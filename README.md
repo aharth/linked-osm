@@ -32,11 +32,11 @@ Requires **Tomcat 10 or higher** for Jakarta EE support.
 
 ### Data Access
 
-Access to OpenStreetMap nodes, ways, and relations:
+Access to OpenStreetMap nodes, ways, and relations in multiple formats:
 
-- **Nodes**: `/node/{id}` - Individual OSM nodes
-- **Ways**: `/way/{id}` - OSM ways (sequences of nodes)
-- **Relations**: `/relation/{id}` - OSM relations (logical groupings)
+- **RDF/XML format**: `/node/{id}.rdf`, `/way/{id}.rdf`, `/relation/{id}.rdf` - Linked Data representation using NeoGeo vocabulary
+- **GeoJSON format**: `/node/{id}.json`, `/way/{id}.json`, `/relation/{id}.json` - Geometry data optimized for web mapping (Leaflet, etc.)
+- **Legacy format**: `/node/{id}`, `/way/{id}`, `/relation/{id}` - Defaults to RDF/XML
 
 
 ### Search
@@ -59,14 +59,19 @@ Get amenity nodes within a bounding box:
 
 ### Geometry Data
 
-Get WKT geometry from LinkedGeoData:
+GeoJSON geometry is now available directly via the `.json` format endpoints above.
 
-- **Endpoint**: `/geo/{type}/{id}`
+Legacy geometry endpoint (deprecated):
+- **Endpoint**: `/geo/{type}/{id}` - WKT geometry (use `.json` format instead)
 
 
 ## Background
 
 Linked OpenStreetmap provides OpenStreetMap data as Linked Data using XSLT transformations to convert OSM XML into RDF/XML format.
+
+## Related Work
+
+We initially attempted to provide geometry files via [MapIt Global](http://global.mapit.mysociety.org/), however there is a mapping between OSM ids and their id scheme missing. We now provide geometries in WKT format from [LinkedGeoData](http://linkedgeodata.org/) (however, relations do not seem to be supported by LinkedGeoData).
 
 ## Future Enhancements
 

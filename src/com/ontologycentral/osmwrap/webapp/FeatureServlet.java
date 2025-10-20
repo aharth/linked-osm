@@ -2,11 +2,15 @@ package com.ontologycentral.osmwrap.webapp;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.logging.Logger;
+import java.util.Scanner;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
@@ -32,11 +36,23 @@ public class FeatureServlet extends HttpServlet {
 
 		String ctrl = null;
 		String id = null;
+		String format = "rdf"; // default format
 
 		if (pathInfo.startsWith("/")) {
 			// Remove leading slash and extract ID
 			String path = pathInfo.substring(1);
-			id = path;
+
+			// Check for file extension
+			if (path.endsWith(".json")) {
+				format = "json";
+				id = path.substring(0, path.length() - 5); // remove .json
+			} else if (path.endsWith(".rdf")) {
+				format = "rdf";
+				id = path.substring(0, path.length() - 4); // remove .rdf
+			} else {
+				// No extension - default to RDF
+				id = path;
+			}
 
 			// Determine the type based on servlet mapping
 			String servletPath = req.getServletPath();
@@ -56,7 +72,16 @@ public class FeatureServlet extends HttpServlet {
 
 		ServletContext ctx = getServletContext();
 
-		String archive = "https://api.openstreetmap.org/api/0.6" + ctrl + id;
+		String archive;
+		if (format.equals("json")) {
+			// Use Overpass API for geometry data
+			String elementType = ctrl.substring(1, ctrl.length() - 1); // remove leading slash and trailing slash
+			String query = "[out:json];" + elementType + "(" + id + ");out geom;";
+			archive = "https://overpass-api.de/api/interpreter?data=" + URLEncoder.encode(query, "UTF-8");
+		} else {
+			// Use standard OSM API for RDF data
+			archive = "https://api.openstreetmap.org/api/0.6" + ctrl + id;
+		}
 
 		URL u = new URL(archive);
 
@@ -79,21 +104,29 @@ public class FeatureServlet extends HttpServlet {
 				encoding = "ISO-8859-1";
 			}
 
-			Transformer t = (Transformer)ctx.getAttribute(ctrl);
+			if (format.equals("json")) {
+				// For JSON format, convert Overpass JSON to GeoJSON
+				resp.setContentType("application/geo+json");
+				String osmJson = readInputStream(is);
+				String geoJson = convertOsmToGeoJson(osmJson);
+				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
+			} else {
+				// RDF format - use existing XSLT transformation
+				Transformer t = (Transformer)ctx.getAttribute(ctrl);
+				resp.setContentType("application/rdf+xml");
 
-			resp.setContentType("application/rdf+xml");
-			
+				StreamSource ssource = new StreamSource(is);
+				StreamResult sresult = new StreamResult(os);
+
+				_log.info("lapplying xslt");
+
+				t.transform(ssource, sresult);
+			}
+
     		resp.setHeader("Cache-Control", "public");
     		Calendar c = Calendar.getInstance();
     		c.add(Calendar.DATE, 1);
     		resp.setHeader("Expires", Listener.RFC822.format(c.getTime()));
-
-			StreamSource ssource = new StreamSource(is);
-			StreamResult sresult = new StreamResult(os);
-
-			_log.info("lapplying xslt");
-
-			t.transform(ssource, sresult);
 
 			is.close();
 		} catch (TransformerException e) {
@@ -111,5 +144,73 @@ public class FeatureServlet extends HttpServlet {
 		}
 
 		os.close();
+	}
+
+	private String readInputStream(InputStream is) throws IOException {
+		Scanner scanner = new Scanner(is, StandardCharsets.UTF_8);
+		scanner.useDelimiter("\\A");
+		return scanner.hasNext() ? scanner.next() : "";
+	}
+
+	private String convertOsmToGeoJson(String osmJson) {
+		// Simple OSM JSON to GeoJSON conversion
+		// This is a basic implementation - could be improved with proper JSON parsing
+		try {
+			if (osmJson.contains("\"elements\":[]")) {
+				// No elements found
+				return "{\"type\":\"FeatureCollection\",\"features\":[]}";
+			}
+
+			// Extract first element for simple case
+			String elementPattern = "\"elements\":\\s*\\[\\s*\\{([^}]+)\\}";
+			java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(elementPattern);
+			java.util.regex.Matcher matcher = pattern.matcher(osmJson);
+
+			if (matcher.find()) {
+				String elementData = matcher.group(1);
+
+				// Extract basic properties
+				String type = extractJsonValue(elementData, "type");
+				String id = extractJsonValue(elementData, "id");
+				String lat = extractJsonValue(elementData, "lat");
+				String lon = extractJsonValue(elementData, "lon");
+
+				if (type != null && id != null) {
+					StringBuilder geoJson = new StringBuilder();
+					geoJson.append("{\"type\":\"Feature\",");
+					geoJson.append("\"id\":").append(id).append(",");
+
+					// Geometry
+					if ("node".equals(type) && lat != null && lon != null) {
+						geoJson.append("\"geometry\":{\"type\":\"Point\",\"coordinates\":[")
+						       .append(lon).append(",").append(lat).append("]},");
+					} else {
+						geoJson.append("\"geometry\":null,");
+					}
+
+					// Properties
+					geoJson.append("\"properties\":{\"osm_type\":\"").append(type).append("\",\"osm_id\":").append(id).append("}}");
+
+					return geoJson.toString();
+				}
+			}
+
+			// Fallback
+			return "{\"type\":\"Feature\",\"geometry\":null,\"properties\":{}}";
+
+		} catch (Exception e) {
+			_log.warning("Error converting OSM JSON to GeoJSON: " + e.getMessage());
+			return "{\"type\":\"Feature\",\"geometry\":null,\"properties\":{\"error\":\"conversion_failed\"}}";
+		}
+	}
+
+	private String extractJsonValue(String json, String key) {
+		String pattern = "\"" + key + "\"\\s*:\\s*([^,}]+)";
+		java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
+		java.util.regex.Matcher m = p.matcher(json);
+		if (m.find()) {
+			return m.group(1).replaceAll("\"", "");
+		}
+		return null;
 	}
 }
