@@ -1,0 +1,84 @@
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>OpenStreetMap Linked Data Wrapper</title>
+  </head>
+
+  <body>
+    <h1>OpenStreetMap Linked Data Wrapper</h1>
+
+    <h2>Introduction</h2>
+    <p>
+      Welcome to Linked OSM, which provides OpenStreetMap data as Linked Data.
+    </p>
+
+    <p>
+      The data comes via the <a href="http://api.openstreetmap.org/api/0.6/">OSM API 0.6</a>.
+      Search is provided via the <a href="http://nominatim.openstreetmap.org">Nominatim API</a>.
+    </p>
+
+    <p>
+      We tried to get geometry files via <a href="http://global.mapit.mysociety.org/">MapIt Global</a>, however, there is a mapping between OSM ids and their id scheme missing.
+      We now provide geometries in WKT format from <a href="http://linkedgeodata.org/">LinkedGeoData</a> (however, relations do not seem to be supported by LinkedGeoData).
+    </p>
+
+    
+    <h2>Some Example Data</h2>
+
+    <dl>
+      <dt><a href="node/17807753">node/17807753</a></dt>
+      <dd>OSM node in Germany</dd>
+      <dt><a href="way/34148844">way/34148844</a></dt>
+      <dd>OSM way (road segment)</dd>
+      <dt><a href="relation/129836">relation/129836</a></dt>
+      <dd>OSM relation (administrative boundary)</dd>
+    </dl>
+
+    <h2>Some Example POI Areas</h2>
+
+    <dl>
+      <dt><a href="poi?bbox=2.33,48.85,2.37,48.87">poi?bbox=2.33,48.85,2.37,48.87</a></dt>
+      <dd>Points of interest in central Paris (Louvre, Châtelet area)</dd>
+      <dt><a href="poi?bbox=-118.28,34.04,-118.24,34.06">poi?bbox=-118.28,34.04,-118.24,34.06</a></dt>
+      <dd>Points of interest in downtown Los Angeles</dd>
+      <dt><a href="poi?bbox=-0.13,51.49,-0.11,51.51">poi?bbox=-0.13,51.49,-0.11,51.51</a></dt>
+      <dd>Points of interest in central London (Westminster area)</dd>
+    </dl>
+
+    <h2>Search</h2>
+
+    <p>
+      Search for nodes, relations and ways.
+    </p>
+
+    <form name="input" action="search">
+      <input type="text" name="q"></input>
+      <input type="submit"/>
+    </form>
+
+    <h2>Map</h2>
+
+    <p>
+      Get nodes, relations and ways inside a bounding box.
+    </p>
+
+    <form name="input" action="map">
+      <input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051"></input>
+      <input type="submit"/>
+    </form>
+
+    <h2>POI</h2>
+
+    <p>
+      Get points of interest (nodes with an amenity tag) inside a bounding box.
+    </p>
+
+    <p>POI data provided by <a href="https://overpass-api.de/">Overpass API</a></p>
+
+    <form name="input" action="poi">
+      <input type="text" name="bbox" value="-118.9448,32.8007,-117.6462,34.8233"></input>
+      <input type="submit"/>
+    </form>
+
+  </body>
+</html>

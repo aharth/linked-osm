@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns="https://jakarta.ee/xml/ns/jakartaee"
+xmlns:web="https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
+		    https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd" version="6.0">
+	<listener>
+		<listener-class>com.ontologycentral.osmwrap.webapp.Listener</listener-class>
+	</listener>
+
+	<servlet>
+		<servlet-name>osm</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.FeatureServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>geo</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.GeometryServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>search</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.SearchServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>map</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.MapServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>poi</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.POIServlet</servlet-class>
+	</servlet>
+	
+	<servlet-mapping>
+		<servlet-name>geo</servlet-name>
+		<url-pattern>/geo/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>osm</servlet-name>
+		<url-pattern>/node/*</url-pattern>
+	</servlet-mapping>
+		<servlet-mapping>
+		<servlet-name>osm</servlet-name>
+		<url-pattern>/relation/*</url-pattern>
+	</servlet-mapping>
+		<servlet-mapping>
+		<servlet-name>osm</servlet-name>
+		<url-pattern>/way/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>search</servlet-name>
+		<url-pattern>/search</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>map</servlet-name>
+		<url-pattern>/map</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>poi</servlet-name>
+		<url-pattern>/poi</url-pattern>
+	</servlet-mapping>
+	
+	<welcome-file-list>
+		<welcome-file>index.html</welcome-file>
+	</welcome-file-list>
+</web-app>
