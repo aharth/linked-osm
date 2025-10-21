@@ -17,7 +17,7 @@
     <rdf:RDF>
       <rdf:Description rdf:about="">
 	<rdfs:comment><xsl:value-of select="@generator"/></rdfs:comment>
-	<dc:attribution>MapQuest (http://open.mapquestapi.com/xapi/)</dc:attribution>
+	<dc:attribution>Overpass API (https://overpass-api.de/)</dc:attribution>
       </rdf:Description>
 
       <xsl:apply-templates/>
@@ -30,9 +30,6 @@
 	<geo:lat><xsl:value-of select="@lat"/></geo:lat>
 	<geo:long><xsl:value-of select="@lon"/></geo:long>
 
-	<owl:sameAs>
-	  <xsl:attribute name="rdf:resource">http://linkedgeodata.org/triplify/node<xsl:value-of select="@id"/></xsl:attribute>
-	</owl:sameAs>
 	
 	<xsl:apply-templates/>
       </rdf:Description>

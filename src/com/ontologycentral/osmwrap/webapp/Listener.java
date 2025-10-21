@@ -48,6 +48,7 @@ public class Listener implements ServletContextListener {
 	public static String MAP = "map";
 	public static String POI = "poi";
 	public static String GEO = "geo";
+	public static String CHANGESET = "changeset";
 	
 	public void contextInitialized(ServletContextEvent event) {
 		ServletContext ctx = event.getServletContext();
@@ -127,6 +128,15 @@ public class Listener implements ServletContextListener {
 		try {
 			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/poi.xsl")));
 			ctx.setAttribute(POI, t);
+		} catch (TransformerConfigurationException e) {
+			_log.severe(e.getMessage());
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/changeset.xsl")));
+			ctx.setAttribute(CHANGESET, t);
 		} catch (TransformerConfigurationException e) {
 			_log.severe(e.getMessage());
 			e.printStackTrace();

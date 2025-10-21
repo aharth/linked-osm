@@ -71,7 +71,7 @@ Linked OpenStreetmap provides OpenStreetMap data as Linked Data using XSLT trans
 
 ## Related Work
 
-We initially attempted to provide geometry files via [MapIt Global](http://global.mapit.mysociety.org/), however there is a mapping between OSM ids and their id scheme missing. We now provide geometries in WKT format from [LinkedGeoData](http://linkedgeodata.org/) (however, relations do not seem to be supported by LinkedGeoData).
+Geometry data is now provided directly via GeoJSON format endpoints (`.json` format) using the Overpass API, which provides complete geometry information for nodes, ways, and relations.
 
 ## Future Enhancements
 

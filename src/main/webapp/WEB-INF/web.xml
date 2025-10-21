@@ -28,6 +28,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-name>poi</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.POIServlet</servlet-class>
 	</servlet>
+	<servlet>
+		<servlet-name>changeset</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.ChangesetServlet</servlet-class>
+	</servlet>
 	
 	<servlet-mapping>
 		<servlet-name>geo</servlet-name>
@@ -56,6 +60,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>poi</servlet-name>
 		<url-pattern>/poi</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>changeset</servlet-name>
+		<url-pattern>/changeset/*</url-pattern>
 	</servlet-mapping>
 	
 	<welcome-file-list>

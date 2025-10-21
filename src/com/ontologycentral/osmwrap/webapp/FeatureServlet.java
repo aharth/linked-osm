@@ -93,8 +93,11 @@ public class FeatureServlet extends HttpServlet {
 			conn.setConnectTimeout(8*1000);
 			conn.setReadTimeout(8*1000);
 
-			if (conn.getResponseCode() != 200) {
-				throw new RuntimeException("lookup on " + u + " resulted HTTP in status code " + conn.getResponseCode());
+			int responseCode = conn.getResponseCode();
+			if (responseCode != 200) {
+				// Pass through the original status code instead of always returning 500
+				resp.sendError(responseCode, "Upstream API returned: " + conn.getResponseMessage());
+				return;
 			}
 
 			InputStream is = conn.getInputStream();

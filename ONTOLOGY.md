@@ -8,12 +8,14 @@ The OpenStreetMap (OSM) data model uses a unified approach where each geographic
 
 ### Element Types
 
-OSM organizes geographic data into four fundamental object types:
+OSM organizes geographic data into six fundamental object types:
 
 1. **Nodes** - Point features with coordinates
 2. **Ways** - Linear or polygonal features composed of node sequences
 3. **Relations** - Logical groupings of nodes, ways, and other relations
 4. **Changesets** - Edit history containers (separate ID namespace)
+5. **Users** - Contributors who create and modify OSM data
+6. **User IDs** - Numeric identifiers for user accounts (separate from usernames)
 
 ### Unified ID System
 
@@ -23,6 +25,33 @@ Each OSM geographic element (node, way, relation) has:
 - **Cross-element references** using the same ID scheme
 
 Changesets use a separate ID namespace for tracking edit operations.
+
+### Global ID Numbering
+
+OSM uses **globally unique, auto-incrementing integers** for element IDs:
+
+- **Global Counter**: Each element type (node, way, relation) has a global counter maintained by the OSM database
+- **Sequential Assignment**: New elements receive the next available ID (e.g., node 1, node 2, node 3...)
+- **No Reuse**: Deleted element IDs are never reused, ensuring persistent references
+- **Cross-Database Consistency**: All OSM mirrors and APIs use the same ID numbers
+- **Historical Significance**: Lower IDs indicate earlier creation (node #1 was the very first OSM node)
+
+**Examples of ID Progression:**
+```
+Node #1: The first node ever created (Monte Piselli radio mast, Italy) - August 2005
+Node #1668797722: Created much later (Burgwächter restaurant, Nuremberg)
+Node #10858097177: Even more recent creation (another Burgwächter location)
+
+Way #100: Early way (highway in Germany) - Ways started being used in 2005-2006
+Relation #147: Early surviving relation (Tigris River multipolygon) - Relations introduced October 2007
+```
+
+**Historical Timeline:**
+- **Nodes**: Started with OSM's launch in 2005 (node #1 created in August 2005)
+- **Ways**: Introduced early in OSM development (2005-2006 era)
+- **Relations**: Added later with API v0.5 in October 2007, replacing the earlier "segments" concept
+
+This global numbering system ensures that every OSM element has a unique, persistent identifier that can be reliably referenced across all OSM services and applications.
 
 ## Geometry Representation by Element Type
 
@@ -75,6 +104,8 @@ Relation ID: 13986332
 - **Scope**: Container for multiple element modifications in a single editing session
 - **Separate ID space**: Changesets have their own numerical ID sequence, independent of element IDs
 - **Metadata**: Include timestamp, user, comment, and bounding box of changes
+- **API Access**: Available via `/changeset/{id}` endpoint with RDF and JSON formats
+- **PROV-O Integration**: Represented as `prov:Activity` entities with provenance relationships
 
 **Example:**
 ```
@@ -83,6 +114,24 @@ Changeset ID: 87654321
 - User: nuremberg_mapper
 - Comment: "Added Burgwächter restaurants and Palas building at Kaiserburg"
 - No geometry: Changesets represent edit operations, not geographic features
+- Access: /changeset/87654321.rdf or /changeset/87654321.json
+```
+
+### Users
+- **Purpose**: Track contributors who create and modify OSM data
+- **Identification**: String-based usernames (display names) plus numeric user IDs
+- **No separate ID space**: Users are identified by their chosen usernames
+- **Metadata**: Username, user ID, profile information, contribution history
+- **API Access**: Available via `/user/{username}` endpoint with RDF and JSON formats
+- **PROV-O Integration**: Represented as `prov:Agent` entities for attribution
+
+**Example:**
+```
+User: nuremberg_mapper
+- User ID: 12345
+- Profile: https://www.openstreetmap.org/user/nuremberg_mapper
+- Contributions: Multiple changesets, nodes, ways, and relations
+- Access: /user/nuremberg_mapper.rdf or /user/nuremberg_mapper.json
 ```
 
 ## Implications for Linked Data and APIs
@@ -91,11 +140,18 @@ Changeset ID: 87654321
 
 Since there's no separation between feature and geometry IDs, content negotiation can be handled through format specifications:
 
-- `/node/10858097177.rdf` → Returns the **same feature** (Burgwächter restaurant) in RDF/XML with semantic tags
+**Geographic Elements:**
+- `/node/10858097177.rdf` → Returns the **same feature** (Burgwächter restaurant) in RDF/XML with semantic tags and PROV-O metadata
 - `/node/10858097177.json` → Returns the **same feature** in GeoJSON with geometry coordinates
-- `/way/32113829.rdf` → Returns the **same feature** (Palas building) in RDF/XML format
+- `/way/32113829.rdf` → Returns the **same feature** (Palas building) in RDF/XML format with provenance
 - `/way/32113829.json` → Returns the **same feature** in GeoJSON with polygon geometry
 - Legacy format without extension defaults to RDF/XML for Linked Data services
+
+**Provenance Entities:**
+- `/changeset/87654321.rdf` → Returns changeset metadata in RDF/XML with PROV-O properties
+- `/changeset/87654321.json` → Returns changeset metadata in JSON-LD format
+- `/user/nuremberg_mapper.rdf` → Returns user/contributor information in RDF/XML as PROV-O Agent
+- `/user/nuremberg_mapper.json` → Returns user information in JSON-LD format
 
 ### Persistent Identifiers
 
@@ -104,6 +160,8 @@ OSM IDs serve as **persistent identifiers** across different data representation
 - Same ID used in OSM API, Overpass API, and Linked Data services
 - Enables consistent referencing across different applications and formats
 - Supports data integration and cross-referencing
+- **Provenance tracking**: Changeset and user identifiers provide full audit trail
+- **PROV-O integration**: Links between elements, activities, and agents enable rich provenance queries
 
 ## Comparison with Other Systems
 
@@ -150,7 +208,43 @@ OSM unifies:
 1. **Unified Identity**: OSM's single ID per element simplifies data integration and persistent referencing
 2. **Geometry Embedding**: Spatial data is inherent to the element, not stored separately
 3. **Topological Integrity**: Shared node references maintain spatial relationships
+
+## Enhanced Provenance Model
+
+The linked-osm implementation extends the basic OSM data model with comprehensive provenance tracking using the PROV-O vocabulary:
+
+### Provenance Entities
+
+**Geographic Elements** (`prov:Entity`):
+- Nodes, ways, and relations with enhanced metadata
+- Links to generating activities and responsible agents
+- Version and timestamp information
+
+**Activities** (`prov:Activity`):
+- Changesets as edit operations with temporal bounds
+- Associated software agents (editors) and human contributors
+- Geographic scope and change descriptions
+
+**Agents** (`prov:Agent`):
+- Human contributors (OSM users) with attribution
+- Software agents (editing tools) with version information
+- Organizational agents (mapping projects, data imports)
+
+### Provenance Relationships
+
+```
+Node/Way/Relation --prov:wasGeneratedBy--> Changeset --prov:wasAssociatedWith--> User
+                  --prov:wasAttributedTo--> User
+                  --prov:hadPrimarySource--> OSM API URL
+```
+
+### Enhanced Key Findings
+
 4. **Format Flexibility**: Same ID can serve multiple representation formats (RDF, GeoJSON, XML)
 5. **Linked Data Compatibility**: Direct mapping from OSM IDs to RDF URIs enables seamless Linked Data integration
+6. **Comprehensive Provenance**: Full audit trail from data creation through transformation
+7. **Attribution Support**: Clear links to contributors and data sources
+8. **Quality Assessment**: Enables evaluation of data freshness and contributor expertise
+9. **Interoperability**: Standard PROV-O vocabulary supports tool integration
 
-This unified approach makes OSM particularly well-suited for Linked Data applications where persistent, dereferenceable identifiers are essential for building the semantic web of geographic information.
+This unified approach with enhanced provenance makes OSM particularly well-suited for Linked Data applications where persistent, dereferenceable identifiers and comprehensive data lineage are essential for building trustworthy semantic web applications.

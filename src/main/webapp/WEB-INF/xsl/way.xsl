@@ -8,6 +8,7 @@
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:geom="http://geovocab.org/geometry#"
    xmlns:spatial="http://geovocab.org/spatial#"
+   xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    version="1.0">
   
@@ -33,9 +34,28 @@
       <spatial:Feature>
 	<xsl:attribute name="rdf:about">/way/<xsl:value-of select="@id"/>#id</xsl:attribute>
 
-	<owl:sameAs>
-	  <xsl:attribute name="rdf:resource">http://linkedgeodata.org/triplify/way<xsl:value-of select="@id"/></xsl:attribute>
-	</owl:sameAs>
+	<!-- PROV-O properties -->
+	<xsl:if test="@changeset">
+	  <prov:wasGeneratedBy rdf:resource="/changeset/{@changeset}"/>
+	</xsl:if>
+	<xsl:if test="@timestamp">
+	  <prov:generatedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">
+	    <xsl:value-of select="@timestamp"/>
+	  </prov:generatedAtTime>
+	</xsl:if>
+	<xsl:if test="@user">
+	  <prov:wasAttributedTo>
+	    <prov:Agent>
+	      <foaf:accountName><xsl:value-of select="@user"/></foaf:accountName>
+	      <foaf:accountServiceHomepage rdf:resource="https://www.openstreetmap.org"/>
+	      <foaf:homepage rdf:resource="https://www.openstreetmap.org/user/{@user}"/>
+	    </prov:Agent>
+	  </prov:wasAttributedTo>
+	</xsl:if>
+	<xsl:if test="@version">
+	  <prov:hadPrimarySource rdf:resource="https://api.openstreetmap.org/api/0.6/way/{@id}/{@version}"/>
+	  <prov:value><xsl:value-of select="@version"/></prov:value>
+	</xsl:if>
 
 	<xsl:apply-templates/>
 
@@ -46,6 +66,22 @@
 	  </geom:Geometry>
 	</geom:geometry>
       </spatial:Feature>
+
+      <!-- Changeset as Activity -->
+      <xsl:if test="@changeset and @timestamp and @user">
+	<prov:Activity rdf:about="/changeset/{@changeset}">
+	  <prov:endedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime">
+	    <xsl:value-of select="@timestamp"/>
+	  </prov:endedAtTime>
+	  <prov:wasAssociatedWith>
+	    <prov:Agent>
+	      <foaf:accountName><xsl:value-of select="@user"/></foaf:accountName>
+	      <foaf:accountServiceHomepage rdf:resource="https://www.openstreetmap.org"/>
+	      <foaf:homepage rdf:resource="https://www.openstreetmap.org/user/{@user}"/>
+	    </prov:Agent>
+	  </prov:wasAssociatedWith>
+	</prov:Activity>
+      </xsl:if>
   </xsl:template>
 
 <!--

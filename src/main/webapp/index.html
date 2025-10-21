@@ -1,4 +1,10 @@
-<html>
+<?xml version="1.0" encoding="utf-8"?>
+
+<!DOCTYPE html
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>OpenStreetMap Linked Data Wrapper</title>
@@ -9,71 +15,98 @@
 
     <h2>Introduction</h2>
     <p>
-      Welcome to Linked OSM, which provides OpenStreetMap data as Linked Data.
+      Welcome to the EXPERIMENTAL <a href="http://openstreetmap.org/">OpenStreetMap</a> wrapper to <a href="http://en.wikipedia.org/wiki/Linked_Data">Linked Data</a>.
     </p>
 
     <p>
-      The data comes via the <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
-      Search functionality is provided via the <a href="https://nominatim.openstreetmap.org">Nominatim API</a> (geocoding service).
+      OpenStreetMap data is licensed under the <a href="https://www.openstreetmap.org/copyright">Open Database License (ODbL)</a>. By using this service, you agree to the <a href="https://operations.osmfoundation.org/policies/api/">OpenStreetMap API Usage Policy</a>.
     </p>
 
 
-    
-    <h2>Some Example Data</h2>
+    <h2>Resources</h2>
+
+    <p>
+      Core element data (nodes, ways, relations) via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>. Data subject to <a href="https://operations.osmfoundation.org/policies/api/">OSM API Usage Policy</a>.
+    </p>
+
 
     <dl>
-      <dt><a href="node/10858097177.rdf">node/10858097177.rdf</a> | <a href="node/10858097177.json">node/10858097177.json</a></dt>
-      <dd>OSM node (Burgwächter restaurant, Nuremberg) - <a href="https://www.openstreetmap.org/node/10858097177">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/node/10858097177">API</a></dd>
-      <dt><a href="node/1668797722.rdf">node/1668797722.rdf</a> | <a href="node/1668797722.json">node/1668797722.json</a></dt>
-      <dd>OSM node (Burgwächter restaurant, Nuremberg) - <a href="https://www.openstreetmap.org/node/1668797722">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/node/1668797722">API</a></dd>
+      <dt><a href="node/1.rdf">node/1.rdf</a> | <a href="node/1.json">node/1.json</a></dt>
+      <dd>Monte Piselli radio mast, Italy - The very first node in OpenStreetMap! - <a href="https://www.openstreetmap.org/node/1">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/node/1">API</a></dd>
+      <dt><a href="node/1675605507.rdf">node/1675605507.rdf</a> | <a href="node/1675605507.json">node/1675605507.json</a></dt>
+      <dd>Café Wanderer, Nuremberg - <a href="https://www.openstreetmap.org/node/1675605507">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/node/1675605507">API</a></dd>
+      <dt><a href="way/100.rdf">way/100.rdf</a> | <a href="way/100.json">way/100.json</a></dt>
+      <dd>Roundabout, Germany - <a href="https://www.openstreetmap.org/way/100">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/way/100">API</a></dd>
       <dt><a href="way/32113829.rdf">way/32113829.rdf</a> | <a href="way/32113829.json">way/32113829.json</a></dt>
-      <dd>OSM way (Palas building, Kaiserburg Nuremberg) - <a href="https://www.openstreetmap.org/way/32113829">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/way/32113829">API</a></dd>
+      <dd>Palas building, Kaiserburg Nuremberg - <a href="https://www.openstreetmap.org/way/32113829">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/way/32113829">API</a></dd>
+      <dt><a href="relation/147.rdf">relation/147.rdf</a> | <a href="relation/147.json">relation/147.json</a></dt>
+      <dd>Tigris River multipolygon - Earliest surviving relation! - <a href="https://www.openstreetmap.org/relation/147">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/relation/147">API</a></dd>
       <dt><a href="relation/71525.rdf">relation/71525.rdf</a> | <a href="relation/71525.json">relation/71525.json</a></dt>
-      <dd>OSM relation (Paris administrative boundary) - <a href="https://www.openstreetmap.org/relation/71525">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/relation/71525">API</a></dd>
+      <dd>Paris administrative boundary - <a href="https://www.openstreetmap.org/relation/71525">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/relation/71525">API</a></dd>
       <dt><a href="relation/13986332.rdf">relation/13986332.rdf</a> | <a href="relation/13986332.json">relation/13986332.json</a></dt>
-      <dd>OSM relation (Sebalder Reichswald forest) - <a href="https://www.openstreetmap.org/relation/13986332">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/relation/13986332">API</a></dd>
+      <dd>Sebalder Reichswald forest - <a href="https://www.openstreetmap.org/relation/13986332">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/relation/13986332">API</a></dd>
+      <dt><a href="changeset/137.rdf">changeset/137.rdf</a> | <a href="changeset/137.json">changeset/137.json</a></dt>
+      <dd>One of the earliest changesets - <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/changeset/137">API</a></dd>
+      <dt><a href="changeset/123456789.rdf">changeset/123456789.rdf</a> | <a href="changeset/123456789.json">changeset/123456789.json</a></dt>
+      <dd>Recent changeset example - <a href="https://www.openstreetmap.org/changeset/123456789">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/changeset/123456789">API</a></dd>
     </dl>
-
-    <h2>Some Example POI Areas</h2>
-
-    <dl>
-      <dt><a href="poi?bbox=2.33,48.85,2.37,48.87">poi?bbox=2.33,48.85,2.37,48.87</a></dt>
-      <dd>Points of interest in central Paris (Louvre, Châtelet area)</dd>
-      <dt><a href="poi?bbox=-118.28,34.04,-118.24,34.06">poi?bbox=-118.28,34.04,-118.24,34.06</a></dt>
-      <dd>Points of interest in downtown Los Angeles</dd>
-      <dt><a href="poi?bbox=-0.13,51.49,-0.11,51.51">poi?bbox=-0.13,51.49,-0.11,51.51</a></dt>
-      <dd>Points of interest in central London (Westminster area)</dd>
-    </dl>
-
-    <h2>Search</h2>
-
-    <p>
-      Search for nodes, relations and ways.
-    </p>
-
-    <form name="input" action="search">
-      <input type="text" name="q"></input>
-      <input type="submit"/>
-    </form>
 
     <h2>Map</h2>
 
     <p>
-      Get nodes, relations and ways inside a bounding box.
+      Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>. Data subject to <a href="https://operations.osmfoundation.org/policies/api/">OSM API Usage Policy</a>.
     </p>
+
+    <dl>
+      <dt><a href="map?bbox=11.075,49.457,11.077,49.459">map?bbox=11.075,49.457,11.077,49.459</a></dt>
+      <dd>Map data around Kaiserburg Nuremberg - <a href="https://api.openstreetmap.org/api/0.6/map?bbox=11.075,49.457,11.077,49.459">OSM API</a></dd>
+      <dt><a href="map?bbox=2.348,48.856,2.350,48.858">map?bbox=2.348,48.856,2.350,48.858</a></dt>
+      <dd>Map data around Louvre, Paris - <a href="https://api.openstreetmap.org/api/0.6/map?bbox=2.348,48.856,2.350,48.858">OSM API</a></dd>
+      <dt><a href="map?bbox=-0.128,51.500,-0.126,51.502">map?bbox=-0.128,51.500,-0.126,51.502</a></dt>
+      <dd>Map data around Westminster, London - <a href="https://api.openstreetmap.org/api/0.6/map?bbox=-0.128,51.500,-0.126,51.502">OSM API</a></dd>
+    </dl>
 
     <form name="input" action="map">
       <input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051"></input>
       <input type="submit"/>
     </form>
 
-    <h2>POI</h2>
+    <h2>Search</h2>
 
     <p>
-      Get points of interest (nodes with an amenity tag) inside a bounding box.
+      Search for nodes, relations and ways via <a href="https://nominatim.openstreetmap.org">Nominatim API</a>. Usage subject to <a href="https://operations.osmfoundation.org/policies/nominatim/">Nominatim Usage Policy</a>.
+    </p>
+    
+    <dl>
+      <dt><a href="search?q=Kaiserburg">search?q=Kaiserburg</a></dt>
+      <dd>Search for "Kaiserburg" - <a href="https://nominatim.openstreetmap.org/search?q=Kaiserburg&format=xml">Nominatim API</a></dd>
+      <dt><a href="search?q=Nuremberg">search?q=Nuremberg</a></dt>
+      <dd>Search for "Nuremberg" - <a href="https://nominatim.openstreetmap.org/search?q=Nuremberg&format=xml">Nominatim API</a></dd>
+      <dt><a href="search?q=restaurant">search?q=restaurant</a></dt>
+      <dd>Search for "restaurant" - <a href="https://nominatim.openstreetmap.org/search?q=restaurant&format=xml">Nominatim API</a></dd>
+    </dl>
+
+    <form name="input" action="search">
+      <input type="text" name="q"></input>
+      <input type="submit"/>
+    </form>
+    
+    <h2>Points of Interest</h2>
+
+    <p>
+      Get points of interest (nodes with an amenity tag) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a>. Usage subject to <a href="https://dev.overpass-api.de/overpass-doc/en/preface/commons.html">Overpass API terms</a>.
     </p>
 
-    <p>POI data provided by <a href="https://overpass-api.de/">Overpass API</a></p>
+    <dl>
+      <dt><a href="poi?bbox=11.070,49.450,11.085,49.465">poi?bbox=11.070,49.450,11.085,49.465</a></dt>
+      <dd>Points of interest in Nuremberg old town (Kaiserburg area) - <a href="https://overpass-api.de/api/interpreter?data=[out:xml];node[amenity](49.450,11.070,49.465,11.085);out;">Overpass API</a></dd>
+      <dt><a href="poi?bbox=2.33,48.85,2.37,48.87">poi?bbox=2.33,48.85,2.37,48.87</a></dt>
+      <dd>Points of interest in central Paris (Louvre, Châtelet area) - <a href="https://overpass-api.de/api/interpreter?data=[out:xml];node[amenity](48.85,2.33,48.87,2.37);out;">Overpass API</a></dd>
+      <dt><a href="poi?bbox=-118.28,34.04,-118.24,34.06">poi?bbox=-118.28,34.04,-118.24,34.06</a></dt>
+      <dd>Points of interest in downtown Los Angeles - <a href="https://overpass-api.de/api/interpreter?data=[out:xml];node[amenity](34.04,-118.28,34.06,-118.24);out;">Overpass API</a></dd>
+      <dt><a href="poi?bbox=-0.13,51.49,-0.11,51.51">poi?bbox=-0.13,51.49,-0.11,51.51</a></dt>
+      <dd>Points of interest in central London (Westminster area) - <a href="https://overpass-api.de/api/interpreter?data=[out:xml];node[amenity](51.49,-0.13,51.51,-0.11);out;">Overpass API</a></dd>
+    </dl>
 
     <form name="input" action="poi">
       <input type="text" name="bbox" value="-118.9448,32.8007,-117.6462,34.8233"></input>
