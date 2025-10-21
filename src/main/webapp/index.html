@@ -6,7 +6,7 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
     <title>OpenStreetMap Linked Data Wrapper</title>
   </head>
 
@@ -19,16 +19,15 @@
     </p>
 
     <p>
-      OpenStreetMap data is licensed under the <a href="https://www.openstreetmap.org/copyright">Open Database License (ODbL)</a>. By using this service, you agree to the <a href="https://operations.osmfoundation.org/policies/api/">OpenStreetMap API Usage Policy</a>.
+      OpenStreetMap data is licensed under the <a href="https://www.openstreetmap.org/copyright">Open Database License (ODbL)</a>.
     </p>
 
 
     <h2>Resources</h2>
 
     <p>
-      Core element data (nodes, ways, relations) via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>. Usage subject to <a href="https://operations.osmfoundation.org/policies/api/">OSM API Usage Policy</a>.
+      Core element data (nodes, ways, relations, changesets) via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
     </p>
-
 
     <dl>
       <dt><a href="node/1.rdf">node/1.rdf</a> | <a href="node/1.json">node/1.json</a></dt>
@@ -51,10 +50,14 @@
       <dd>Recent changeset example - <a href="https://www.openstreetmap.org/changeset/123456789">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/changeset/123456789">API</a></dd>
     </dl>
 
+    <p>
+      Usage subject to <a href="https://operations.osmfoundation.org/policies/api/">OSM API Usage Policy</a>.
+    </p>
+
     <h2>Map</h2>
 
     <p>
-      Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>. Usage subject to <a href="https://operations.osmfoundation.org/policies/api/">OSM API Usage Policy</a>.
+      Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
     </p>
 
     <dl>
@@ -71,30 +74,39 @@
       <input type="submit"/>
     </form>
 
+    <p>
+       Usage subject to <a href="https://operations.osmfoundation.org/policies/api/">OSM API Usage Policy</a>.
+    </p>
+    
     <h2>Search</h2>
 
     <p>
-      Search for nodes, relations and ways via <a href="https://nominatim.openstreetmap.org">Nominatim API</a>. Usage subject to <a href="https://operations.osmfoundation.org/policies/nominatim/">Nominatim Usage Policy</a>.
+      Search for nodes, relations and ways via <a href="https://nominatim.openstreetmap.org">Nominatim API</a>.
     </p>
     
     <dl>
       <dt><a href="search?q=Kaiserburg">search?q=Kaiserburg</a></dt>
-      <dd>Search for "Kaiserburg" - <a href="https://nominatim.openstreetmap.org/search?q=Kaiserburg&format=xml">Nominatim API</a></dd>
+      <dd>Search for "Kaiserburg" - <a href="https://nominatim.openstreetmap.org/search?q=Kaiserburg&amp;format=xml">Nominatim API</a></dd>
       <dt><a href="search?q=Nuremberg">search?q=Nuremberg</a></dt>
-      <dd>Search for "Nuremberg" - <a href="https://nominatim.openstreetmap.org/search?q=Nuremberg&format=xml">Nominatim API</a></dd>
+      <dd>Search for "Nuremberg" - <a href="https://nominatim.openstreetmap.org/search?q=Nuremberg&amp;format=xml">Nominatim API</a></dd>
       <dt><a href="search?q=restaurant">search?q=restaurant</a></dt>
-      <dd>Search for "restaurant" - <a href="https://nominatim.openstreetmap.org/search?q=restaurant&format=xml">Nominatim API</a></dd>
+      <dd>Search for "restaurant" - <a href="https://nominatim.openstreetmap.org/search?q=restaurant&amp;format=xml">Nominatim API</a></dd>
     </dl>
 
     <form name="input" action="search">
       <input type="text" name="q"></input>
       <input type="submit"/>
     </form>
+
+    <p>
+      Usage subject to <a href="https://operations.osmfoundation.org/policies/nominatim/">Nominatim Usage Policy</a>.
+    </p>
+
     
     <h2>Points of Interest</h2>
 
     <p>
-      Get points of interest (nodes with an amenity tag) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a>. Usage subject to <a href="https://dev.overpass-api.de/overpass-doc/en/preface/commons.html">Overpass API terms</a>.
+      Get points of interest (nodes with an amenity tag) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a>.
     </p>
 
     <dl>
@@ -112,6 +124,10 @@
       <input type="text" name="bbox" value="-118.9448,32.8007,-117.6462,34.8233"></input>
       <input type="submit"/>
     </form>
+
+    <p>
+      Usage subject to <a href="https://dev.overpass-api.de/overpass-doc/en/preface/commons.html">Overpass API terms</a>.
+    </p>
 
 
     <h2>Documentation</h2>
