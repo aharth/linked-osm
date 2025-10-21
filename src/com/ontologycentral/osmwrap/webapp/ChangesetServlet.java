@@ -94,7 +94,7 @@ public class ChangesetServlet extends HttpServlet {
 
 				resp.setContentType("application/rdf+xml");
 
-				t.transform(new StreamSource(is, encoding), new StreamResult(os));
+				t.transform(new StreamSource(is), new StreamResult(os));
 			}
 
 		} catch (TransformerException te) {

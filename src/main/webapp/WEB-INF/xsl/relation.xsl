@@ -19,12 +19,34 @@
   <xsl:template match="osm">
     <rdf:RDF>
       <rdf:Description rdf:about="">
+	<rdfs:comment>No guarantee of correctness! USE AT YOUR OWN RISK!</rdfs:comment>
 	<rdfs:comment><xsl:value-of select="@generator"/></rdfs:comment>
 	<rdfs:comment><xsl:value-of select="@copyright"/></rdfs:comment>
+	<dc:publisher>OpenStreetMap Contributors (https://www.openstreetmap.org/) via Linked OSM (http://osmwrap.ontologycentral.com/)</dc:publisher>
 	<dc:attribution><xsl:value-of select="@attribution"/></dc:attribution>
 	<dc:license><xsl:value-of select="@license"/></dc:license>
 	<dc:date><xsl:value-of select="relation/@timestamp"/></dc:date>
+	<rdfs:seeAlso rdf:resource="https://www.openstreetmap.org/copyright"/>
+	<rdfs:seeAlso rdf:resource="https://wiki.openstreetmap.org/wiki/Legal_FAQ"/>
+	<prov:wasGeneratedBy rdf:resource="#transformation"/>
       </rdf:Description>
+
+      <!-- PROV: Transformation activity -->
+      <prov:Activity rdf:about="#transformation">
+        <rdfs:label>OSM XML to RDF Relation Transformation</rdfs:label>
+        <prov:used>
+          <xsl:attribute name="rdf:resource">https://api.openstreetmap.org/api/0.6/relation/<xsl:value-of select="relation/@id"/></xsl:attribute>
+        </prov:used>
+        <prov:wasAssociatedWith rdf:resource="#osmwrap"/>
+        <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
+      </prov:Activity>
+
+      <!-- PROV: Agent (osmwrap service) -->
+      <prov:SoftwareAgent rdf:about="#osmwrap">
+        <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
+        <foaf:homepage rdf:resource="http://osmwrap.ontologycentral.com/"/>
+        <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
+      </prov:SoftwareAgent>
 
       <xsl:apply-templates/>
     </rdf:RDF>
