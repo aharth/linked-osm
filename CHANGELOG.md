@@ -2,6 +2,9 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2025-10-22]
+- Refactor HTTP client code to eliminate duplication between CLI and webapp
+
 ## [2025-10-21]
 - Major refactoring, current version of JDK and libraries
 - Added CLI tool for command-line access to OSM data

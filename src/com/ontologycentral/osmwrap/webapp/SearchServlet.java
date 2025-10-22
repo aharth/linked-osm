@@ -8,6 +8,10 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.logging.Logger;
 
+import com.ontologycentral.osmwrap.ApiConstants;
+import com.ontologycentral.osmwrap.HttpClientUtil;
+import com.ontologycentral.osmwrap.UrlBuilder;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,7 +32,7 @@ public class SearchServlet extends HttpServlet {
 		
 		ServletContext ctx = getServletContext();
 
-		String archive = "https://nominatim.openstreetmap.org/search?format=xml&q=" + URLEncoder.encode(query, "utf-8");
+		String archive = UrlBuilder.buildSearchUrl(query);
 		
 		URL u = new URL(archive);
 
@@ -36,9 +40,7 @@ public class SearchServlet extends HttpServlet {
 		System.out.println("retrieving " + u);
 
 		try {
-			HttpURLConnection conn = (HttpURLConnection)u.openConnection();
-			conn.setConnectTimeout(30*1000);
-			conn.setReadTimeout(30*1000);
+			HttpURLConnection conn = HttpClientUtil.createConnection(archive, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.SEARCH_READ_TIMEOUT);
 
 			int responseCode = conn.getResponseCode();
 			if (responseCode != 200) {
@@ -61,7 +63,7 @@ public class SearchServlet extends HttpServlet {
 			StreamSource ssource = new StreamSource(is);
 			StreamResult sresult = new StreamResult(os);
 
-			_log.info("lapplying xslt");
+			_log.info("applying xslt");
 
 			t.transform(ssource, sresult);
 

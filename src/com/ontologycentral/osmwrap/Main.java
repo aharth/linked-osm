@@ -23,8 +23,6 @@ import org.apache.commons.cli.ParseException;
 public class Main {
     private static final Logger logger = Logger.getLogger(Main.class.getName());
 
-    public static final String OSM_API_BASE = "https://api.openstreetmap.org/api/0.6";
-    public static final String NOMINATIM_API_BASE = "https://nominatim.openstreetmap.org";
 
     public static void main(String[] args) {
         Options options = createOptions();
@@ -35,6 +33,11 @@ public class Main {
 
             if (cmd.hasOption("help") || args.length == 0) {
                 printHelp(options);
+                return;
+            }
+
+            if (cmd.hasOption("version")) {
+                printVersion();
                 return;
             }
 
@@ -56,6 +59,9 @@ public class Main {
             } else if (cmd.hasOption("poi")) {
                 String bbox = cmd.getOptionValue("poi");
                 fetchPOIData(bbox);
+            } else if (cmd.hasOption("changeset")) {
+                String changesetId = cmd.getOptionValue("changeset");
+                fetchChangeset(changesetId);
             } else {
                 System.err.println("No valid operation specified. Use --help for usage information.");
                 System.exit(1);
@@ -117,9 +123,21 @@ public class Main {
                 .desc("Fetch points of interest (amenities) for bounding box (west,south,east,north)")
                 .build());
 
+        options.addOption(Option.builder("c")
+                .longOpt("changeset")
+                .hasArg()
+                .argName("ID")
+                .desc("Fetch OSM changeset by ID")
+                .build());
+
         options.addOption(Option.builder("h")
                 .longOpt("help")
                 .desc("Show this help message")
+                .build());
+
+        options.addOption(Option.builder("v")
+                .longOpt("version")
+                .desc("Show version information")
                 .build());
 
         return options;
@@ -134,105 +152,90 @@ public class Main {
                 "  linked-osm --node 17807753\n" +
                 "  linked-osm --way 34148844\n" +
                 "  linked-osm --relation 129836\n" +
+                "  linked-osm --changeset 137\n" +
                 "  linked-osm --search \"London\"\n" +
                 "  linked-osm --map \"-118.241,34.050,-118.240,34.051\"\n" +
                 "  linked-osm --poi \"-118.9448,32.8007,-117.6462,34.8233\"\n\n" +
-                "For more information, visit: https://github.com/your-repo/linked-osm");
+                "For more information, visit: https://github.com/aharth/linked-osm");
+    }
+
+    private static void printVersion() {
+        System.out.println(BuildInfo.getName() + " " + BuildInfo.getVersion());
+        System.out.println("User-Agent: " + BuildInfo.getUserAgent());
+        System.out.println("Build timestamp: " + BuildInfo.getBuildTimestamp());
+        System.out.println();
+        System.out.println("OpenStreetMap Linked Data Command Line Tool");
+        System.out.println("Project: https://github.com/aharth/linked-osm");
     }
 
     private static void fetchOsmFeature(String type, String id) throws IOException {
-        String url = OSM_API_BASE + "/" + type + "/" + id;
+        String url = UrlBuilder.buildFeatureUrl(type, id);
         logger.info("Fetching " + type + " " + id + " from " + url);
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        HttpURLConnection connection = HttpClientUtil.createConnection(url);
         connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "LinkedOSM/1.0");
 
-        int responseCode = connection.getResponseCode();
-        if (responseCode == 200) {
+        try {
+            HttpClientUtil.checkResponseCode(connection, type + " " + id);
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw OSM XML
             try (InputStream input = connection.getInputStream()) {
-                copyStream(input, System.out);
+                HttpClientUtil.copyStream(input, System.out);
             }
-        } else if (responseCode == 404) {
-            System.err.println("Error: " + type + " " + id + " not found");
-            System.exit(1);
-        } else {
-            System.err.println("Error: HTTP " + responseCode + " from OSM API");
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
             System.exit(1);
         }
     }
 
     private static void searchFeatures(String query) throws IOException {
-        String encodedQuery = java.net.URLEncoder.encode(query, "UTF-8");
-        String url = NOMINATIM_API_BASE + "/search?q=" + encodedQuery + "&format=xml";
+        String url = UrlBuilder.buildSearchUrl(query);
         logger.info("Searching for '" + query + "' via " + url);
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        HttpURLConnection connection = HttpClientUtil.createConnection(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.SEARCH_READ_TIMEOUT);
         connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "LinkedOSM/1.0");
 
-        int responseCode = connection.getResponseCode();
-        if (responseCode == 200) {
+        try {
+            HttpClientUtil.checkResponseCode(connection, "Nominatim search");
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw Nominatim XML
             try (InputStream input = connection.getInputStream()) {
-                copyStream(input, System.out);
+                HttpClientUtil.copyStream(input, System.out);
             }
-        } else {
-            System.err.println("Error: HTTP " + responseCode + " from Nominatim API");
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
             System.exit(1);
         }
     }
 
     private static void fetchMapData(String bbox) throws IOException {
-        String url = OSM_API_BASE + "/map?bbox=" + bbox;
+        String url = UrlBuilder.buildMapUrl(bbox);
         logger.info("Fetching map data for bbox " + bbox + " from " + url);
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        HttpURLConnection connection = HttpClientUtil.createConnection(url);
         connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "LinkedOSM/1.0");
 
-        int responseCode = connection.getResponseCode();
-        if (responseCode == 200) {
+        try {
+            HttpClientUtil.checkResponseCode(connection, "map data");
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw OSM XML
             try (InputStream input = connection.getInputStream()) {
-                copyStream(input, System.out);
+                HttpClientUtil.copyStream(input, System.out);
             }
-        } else {
-            System.err.println("Error: HTTP " + responseCode + " from OSM API");
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
             System.exit(1);
         }
     }
 
     private static void fetchPOIData(String bbox) throws IOException {
-        // Convert bbox from "west,south,east,north" to "south,west,north,east" for Overpass API
-        String[] coords = bbox.split(",");
-        if (coords.length != 4) {
-            System.err.println("Error: Invalid bbox format. Use: west,south,east,north");
-            System.exit(1);
-        }
-        String overpassBbox = coords[1] + "," + coords[0] + "," + coords[3] + "," + coords[2]; // south,west,north,east
-
-        // Overpass API query for nodes with amenity tags in bounding box
-        String overpassQuery = "[out:xml][timeout:25];\n" +
-                              "(\n" +
-                              "  node[amenity](" + overpassBbox + ");\n" +
-                              ");\n" +
-                              "out meta;";
-
-        String url = "https://overpass-api.de/api/interpreter";
+        String overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox);
         logger.info("Fetching POI data for bbox " + bbox + " from Overpass API");
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        HttpURLConnection connection = HttpClientUtil.createConnection(ApiConstants.OVERPASS_API_BASE, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.POI_READ_TIMEOUT);
         connection.setRequestMethod("POST");
         connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        connection.setRequestProperty("User-Agent", "LinkedOSM/1.0");
         connection.setDoOutput(true);
-        connection.setConnectTimeout(8000);
-        connection.setReadTimeout(30000);
 
         // Send Overpass query as POST data
         String postData = "data=" + java.net.URLEncoder.encode(overpassQuery, "UTF-8");
@@ -241,24 +244,34 @@ public class Main {
             os.flush();
         }
 
-        int responseCode = connection.getResponseCode();
-        if (responseCode == 200) {
+        try {
+            HttpClientUtil.checkResponseCode(connection, "Overpass API");
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw Overpass XML
             try (InputStream input = connection.getInputStream()) {
-                copyStream(input, System.out);
+                HttpClientUtil.copyStream(input, System.out);
             }
-        } else {
-            System.err.println("Error: HTTP " + responseCode + " from Overpass API");
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
             System.exit(1);
         }
     }
 
-    private static void copyStream(InputStream input, OutputStream output) throws IOException {
-        byte[] buffer = new byte[8192];
-        int bytesRead;
-        while ((bytesRead = input.read(buffer)) != -1) {
-            output.write(buffer, 0, bytesRead);
+    private static void fetchChangeset(String changesetId) throws IOException {
+        String url = UrlBuilder.buildChangesetUrl(changesetId);
+        logger.info("Fetching changeset " + changesetId + " from " + url);
+
+        HttpURLConnection connection = HttpClientUtil.createConnection(url);
+
+        try {
+            HttpClientUtil.checkResponseCode(connection, "changeset " + changesetId);
+            try (InputStream input = connection.getInputStream()) {
+                HttpClientUtil.copyStream(input, System.out);
+            }
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
+            System.exit(1);
         }
     }
+
 }

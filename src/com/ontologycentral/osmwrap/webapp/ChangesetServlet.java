@@ -7,6 +7,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.logging.Logger;
 
+import com.ontologycentral.osmwrap.ApiConstants;
+import com.ontologycentral.osmwrap.HttpClientUtil;
+import com.ontologycentral.osmwrap.UrlBuilder;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -56,7 +60,7 @@ public class ChangesetServlet extends HttpServlet {
 
 		ServletContext ctx = getServletContext();
 
-		String archive = "https://api.openstreetmap.org/api/0.6/changeset/" + changesetId;
+		String archive = UrlBuilder.buildChangesetUrl(changesetId);
 
 		URL u = new URL(archive);
 
@@ -64,9 +68,7 @@ public class ChangesetServlet extends HttpServlet {
 		System.out.println("retrieving " + u);
 
 		try {
-			HttpURLConnection conn = (HttpURLConnection)u.openConnection();
-			conn.setConnectTimeout(8*1000);
-			conn.setReadTimeout(8*1000);
+			HttpURLConnection conn = HttpClientUtil.createConnection(archive);
 
 			int responseCode = conn.getResponseCode();
 			if (responseCode != 200) {

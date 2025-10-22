@@ -26,9 +26,29 @@
     <h2>Resources</h2>
 
     <p>
-      Core element data (nodes, ways, relations, changesets) via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
+      Core element data (nodes, ways, relations, changesets) via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a> (<a href="https://operations.osmfoundation.org/policies/api/">usage policy</a>).
     </p>
 
+    <dl>
+      <dt>node/{id}.rdf</dt>
+      <dd>Node descriptions in RDF</dd>
+      <dt>node/{id}.json</dt>
+      <dd>Node geometry in GeoJSON</dd>
+      <dt>way/{id}.rdf</dt>
+      <dd>Way descriptions in RDF</dd>
+      <dt>way/{id}.json</dt>
+      <dd>Way geometry in GeoJSON</dd>
+      <dt>relation/{id}.rdf</dt>
+      <dd>Relation descriptions in RDF</dd>
+      <dt>relation/{id}.json</dt>
+      <dd>Relation geometry in GeoJSON</dd>
+      <dt>changeset/{id}.rdf</dt>
+      <dd>Changeset descriptions in RDF</dd>
+      <dt>changeset/{id}.json</dt>
+      <dd>Changeset geometry in GeoJSON @@@does that even make sense</dd>
+    </dl>
+
+    <h3>Examples</h3>
     <dl>
       <dt><a href="node/1.rdf">node/1.rdf</a> | <a href="node/1.json">node/1.json</a></dt>
       <dd>Monte Piselli radio mast, Italy - The very first node in OpenStreetMap! - <a href="https://www.openstreetmap.org/node/1">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/node/1">API</a></dd>
@@ -50,15 +70,18 @@
       <dd>Recent changeset example - <a href="https://www.openstreetmap.org/changeset/123456789">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/changeset/123456789">API</a></dd>
     </dl>
 
-    <p>
-      Usage subject to <a href="https://operations.osmfoundation.org/policies/api/">OSM API Usage Policy</a>.
-    </p>
-
     <h2>Map</h2>
 
     <p>
-      Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
+      Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a> (<a href="https://operations.osmfoundation.org/policies/api/">usage policy</a>).
     </p>
+
+    <form name="input" action="map">
+      <input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051"></input>
+      <input type="submit"/>
+    </form>
+
+    <h3>Examples</h3>
 
     <dl>
       <dt><a href="map?bbox=11.075,49.457,11.077,49.459">map?bbox=11.075,49.457,11.077,49.459</a></dt>
@@ -69,21 +92,19 @@
       <dd>Map data around Westminster, London - <a href="https://api.openstreetmap.org/api/0.6/map?bbox=-0.128,51.500,-0.126,51.502">OSM API</a></dd>
     </dl>
 
-    <form name="input" action="map">
-      <input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051"></input>
-      <input type="submit"/>
-    </form>
-
-    <p>
-       Usage subject to <a href="https://operations.osmfoundation.org/policies/api/">OSM API Usage Policy</a>.
-    </p>
-    
     <h2>Search</h2>
 
     <p>
-      Search for nodes, relations and ways via <a href="https://nominatim.openstreetmap.org">Nominatim API</a>.
+      Search for nodes, relations and ways via <a href="https://nominatim.openstreetmap.org">Nominatim API</a> (<a href="https://operations.osmfoundation.org/policies/nominatim/">usage policy</a>).
     </p>
-    
+
+    <form name="input" action="search">
+      <input type="text" name="q"></input>
+      <input type="submit"/>
+    </form>
+
+    <h3>Examples</h3>
+
     <dl>
       <dt><a href="search?q=Kaiserburg">search?q=Kaiserburg</a></dt>
       <dd>Search for "Kaiserburg" - <a href="https://nominatim.openstreetmap.org/search?q=Kaiserburg&amp;format=xml">Nominatim API</a></dd>
@@ -93,21 +114,19 @@
       <dd>Search for "restaurant" - <a href="https://nominatim.openstreetmap.org/search?q=restaurant&amp;format=xml">Nominatim API</a></dd>
     </dl>
 
-    <form name="input" action="search">
-      <input type="text" name="q"></input>
-      <input type="submit"/>
-    </form>
-
-    <p>
-      Usage subject to <a href="https://operations.osmfoundation.org/policies/nominatim/">Nominatim Usage Policy</a>.
-    </p>
-
     
     <h2>Points of Interest</h2>
 
     <p>
-      Get points of interest (nodes with an amenity tag) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a>.
+      Get points of interest (nodes with an amenity tag) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a> (<a href="https://dev.overpass-api.de/overpass-doc/en/preface/commons.html">terms</a>).
     </p>
+
+    <form name="input" action="poi">
+      <input type="text" name="bbox" value="-118.9448,32.8007,-117.6462,34.8233"></input>
+      <input type="submit"/>
+    </form>
+
+    <h3>Examples</h3>
 
     <dl>
       <dt><a href="poi?bbox=11.070,49.450,11.085,49.465">poi?bbox=11.070,49.450,11.085,49.465</a></dt>
@@ -119,15 +138,6 @@
       <dt><a href="poi?bbox=-0.13,51.49,-0.11,51.51">poi?bbox=-0.13,51.49,-0.11,51.51</a></dt>
       <dd>Points of interest in central London (Westminster area) - <a href="https://overpass-api.de/api/interpreter?data=[out:xml];node[amenity](51.49,-0.13,51.51,-0.11);out;">Overpass API</a></dd>
     </dl>
-
-    <form name="input" action="poi">
-      <input type="text" name="bbox" value="-118.9448,32.8007,-117.6462,34.8233"></input>
-      <input type="submit"/>
-    </form>
-
-    <p>
-      Usage subject to <a href="https://dev.overpass-api.de/overpass-doc/en/preface/commons.html">Overpass API terms</a>.
-    </p>
 
 
     <h2>Documentation</h2>

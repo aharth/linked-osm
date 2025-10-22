@@ -8,6 +8,10 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.logging.Logger;
 
+import com.ontologycentral.osmwrap.ApiConstants;
+import com.ontologycentral.osmwrap.HttpClientUtil;
+import com.ontologycentral.osmwrap.UrlBuilder;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,7 +32,7 @@ public class MapServlet extends HttpServlet {
 		
 		ServletContext ctx = getServletContext();
 
-		String archive = "https://api.openstreetmap.org/api/0.6/map?bbox=" + URLEncoder.encode(bbox, "utf-8");
+		String archive = UrlBuilder.buildMapUrl(bbox);
 
 		// rather, use overpass api and filter by "relevant" nodes, e.g. those that reference wikipedia
 		// or those that have a street address
@@ -47,9 +51,7 @@ public class MapServlet extends HttpServlet {
 		System.out.println("retrieving " + u);
 
 		try {
-			HttpURLConnection conn = (HttpURLConnection)u.openConnection();
-			conn.setConnectTimeout(8*1000);
-			conn.setReadTimeout(8*1000);
+			HttpURLConnection conn = HttpClientUtil.createConnection(archive);
 
 			int responseCode = conn.getResponseCode();
 			if (responseCode != 200) {
@@ -72,7 +74,7 @@ public class MapServlet extends HttpServlet {
 			StreamSource ssource = new StreamSource(is);
 			StreamResult sresult = new StreamResult(os);
 
-			_log.info("lapplying xslt");
+			_log.info("applying xslt");
 
 			t.transform(ssource, sresult);
 

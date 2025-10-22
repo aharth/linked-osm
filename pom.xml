@@ -11,6 +11,9 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
+    <!-- Version management -->
+    <project.version.string>${project.artifactId}/${project.version}</project.version.string>
+    <project.user.agent>${project.artifactId}/${project.version} (+https://github.com/aharth/linked-osm)</project.user.agent>
   </properties>
 
   <dependencies>
@@ -60,6 +63,11 @@
         <excludes>
           <exclude>**/*.java</exclude>
         </excludes>
+      </resource>
+      <!-- Filtered resources for version properties -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
       </resource>
     </resources>
 

@@ -8,6 +8,10 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.logging.Logger;
 
+import com.ontologycentral.osmwrap.ApiConstants;
+import com.ontologycentral.osmwrap.HttpClientUtil;
+import com.ontologycentral.osmwrap.UrlBuilder;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,22 +32,15 @@ public class POIServlet extends HttpServlet {
 		
 		ServletContext ctx = getServletContext();
 		
-		// Convert bbox from "west,south,east,north" to "south,west,north,east" for Overpass API
-		String[] coords = bbox.split(",");
-		if (coords.length != 4) {
-			resp.sendError(400, "Invalid bbox format. Use: west,south,east,north");
+		String overpassQuery;
+		try {
+			overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox);
+		} catch (IllegalArgumentException e) {
+			resp.sendError(400, e.getMessage());
 			return;
 		}
-		String overpassBbox = coords[1] + "," + coords[0] + "," + coords[3] + "," + coords[2]; // south,west,north,east
 
-		// Overpass API query for nodes with amenity tags in bounding box
-		String overpassQuery = "[out:xml][timeout:25];\n" +
-		                      "(\n" +
-		                      "  node[amenity](" + overpassBbox + ");\n" +
-		                      ");\n" +
-		                      "out meta;";
-
-		String archive = "https://overpass-api.de/api/interpreter";
+		String archive = ApiConstants.OVERPASS_API_BASE;
 
 		URL u = new URL(archive);
 
@@ -51,9 +48,7 @@ public class POIServlet extends HttpServlet {
 		System.out.println("retrieving " + u);
 
 		try {
-			HttpURLConnection conn = (HttpURLConnection)u.openConnection();
-			conn.setConnectTimeout(8*1000);
-			conn.setReadTimeout(30*1000); // Overpass can be slower
+			HttpURLConnection conn = HttpClientUtil.createConnection(archive, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.POI_READ_TIMEOUT);
 			conn.setRequestMethod("POST");
 			conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 			conn.setDoOutput(true);
@@ -85,7 +80,7 @@ public class POIServlet extends HttpServlet {
 			StreamSource ssource = new StreamSource(is);
 			StreamResult sresult = new StreamResult(os);
 
-			_log.info("lapplying xslt");
+			_log.info("applying xslt");
 
 			t.transform(ssource, sresult);
 
