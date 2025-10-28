@@ -56,6 +56,10 @@
       <spatial:Feature>
 	<xsl:attribute name="rdf:about">/way/<xsl:value-of select="@id"/>#id</xsl:attribute>
 
+	<!-- Links to document representations -->
+	<foaf:page rdf:resource="/way/{@id}.rdf"/>
+	<foaf:page rdf:resource="/way/{@id}.json"/>
+
 	<!-- PROV-O properties -->
 	<xsl:if test="@changeset">
 	  <prov:wasGeneratedBy rdf:resource="/changeset/{@changeset}"/>

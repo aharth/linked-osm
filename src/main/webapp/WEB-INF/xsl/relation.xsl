@@ -56,6 +56,10 @@
       <spatial:Feature>
 	<xsl:attribute name="rdf:about">/relation/<xsl:value-of select="@id"/>#id</xsl:attribute>
 
+	<!-- Links to document representations -->
+	<foaf:page rdf:resource="/relation/{@id}.rdf"/>
+	<foaf:page rdf:resource="/relation/{@id}.json"/>
+
 	<!-- PROV-O properties -->
 	<xsl:if test="@changeset">
 	  <prov:wasGeneratedBy rdf:resource="/changeset/{@changeset}"/>

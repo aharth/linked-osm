@@ -48,6 +48,31 @@
       <dd>Changeset geometry in GeoJSON @@@does that even make sense</dd>
     </dl>
 
+    <h3>Understanding URIs</h3>
+
+    <p>
+      For each OSM element, three URI patterns are used:
+    </p>
+
+    <dl>
+      <dt><code>/node/{id}.rdf</code>, <code>/way/{id}.rdf</code>, <code>/relation/{id}.rdf</code></dt>
+      <dd>Document URI that returns RDF/XML with semantic metadata and provenance information</dd>
+
+      <dt><code>/node/{id}.json</code>, <code>/way/{id}.json</code>, <code>/relation/{id}.json</code></dt>
+      <dd>Document URI that returns GeoJSON with geometry coordinates</dd>
+
+      <dt><code>/node/{id}#id</code>, <code>/way/{id}#id</code>, <code>/relation/{id}#id</code></dt>
+      <dd>Resource URI identifying the geographic feature itself (the thing with properties like
+      location and tags). This hash URI appears within RDF responses and follows
+      <a href="https://www.w3.org/TR/cooluris/">W3C Linked Data best practices</a> to distinguish
+      the feature from documents describing it. The RDF output includes <code>foaf:page</code> links
+      to both the RDF and JSON representations.</dd>
+    </dl>
+
+    <p>
+      Requesting a URI without an extension (e.g., <code>/node/{id}</code>) defaults to RDF format.
+    </p>
+
     <h3>Examples</h3>
     <dl>
       <dt><a href="node/1.rdf">node/1.rdf</a> | <a href="node/1.json">node/1.json</a></dt>
@@ -144,6 +169,10 @@
 
     <p>
       For project updates and changes, see the <a href="https://github.com/aharth/linked-osm/blob/main/CHANGELOG.md">CHANGELOG</a>.
+    </p>
+
+    <p>
+      For information about the OSM data model and how it's represented as Linked Data, see the <a href="https://github.com/aharth/linked-osm/blob/main/ONTOLOGY.md">ONTOLOGY</a> documentation.
     </p>
 
     <hr/>

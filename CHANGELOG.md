@@ -2,6 +2,9 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2025-10-28]
+- Added foaf:page links from hash URI resources to .rdf and .json document representations, and documented URI patterns in index.html
+
 ## [2025-10-22]
 - Refactor HTTP client code to eliminate duplication between CLI and webapp
 

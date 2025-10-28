@@ -57,6 +57,10 @@
 	<geo:lat><xsl:value-of select="@lat"/></geo:lat>
 	<geo:long><xsl:value-of select="@lon"/></geo:long>
 
+	<!-- Links to document representations -->
+	<foaf:page rdf:resource="/node/{@id}.rdf"/>
+	<foaf:page rdf:resource="/node/{@id}.json"/>
+
 	<!-- PROV-O properties -->
 	<xsl:if test="@changeset">
 	  <prov:wasGeneratedBy rdf:resource="/changeset/{@changeset}"/>

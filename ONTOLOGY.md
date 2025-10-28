@@ -32,17 +32,19 @@ OSM uses **globally unique, auto-incrementing integers** for element IDs:
 
 - **Global Counter**: Each element type (node, way, relation) has a global counter maintained by the OSM database
 - **Sequential Assignment**: New elements receive the next available ID (e.g., node 1, node 2, node 3...)
-- **No Reuse**: Deleted element IDs are never reused, ensuring persistent references
+- **Limited Reuse**: While the API's auto-incrementing counter does not reuse IDs, deleted element IDs can technically be reused through manual operations or application errors, though this is rare and discouraged by the community's "Keep the history" principle [1][2]
 - **Cross-Database Consistency**: All OSM mirrors and APIs use the same ID numbers
 - **Historical Significance**: Lower IDs indicate earlier creation (node #1 was the very first OSM node)
 
 **Examples of ID Progression:**
 ```
-Node #1: The first node ever created (Monte Piselli radio mast, Italy) - August 2005
+Node #1: The first node ever created - August 2005 (Note: This ID has been reused multiple
+         times throughout OSM history, with the node appearing at different global locations [2])
 Node #1668797722: Created much later (Burgwächter restaurant, Nuremberg)
 Node #10858097177: Even more recent creation (another Burgwächter location)
 
 Way #100: Early way (highway in Germany) - Ways started being used in 2005-2006
+Way #23319192: Example of ID reuse - moved from Romania to Germany over time [2]
 Relation #147: Early surviving relation (Tigris River multipolygon) - Relations introduced October 2007
 ```
 
@@ -51,7 +53,7 @@ Relation #147: Early surviving relation (Tigris River multipolygon) - Relations 
 - **Ways**: Introduced early in OSM development (2005-2006 era)
 - **Relations**: Added later with API v0.5 in October 2007, replacing the earlier "segments" concept
 
-This global numbering system ensures that every OSM element has a unique, persistent identifier that can be reliably referenced across all OSM services and applications.
+This global numbering system provides identifiers that can be referenced across all OSM services and applications, though IDs should not be considered permanently bound to a single geographic concept due to the possibility of reuse after deletion [3].
 
 ## Geometry Representation by Element Type
 
@@ -179,27 +181,39 @@ OSM unifies:
 
 ## References
 
-1. **OpenStreetMap Elements Documentation**
+1. **Keep the History - OpenStreetMap Wiki**
+   - [OSM Wiki: Keep the history](https://wiki.openstreetmap.org/wiki/Keep_the_history)
+   - Community guidelines on preserving data history and avoiding problematic ID reuse
+
+2. **Can a way's ID appear again after the way is deleted? - OSM Help**
+   - [OSM Help Forum Discussion](https://help.openstreetmap.org/questions/80343/can-a-ways-id-appear-again-after-the-way-is-deleted)
+   - Documentation of concrete examples of ID reuse (node #1, way #23319192)
+
+3. **Permanent ID - OpenStreetMap Wiki**
+   - [OSM Wiki: Permanent ID](https://wiki.openstreetmap.org/wiki/Permanent_ID)
+   - Discussion of OSM ID limitations and the need for truly permanent identifiers
+
+4. **OpenStreetMap Elements Documentation**
    - [OSM Wiki: Elements](https://wiki.openstreetmap.org/wiki/Elements)
    - Official documentation of nodes, ways, and relations
 
-2. **OSM Data Model Technical Specification**
+5. **OSM Data Model Technical Specification**
    - [The OSM Data Model](https://dev.overpass-api.de/overpass-doc/en/preface/osm_data_model.html)
    - Detailed technical specification from Overpass API documentation
 
-3. **OSM API Documentation**
+6. **OSM API Documentation**
    - [API v0.6](https://wiki.openstreetmap.org/wiki/API_v0.6)
    - Official OpenStreetMap API reference
 
-4. **LinkedGeoData Project**
+7. **LinkedGeoData Project**
    - [LinkedGeoData: A Core for a Web of Spatial Open Data](http://www.semantic-web-journal.net/content/linkedgeodata-core-web-spatial-open-data)
    - Academic paper on converting OSM data to RDF
 
-5. **GeoSPARQL and Spatial RDF**
+8. **GeoSPARQL and Spatial RDF**
    - [GeoSPARQL - A Geographic Query Language for RDF Data](https://www.ogc.org/standards/geosparql)
    - OGC standard for representing spatial data in RDF
 
-6. **OpenStreetMap Data Structure Analysis**
+9. **OpenStreetMap Data Structure Analysis**
    - [OSM Data Structures and Relationships](https://archive.flossmanuals.net/openstreetmap/the-osm-data-model.html)
    - Comprehensive analysis of OSM's topological data model
 
