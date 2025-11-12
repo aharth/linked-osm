@@ -13,6 +13,7 @@ public final class ApiConstants {
     public static final int DEFAULT_READ_TIMEOUT = 8000;
     public static final int SEARCH_READ_TIMEOUT = 30000;
     public static final int POI_READ_TIMEOUT = 30000;
+    public static final int GEOMETRY_READ_TIMEOUT = 30000;
 
     private ApiConstants() {
         // Utility class

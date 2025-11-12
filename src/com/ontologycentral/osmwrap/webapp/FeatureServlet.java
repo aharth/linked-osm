@@ -58,6 +58,11 @@ public class FeatureServlet extends HttpServlet {
 				id = path;
 			}
 
+			// Strip any remaining extensions (e.g., from malformed URLs like 123.json.json)
+			if (id.contains(".")) {
+				id = id.substring(0, id.indexOf("."));
+			}
+
 			// Determine the type based on servlet mapping
 			String servletPath = req.getServletPath();
 			if (servletPath.equals("/node")) {
@@ -185,13 +190,8 @@ public class FeatureServlet extends HttpServlet {
 					geoJson.append("{\"type\":\"Feature\",");
 					geoJson.append("\"id\":").append(id).append(",");
 
-					// Geometry
-					if ("node".equals(type) && lat != null && lon != null) {
-						geoJson.append("\"geometry\":{\"type\":\"Point\",\"coordinates\":[")
-						       .append(lon).append(",").append(lat).append("]},");
-					} else {
-						geoJson.append("\"geometry\":null,");
-					}
+				// Geometry is null - geometry is served separately via /geo/{type}/{id}
+				geoJson.append("\"geometry\":null,");
 
 					// Properties
 					geoJson.append("\"properties\":{\"osm_type\":\"").append(type).append("\",\"osm_id\":").append(id).append("}}");

@@ -85,12 +85,8 @@
 
 	<xsl:apply-templates/>
 
-	<geom:geometry>
-	  <!-- content negotiation there, kml, html etc -->
-	  <geom:Geometry>
-	    <xsl:attribute name="rdf:about">/geo/relation/<xsl:value-of select="@id"/></xsl:attribute>
-	  </geom:Geometry>
-	</geom:geometry>
+	<geom:geometry rdf:resource="/geo/overpass/relation/{@id}"/>
+	<geom:geometry rdf:resource="/geo/osm/relation/{@id}"/>
       </spatial:Feature>
 
       <!-- Changeset as Activity -->

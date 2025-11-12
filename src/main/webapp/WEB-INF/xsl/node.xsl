@@ -6,6 +6,7 @@
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:sioc="http://rdfs.org/sioc/ns#"
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+   xmlns:geom="http://geovocab.org/geometry#"
    xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    xmlns="http://osm.geovocab.org/vocab#"
@@ -60,6 +61,10 @@
 	<!-- Links to document representations -->
 	<foaf:page rdf:resource="/node/{@id}.rdf"/>
 	<foaf:page rdf:resource="/node/{@id}.json"/>
+
+	<!-- Geometry representation -->
+	<geom:geometry rdf:resource="/geo/overpass/node/{@id}"/>
+	<geom:geometry rdf:resource="/geo/osm/node/{@id}"/>
 
 	<!-- PROV-O properties -->
 	<xsl:if test="@changeset">

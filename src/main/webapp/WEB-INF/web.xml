@@ -13,8 +13,12 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-class>com.ontologycentral.osmwrap.webapp.FeatureServlet</servlet-class>
 	</servlet>
 	<servlet>
-		<servlet-name>geo</servlet-name>
-		<servlet-class>com.ontologycentral.osmwrap.webapp.GeometryServlet</servlet-class>
+		<servlet-name>geoOverpass</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.GeometryOverpassServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>geoOSM</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.GeometryOSMServlet</servlet-class>
 	</servlet>
 	<servlet>
 		<servlet-name>search</servlet-name>
@@ -34,8 +38,12 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	</servlet>
 	
 	<servlet-mapping>
-		<servlet-name>geo</servlet-name>
-		<url-pattern>/geo/*</url-pattern>
+		<servlet-name>geoOverpass</servlet-name>
+		<url-pattern>/geo/overpass/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>geoOSM</servlet-name>
+		<url-pattern>/geo/osm/*</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>osm</servlet-name>

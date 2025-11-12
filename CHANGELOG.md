@@ -2,6 +2,10 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2025-11-12]
+- Split geometry endpoints into separate servlets: `/geo/overpass/*` (simplified, fast) and `/geo/osm/*` (complete, detailed)
+- RDF features now link both geometry sources; both servlets support GeoJSON, WKT, and KML formats
+
 ## [2025-10-28]
 - Added foaf:page links from hash URI resources to .rdf and .json document representations, and documented URI patterns in index.html
 
