@@ -62,6 +62,9 @@ public class Main {
             } else if (cmd.hasOption("changeset")) {
                 String changesetId = cmd.getOptionValue("changeset");
                 fetchChangeset(changesetId);
+            } else if (cmd.hasOption("tag")) {
+                String tagKey = cmd.getOptionValue("tag");
+                fetchTagInfo(tagKey);
             } else {
                 System.err.println("No valid operation specified. Use --help for usage information.");
                 System.exit(1);
@@ -130,6 +133,13 @@ public class Main {
                 .desc("Fetch OSM changeset by ID")
                 .build());
 
+        options.addOption(Option.builder("t")
+                .longOpt("tag")
+                .hasArg()
+                .argName("KEY")
+                .desc("Fetch SKOS vocabulary for OSM tag key (e.g., amenity, building)")
+                .build());
+
         options.addOption(Option.builder("h")
                 .longOpt("help")
                 .desc("Show this help message")
@@ -155,7 +165,9 @@ public class Main {
                 "  linked-osm --changeset 137\n" +
                 "  linked-osm --search \"London\"\n" +
                 "  linked-osm --map \"-118.241,34.050,-118.240,34.051\"\n" +
-                "  linked-osm --poi \"-118.9448,32.8007,-117.6462,34.8233\"\n\n" +
+                "  linked-osm --poi \"-118.9448,32.8007,-117.6462,34.8233\"\n" +
+                "  linked-osm --tag amenity\n" +
+                "  linked-osm --tag name:en\n\n" +
                 "For more information, visit: https://github.com/aharth/linked-osm");
     }
 
@@ -270,6 +282,38 @@ public class Main {
             }
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
+    private static void fetchTagInfo(String tagKey) throws IOException {
+        String tagUrl = "https://taginfo.openstreetmap.org/api/4/key/overview?key=" + java.net.URLEncoder.encode(tagKey, "UTF-8");
+        logger.info("Fetching tag info for '" + tagKey + "' from " + tagUrl);
+
+        TaginfoConverter converter = new TaginfoConverter();
+
+        try {
+            // Fetch key info
+            String keyInfo = converter.fetchKeyInfo(tagKey);
+
+            // Fetch key values
+            String values = converter.fetchKeyValues(tagKey);
+
+            // For base keys (no colon), fetch namespace variants
+            String namespacesJson = "";
+            if (!tagKey.contains(":")) {
+                namespacesJson = converter.fetchAllKeys();
+            }
+
+            // Convert to SKOS JSON-LD (native format from Taginfo API)
+            String output = converter.convertToSKOSJson(tagKey, keyInfo, values, namespacesJson, "/tag/");
+            System.out.println(output);
+
+        } catch (IOException e) {
+            System.err.println("Error fetching tag info: " + e.getMessage());
+            System.exit(1);
+        } catch (RuntimeException e) {
+            System.err.println("Error processing tag: " + e.getMessage());
             System.exit(1);
         }
     }

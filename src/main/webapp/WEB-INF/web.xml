@@ -36,6 +36,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-name>changeset</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.ChangesetServlet</servlet-class>
 	</servlet>
+	<servlet>
+		<servlet-name>tag</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.TagServlet</servlet-class>
+	</servlet>
 	
 	<servlet-mapping>
 		<servlet-name>geoOverpass</servlet-name>
@@ -73,7 +77,11 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-name>changeset</servlet-name>
 		<url-pattern>/changeset/*</url-pattern>
 	</servlet-mapping>
-	
+	<servlet-mapping>
+		<servlet-name>tag</servlet-name>
+		<url-pattern>/tag/*</url-pattern>
+	</servlet-mapping>
+
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>

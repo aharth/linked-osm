@@ -2,6 +2,9 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2025-11-25]
+- Added `/tag/{key}` endpoints for SKOS vocabulary representations of OSM tags with 2-layer hierarchy and namespace variant filtering (1000+ usage threshold)
+
 ## [2025-11-12]
 - Split geometry endpoints into separate servlets: `/geo/overpass/*` (simplified, fast) and `/geo/osm/*` (complete, detailed)
 - RDF features now link both geometry sources; both servlets support GeoJSON, WKT, and KML formats
