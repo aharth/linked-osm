@@ -70,6 +70,33 @@ public final class HttpClientUtil {
         }
     }
 
+    /**
+     * Fetch content from a URL and return as String.
+     *
+     * @param url the URL to fetch from
+     * @param connectTimeout connection timeout in milliseconds
+     * @param readTimeout read timeout in milliseconds
+     * @return the response body as a String
+     * @throws IOException if fetch fails or response code is not 200
+     */
+    public static String fetchUrl(String url, int connectTimeout, int readTimeout) throws IOException {
+        HttpURLConnection conn = createConnection(url, connectTimeout, readTimeout);
+        checkResponseCode(conn, url);
+
+        try (InputStream is = conn.getInputStream()) {
+            // Read the response into a StringBuilder
+            StringBuilder sb = new StringBuilder();
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = is.read(buffer)) != -1) {
+                sb.append(new String(buffer, 0, bytesRead, "UTF-8"));
+            }
+            return sb.toString();
+        } finally {
+            conn.disconnect();
+        }
+    }
+
     private HttpClientUtil() {
         // Utility class
     }

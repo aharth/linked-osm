@@ -34,21 +34,21 @@ public class GeometryOverpassServlet extends HttpServlet {
 			return;
 		}
 
-		// Parse /geo/osm/way/123 or /geo/overpass/way/456, or legacy /geo/way/789
-		String[] parts = pathInfo.substring(1).split("/", 4);
+		// Parse /way/123 (overpass default) or /osm/way/456 (osm source)
+		String[] parts = pathInfo.substring(1).split("/", 3);
 		String source = "overpass"; // default source
 		String elementType;
 		String id;
 
-		if (parts.length == 3) {
-			// Legacy format: /geo/way/123
+		if (parts.length == 2) {
+			// Format: /way/123 (overpass is default)
+			elementType = parts[0];
+			id = parts[1];
+		} else if (parts.length == 3) {
+			// Format: /osm/way/123 (explicitly specify source)
+			source = parts[0].toLowerCase();
 			elementType = parts[1];
 			id = parts[2];
-		} else if (parts.length == 4) {
-			// New format: /geo/osm/way/123 or /geo/overpass/way/123
-			source = parts[1].toLowerCase();
-			elementType = parts[2];
-			id = parts[3];
 			if (!"osm".equals(source) && !"overpass".equals(source)) {
 				resp.sendError(404, "Invalid source: " + source);
 				return;

@@ -3,6 +3,7 @@
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
 ## [2025-11-25]
+- Implemented proper multipolygon handling with outer/inner rings for GeoJSON, WKT, and KML output (Ring, MultipolygonGeometry, MultipolygonHandler classes)
 - Added `/tag/{key}` endpoints for SKOS vocabulary representations of OSM tags with 2-layer hierarchy and namespace variant filtering (1000+ usage threshold)
 
 ## [2025-11-12]

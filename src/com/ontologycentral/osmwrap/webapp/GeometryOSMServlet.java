@@ -21,6 +21,8 @@ import java.util.Set;
 
 import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.HttpClientUtil;
+import com.ontologycentral.osmwrap.geometry.MultipolygonHandler;
+import com.ontologycentral.osmwrap.geometry.MultipolygonGeometry;
 
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,15 +41,15 @@ public class GeometryOSMServlet extends HttpServlet {
 			return;
 		}
 
-		// Parse /osm/way/123 or /osm/node/456, or /osm/relation/789
-		String[] parts = pathInfo.substring(1).split("/", 3);
+		// Parse /way/123 or /node/456, or /relation/789
+		String[] parts = pathInfo.substring(1).split("/", 2);
 		String elementType;
 		String id;
 
-		if (parts.length == 3) {
-			// Format: /osm/way/123
-			elementType = parts[1];
-			id = parts[2];
+		if (parts.length == 2) {
+			// Format: /way/123
+			elementType = parts[0];
+			id = parts[1];
 		} else {
 			resp.sendError(404, "Invalid path format");
 			return;
@@ -171,7 +173,19 @@ public class GeometryOSMServlet extends HttpServlet {
 				List<double[]> coordinates = fetchNodeCoordinates(nodeRefs);
 				return buildLineStringGeometry(coordinates);
 			} else if ("relation".equals(elementType)) {
-				// For a relation, extract member references
+				// Check if this is a multipolygon relation
+				if (MultipolygonHandler.isMultipolygon(osmXml)) {
+					try {
+						_log.info("Processing multipolygon relation " + id);
+						MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(osmXml, id);
+						return MultipolygonHandler.toGeoJSON(geom);
+					} catch (Exception e) {
+						_log.warning("Error processing multipolygon: " + e.getMessage());
+						// Fall through to generic relation handling
+					}
+				}
+
+				// For other relations, extract member references (generic handling)
 				List<Map<String, String>> members = extractMemberReferences(osmXml);
 				List<double[]> coordinates = new ArrayList<>();
 
@@ -319,6 +333,22 @@ public class GeometryOSMServlet extends HttpServlet {
 					String lat = matcher.group(2);
 					return "POINT(" + lon + " " + lat + ")";
 				}
+			} else if (geoJson.contains("\"type\":\"Polygon\"")) {
+				Pattern coordPattern = Pattern.compile("\"coordinates\"\\s*:\\s*(\\[\\[.*?\\]\\])");
+				Matcher matcher = coordPattern.matcher(geoJson);
+				if (matcher.find()) {
+					String coordStr = matcher.group(1);
+					String wktCoords = coordStr.replaceAll("\\[", "(").replaceAll("\\]", ")").replaceAll("\\],\\s*\\[", ", ").replaceAll(",\\s*", " ");
+					return "POLYGON" + wktCoords;
+				}
+			} else if (geoJson.contains("\"type\":\"MultiPolygon\"")) {
+				Pattern coordPattern = Pattern.compile("\"coordinates\"\\s*:\\s*(\\[\\[\\[.*?\\]\\]\\])");
+				Matcher matcher = coordPattern.matcher(geoJson);
+				if (matcher.find()) {
+					String coordStr = matcher.group(1);
+					String wktCoords = coordStr.replaceAll("\\[", "(").replaceAll("\\]", ")").replaceAll("\\],\\s*\\[", ", ").replaceAll(",\\s*", " ");
+					return "MULTIPOLYGON" + wktCoords;
+				}
 			} else if (geoJson.contains("\"type\":\"LineString\"")) {
 				Pattern coordPattern = Pattern.compile("\"coordinates\"\\s*:\\s*(\\[[^\\]]*\\])");
 				Matcher matcher = coordPattern.matcher(geoJson);
@@ -355,6 +385,26 @@ public class GeometryOSMServlet extends HttpServlet {
 					kml.append("        <coordinates>").append(lon).append(",").append(lat).append(",0</coordinates>\n");
 					kml.append("      </Point>\n");
 				}
+			} else if (geoJson.contains("\"type\":\"Polygon\"")) {
+				// Polygon output: extract coordinates and build KML Polygon
+				Pattern coordPattern = Pattern.compile("\\[([^,]+),([^\\]]+)\\]");
+				Matcher matcher = coordPattern.matcher(geoJson);
+
+				kml.append("      <Polygon>\n");
+				kml.append("        <outerBoundaryIs>\n");
+				kml.append("          <LinearRing>\n");
+				kml.append("            <coordinates>\n");
+
+				while (matcher.find()) {
+					String lon = matcher.group(1);
+					String lat = matcher.group(2);
+					kml.append("              ").append(lon).append(",").append(lat).append(",0\n");
+				}
+
+				kml.append("            </coordinates>\n");
+				kml.append("          </LinearRing>\n");
+				kml.append("        </outerBoundaryIs>\n");
+				kml.append("      </Polygon>\n");
 			} else if (geoJson.contains("\"type\":\"LineString\"")) {
 				Pattern coordPattern = Pattern.compile("\\[([^,]+),([^\\]]+)\\]");
 				Matcher matcher = coordPattern.matcher(geoJson);
