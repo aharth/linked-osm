@@ -46,7 +46,7 @@ public class MultipolygonHandler {
 
     /**
      * Convert OSM multipolygon relation to MultipolygonGeometry
-     * Handles fetching of member ways and node coordinates from OSM API
+     * Handles bulk fetching of member ways and node coordinates from OSM API
      */
     public static MultipolygonGeometry buildMultipolygon(String relationXml, String relationId) throws IOException {
         MultipolygonGeometry geom = new MultipolygonGeometry();
@@ -54,48 +54,99 @@ public class MultipolygonHandler {
         // Extract members with their roles
         List<Map<String, String>> members = extractMembers(relationXml);
 
-        // Process each member (way or node)
+        // Separate way and node members for bulk fetching
+        List<String> wayIds = new ArrayList<>();
+        Map<String, String> wayRoles = new HashMap<>();
+        List<String> nodeIds = new ArrayList<>();
+        Map<String, String> nodeRoles = new HashMap<>();
+
         for (Map<String, String> member : members) {
             String type = member.get("type");
             String ref = member.get("ref");
             String role = member.get("role");
 
             if ("way".equals(type)) {
-                try {
-                    // Fetch the way from OSM API
-                    String wayXml = fetchFromOSMAPI("way", ref);
-                    List<double[]> coordinates = extractWayCoordinates(wayXml);
+                wayIds.add(ref);
+                wayRoles.put(ref, role);
+            } else if ("node".equals(type)) {
+                nodeIds.add(ref);
+                nodeRoles.put(ref, role);
+            }
+        }
 
-                    if (!coordinates.isEmpty()) {
-                        Ring ring = new Ring(coordinates, role);
-                        if (ring.isClosed()) {
-                            if ("inner".equals(role)) {
-                                geom.addInnerRing(ring);
-                            } else {
-                                // Default to outer if role is empty or "outer"
-                                geom.addOuterRing(ring);
+        // Bulk fetch all ways and get their node references
+        if (!wayIds.isEmpty()) {
+            try {
+                Map<String, List<String>> wayNodes = HttpClientUtil.fetchWaysBulk(wayIds);
+
+                // Collect all unique node IDs from ways
+                Set<String> allWayNodeIds = new HashSet<>();
+                for (List<String> nodes : wayNodes.values()) {
+                    allWayNodeIds.addAll(nodes);
+                }
+
+                // Bulk fetch all node coordinates
+                if (!allWayNodeIds.isEmpty()) {
+                    Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(new ArrayList<>(allWayNodeIds));
+
+                    // Now process each way with its coordinates
+                    for (String wayId : wayIds) {
+                        try {
+                            List<String> nodeRefs = wayNodes.get(wayId);
+                            if (nodeRefs != null && !nodeRefs.isEmpty()) {
+                                List<double[]> coordinates = new ArrayList<>();
+
+                                // Build coordinates in order
+                                for (String nodeRef : nodeRefs) {
+                                    if (nodeCoordinates.containsKey(nodeRef)) {
+                                        coordinates.add(nodeCoordinates.get(nodeRef));
+                                    }
+                                }
+
+                                if (!coordinates.isEmpty()) {
+                                    String role = wayRoles.get(wayId);
+                                    Ring ring = new Ring(coordinates, role);
+                                    if (ring.isClosed()) {
+                                        if ("inner".equals(role)) {
+                                            geom.addInnerRing(ring);
+                                        } else {
+                                            // Default to outer if role is empty or "outer"
+                                            geom.addOuterRing(ring);
+                                        }
+                                    }
+                                }
                             }
+                        } catch (Exception e) {
+                            logger.warning("Failed to process way " + wayId + " in relation " + relationId + ": " + e.getMessage());
                         }
                     }
-                } catch (Exception e) {
-                    logger.warning("Failed to process way " + ref + " in relation " + relationId + ": " + e.getMessage());
-                    // Continue processing other members
                 }
-            } else if ("node".equals(type)) {
-                try {
-                    // Fetch single node
-                    String nodeXml = fetchFromOSMAPI("node", ref);
-                    double[] coord = extractNodeCoordinate(nodeXml);
+            } catch (Exception e) {
+                logger.warning("Error bulk fetching ways for relation " + relationId + ": " + e.getMessage());
+            }
+        }
 
-                    if (coord != null) {
-                        List<double[]> singleCoord = new ArrayList<>();
-                        singleCoord.add(coord);
-                        Ring ring = new Ring(singleCoord, role);
-                        // Note: single node rings won't be closed/valid, but we process them anyway
+        // Process node members
+        if (!nodeIds.isEmpty()) {
+            try {
+                Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(nodeIds);
+
+                for (String nodeId : nodeIds) {
+                    try {
+                        if (nodeCoordinates.containsKey(nodeId)) {
+                            double[] coord = nodeCoordinates.get(nodeId);
+                            List<double[]> singleCoord = new ArrayList<>();
+                            singleCoord.add(coord);
+                            String role = nodeRoles.get(nodeId);
+                            Ring ring = new Ring(singleCoord, role);
+                            // Note: single node rings won't be closed/valid, but we process them anyway
+                        }
+                    } catch (Exception e) {
+                        logger.warning("Failed to process node " + nodeId + " in relation " + relationId + ": " + e.getMessage());
                     }
-                } catch (Exception e) {
-                    logger.warning("Failed to process node " + ref + " in relation " + relationId + ": " + e.getMessage());
                 }
+            } catch (Exception e) {
+                logger.warning("Error bulk fetching nodes for relation " + relationId + ": " + e.getMessage());
             }
         }
 
@@ -136,33 +187,34 @@ public class MultipolygonHandler {
     }
 
     /**
-     * Extract coordinates for a way by fetching all referenced nodes
+     * Extract coordinates for a way by fetching all referenced nodes in bulk
      */
     private static List<double[]> extractWayCoordinates(String wayXml) throws IOException {
         List<double[]> coordinates = new ArrayList<>();
-        Set<String> processed = new HashSet<>();
 
         // Extract node references from the way
         List<String> nodeRefs = extractNodeReferences(wayXml);
 
-        // Fetch each node and get its coordinates
-        for (String nodeRef : nodeRefs) {
-            if (processed.contains(nodeRef)) {
-                continue;  // Skip duplicates
-            }
-            processed.add(nodeRef);
+        if (nodeRefs.isEmpty()) {
+            return coordinates;
+        }
 
-            try {
-                String nodeXml = fetchFromOSMAPI("node", nodeRef);
-                double[] coord = extractNodeCoordinate(nodeXml);
+        // Remove duplicates
+        Set<String> uniqueNodeRefs = new HashSet<>(nodeRefs);
 
-                if (coord != null) {
-                    coordinates.add(coord);
+        try {
+            // Use bulk fetching to get all nodes in batches (up to 50 per request)
+            Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(new ArrayList<>(uniqueNodeRefs));
+
+            // Maintain original order from nodeRefs list
+            for (String nodeRef : nodeRefs) {
+                if (nodeCoordinates.containsKey(nodeRef)) {
+                    coordinates.add(nodeCoordinates.get(nodeRef));
                 }
-            } catch (Exception e) {
-                logger.warning("Failed to fetch node " + nodeRef + ": " + e.getMessage());
-                // Continue with next node
             }
+        } catch (Exception e) {
+            logger.warning("Error fetching node coordinates in bulk: " + e.getMessage());
+            // Return empty list on error
         }
 
         return coordinates;

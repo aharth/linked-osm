@@ -265,39 +265,27 @@ public class GeometryOSMServlet extends HttpServlet {
 
 	private List<double[]> fetchNodeCoordinates(List<String> nodeIds) throws IOException {
 		List<double[]> coordinates = new ArrayList<>();
-		Set<String> processedIds = new HashSet<>();
 
-		for (String nodeId : nodeIds) {
-			if (processedIds.contains(nodeId)) {
-				continue; // Skip duplicates
-			}
-			processedIds.add(nodeId);
+		if (nodeIds == null || nodeIds.isEmpty()) {
+			return coordinates;
+		}
 
-			String url = ApiConstants.OSM_API_BASE + "/node/" + nodeId;
-			try {
-				HttpURLConnection conn = HttpClientUtil.createConnection(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.GEOMETRY_READ_TIMEOUT);
-				int responseCode = conn.getResponseCode();
+		// Remove duplicates
+		Set<String> uniqueNodeIds = new HashSet<>(nodeIds);
 
-				if (responseCode == 200) {
-					InputStream is = conn.getInputStream();
-					String osmXml = readInputStream(is);
-					is.close();
+		try {
+			// Use bulk fetching to get all nodes in batches (up to 50 per request)
+			Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(new ArrayList<>(uniqueNodeIds));
 
-					Pattern latPattern = Pattern.compile("lat=['\"]([^'\"]+)['\"]");
-					Pattern lonPattern = Pattern.compile("lon=['\"]([^'\"]+)['\"]");
-					Matcher latMatcher = latPattern.matcher(osmXml);
-					Matcher lonMatcher = lonPattern.matcher(osmXml);
-
-					if (latMatcher.find() && lonMatcher.find()) {
-						double lon = Double.parseDouble(lonMatcher.group(1));
-						double lat = Double.parseDouble(latMatcher.group(1));
-						coordinates.add(new double[]{lon, lat});
-					}
+			// Maintain original order from nodeIds list
+			for (String nodeId : nodeIds) {
+				if (nodeCoordinates.containsKey(nodeId)) {
+					coordinates.add(nodeCoordinates.get(nodeId));
 				}
-			} catch (Exception e) {
-				_log.warning("Error fetching node " + nodeId + ": " + e.getMessage());
-				// Continue with next node
 			}
+		} catch (Exception e) {
+			_log.warning("Error fetching node coordinates in bulk: " + e.getMessage());
+			// Return empty list on error
 		}
 
 		return coordinates;
