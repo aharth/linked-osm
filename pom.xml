@@ -23,6 +23,13 @@
       <version>4.13.2</version>
       <scope>test</scope>
     </dependency>
+    <!-- REST Assured for HTTP API testing -->
+    <dependency>
+      <groupId>io.rest-assured</groupId>
+      <artifactId>rest-assured</artifactId>
+      <version>5.4.0</version>
+      <scope>test</scope>
+    </dependency>
     <!-- Commons CLI for command-line interface -->
     <dependency>
       <groupId>commons-cli</groupId>
@@ -87,7 +94,7 @@
         </configuration>
       </plugin>
 
-      <!-- Maven Surefire for tests -->
+      <!-- Maven Surefire for unit tests -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -95,6 +102,24 @@
         <configuration>
           <useSystemClassLoader>false</useSystemClassLoader>
         </configuration>
+      </plugin>
+
+      <!-- Maven Failsafe for integration tests -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <version>3.5.4</version>
+        <configuration>
+          <useSystemClassLoader>false</useSystemClassLoader>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>integration-test</goal>
+              <goal>verify</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
 
       <!-- Maven Assembly Plugin for executable JAR -->
