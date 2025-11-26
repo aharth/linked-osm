@@ -59,10 +59,31 @@ Get amenity nodes within a bounding box:
 
 ### Geometry Data
 
-GeoJSON geometry is now available directly via the `.json` format endpoints above.
+Get geometry data for OSM features in multiple formats from linked geometry sources:
 
-Legacy geometry endpoint (deprecated):
-- **Endpoint**: `/geo/{type}/{id}` - WKT geometry (use `.json` format instead)
+- **Endpoint**: `/geo/osm/{type}/{id}.{format}` - Geometry from OpenStreetMap API
+- **Endpoint**: `/geo/overpass/{type}/{id}.{format}` - Geometry from Overpass API (useful for complex geometries)
+
+**Supported formats:**
+- `json` (default, GeoJSON) - `application/geo+json`
+- `wkt` (Well-Known Text) - `application/wkt`
+- `kml` (Keyhole Markup Language) - `application/vnd.google-earth.kml+xml`
+
+**Content Negotiation:**
+
+Specify format using file extension:
+```
+/geo/osm/node/1.json    # GeoJSON
+/geo/osm/node/1.wkt     # WKT format
+/geo/osm/node/1.kml     # KML format
+```
+
+Or via HTTP Accept header:
+```
+Accept: application/geo+json                          # GeoJSON
+Accept: application/wkt                               # WKT
+Accept: application/vnd.google-earth.kml+xml          # KML
+```
 
 
 ## Background

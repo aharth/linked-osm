@@ -93,6 +93,58 @@
       <dd>Recent changeset example - <a href="https://www.openstreetmap.org/changeset/123456789">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/changeset/123456789">API</a></dd>
     </dl>
 
+    <h2>Geometry Data</h2>
+
+    <p>
+      Get raw geometry data for OSM features via linked geometry sources. Supports multiple formats via file extension or HTTP Accept header content negotiation.
+    </p>
+
+    <dl>
+      <dt><code>/geo/osm/{type}/{id}.{format}</code></dt>
+      <dd>Geometry from OpenStreetMap API. Supported formats: <code>json</code> (GeoJSON, default), <code>wkt</code> (Well-Known Text), <code>kml</code> (Keyhole Markup Language)</dd>
+
+      <dt><code>/geo/overpass/{type}/{id}.{format}</code></dt>
+      <dd>Geometry from Overpass API (useful for complex geometries). Same format options as OSM endpoint</dd>
+    </dl>
+
+    <h3>Content Negotiation</h3>
+
+    <p>Request different formats using file extensions or HTTP Accept headers:</p>
+
+    <dl>
+      <dt>File extension method</dt>
+      <dd><code>/geo/osm/node/1.json</code> → GeoJSON<br/>
+          <code>/geo/osm/node/1.wkt</code> → WKT<br/>
+          <code>/geo/osm/node/1.kml</code> → KML</dd>
+
+      <dt>HTTP Accept header method</dt>
+      <dd><code>Accept: application/geo+json</code> → GeoJSON (default)<br/>
+          <code>Accept: application/wkt</code> → WKT<br/>
+          <code>Accept: application/vnd.google-earth.kml+xml</code> → KML</dd>
+    </dl>
+
+    <h3>Examples</h3>
+
+    <dl>
+      <dt><a href="geo/osm/node/1.json">geo/osm/node/1.json</a></dt>
+      <dd>Point geometry for Monte Piselli node (GeoJSON format)</dd>
+
+      <dt>geo/osm/node/1.wkt</dt>
+      <dd>Same node in WKT format: <code>POINT(lon lat)</code></dd>
+
+      <dt>geo/osm/node/1.kml</dt>
+      <dd>Same node in KML format for Google Earth</dd>
+
+      <dt><a href="geo/osm/way/100.json">geo/osm/way/100.json</a></dt>
+      <dd>Geometry for Roundabout way in Germany (GeoJSON)</dd>
+
+      <dt><a href="geo/osm/relation/71525.json">geo/osm/relation/71525.json</a></dt>
+      <dd>Geometry for Paris administrative boundary relation (GeoJSON)</dd>
+
+      <dt><a href="geo/overpass/way/100.json">geo/overpass/way/100.json</a></dt>
+      <dd>Geometry from Overpass API for way (GeoJSON)</dd>
+    </dl>
+
     <h2>Map</h2>
 
     <p>
