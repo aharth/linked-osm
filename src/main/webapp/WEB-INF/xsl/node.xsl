@@ -59,6 +59,7 @@
 	<geo:long><xsl:value-of select="@lon"/></geo:long>
 
 	<!-- Links to document representations -->
+	<foaf:page rdf:resource="https://www.openstreetmap.org/node/{@id}"/>
 	<foaf:page rdf:resource="/node/{@id}.rdf"/>
 	<foaf:page rdf:resource="/node/{@id}.json"/>
 

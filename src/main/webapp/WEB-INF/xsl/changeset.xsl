@@ -96,7 +96,8 @@
       <!-- Process tags -->
       <xsl:apply-templates/>
 
-      <!-- Link to primary source -->
+      <!-- Links -->
+      <foaf:page rdf:resource="https://www.openstreetmap.org/changeset/{@id}"/>
       <prov:hadPrimarySource rdf:resource="https://api.openstreetmap.org/api/0.6/changeset/{@id}"/>
 
     </prov:Activity>

@@ -57,6 +57,7 @@
 	<xsl:attribute name="rdf:about">/relation/<xsl:value-of select="@id"/>#id</xsl:attribute>
 
 	<!-- Links to document representations -->
+	<foaf:page rdf:resource="https://www.openstreetmap.org/relation/{@id}"/>
 	<foaf:page rdf:resource="/relation/{@id}.rdf"/>
 	<foaf:page rdf:resource="/relation/{@id}.json"/>
 
