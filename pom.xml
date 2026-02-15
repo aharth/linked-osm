@@ -74,6 +74,12 @@
       <artifactId>Saxon-HE</artifactId>
       <version>12.5</version>
     </dependency>
+    <!-- Jena for RDF parsing and serialization -->
+    <dependency>
+      <groupId>org.apache.jena</groupId>
+      <artifactId>jena-arq</artifactId>
+      <version>5.2.0</version>
+    </dependency>
   </dependencies>
 
   <build>

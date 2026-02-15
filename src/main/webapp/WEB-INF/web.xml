@@ -4,6 +4,15 @@ xmlns="https://jakarta.ee/xml/ns/jakartaee"
 xmlns:web="https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
 xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		    https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd" version="6.0">
+	<filter>
+		<filter-name>rdf</filter-name>
+		<filter-class>com.ontologycentral.osmwrap.webapp.RdfFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>rdf</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
 	<listener>
 		<listener-class>com.ontologycentral.osmwrap.webapp.Listener</listener-class>
 	</listener>
