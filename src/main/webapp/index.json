@@ -1,0 +1,73 @@
+{
+  "resources": {
+    "node": {
+      "hrefTemplate": "/node/{id}{.format}",
+      "hrefVars": {
+        "id": "OSM node ID",
+        "format": "rdf (default) or json (GeoJSON)"
+      }
+    },
+    "way": {
+      "hrefTemplate": "/way/{id}{.format}",
+      "hrefVars": {
+        "id": "OSM way ID",
+        "format": "rdf (default) or json (GeoJSON)"
+      }
+    },
+    "relation": {
+      "hrefTemplate": "/relation/{id}{.format}",
+      "hrefVars": {
+        "id": "OSM relation ID",
+        "format": "rdf (default) or json (GeoJSON)"
+      }
+    },
+    "changeset": {
+      "hrefTemplate": "/changeset/{id}{.format}",
+      "hrefVars": {
+        "id": "OSM changeset ID",
+        "format": "rdf (default)"
+      }
+    },
+    "geo-osm": {
+      "hrefTemplate": "/geo/osm/{type}/{id}{.format}",
+      "hrefVars": {
+        "type": "node, way, or relation",
+        "id": "OSM element ID",
+        "format": "json (GeoJSON, default), wkt, or kml"
+      }
+    },
+    "geo-overpass": {
+      "hrefTemplate": "/geo/overpass/{type}/{id}{.format}",
+      "hrefVars": {
+        "type": "node, way, or relation",
+        "id": "OSM element ID",
+        "format": "json (GeoJSON, default), wkt, or kml"
+      }
+    },
+    "search": {
+      "hrefTemplate": "/search{?q}",
+      "hrefVars": {
+        "q": "search query (Nominatim)"
+      }
+    },
+    "map": {
+      "hrefTemplate": "/map{?bbox}",
+      "hrefVars": {
+        "bbox": "bounding box as west,south,east,north"
+      }
+    },
+    "poi": {
+      "hrefTemplate": "/poi{?bbox}",
+      "hrefVars": {
+        "bbox": "bounding box as west,south,east,north"
+      }
+    },
+    "tag": {
+      "hrefTemplate": "/tag/{key}{.format}",
+      "hrefVars": {
+        "key": "OSM tag key (e.g. amenity, highway) or 'index' for all keys",
+        "format": "rdf (SKOS/RDF, default) or json (SKOS JSON-LD)"
+      }
+    }
+  }
+}
