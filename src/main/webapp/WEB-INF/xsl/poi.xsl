@@ -18,9 +18,12 @@
       <rdf:Description rdf:about="">
 	<rdfs:comment><xsl:value-of select="@generator"/></rdfs:comment>
 	<dc:attribution>Overpass API (https://overpass-api.de/)</dc:attribution>
+	<xsl:for-each select="note">
+	  <rdfs:comment><xsl:value-of select="."/></rdfs:comment>
+	</xsl:for-each>
       </rdf:Description>
 
-      <xsl:apply-templates/>
+      <xsl:apply-templates select="node"/>
     </rdf:RDF>
   </xsl:template>
 
@@ -34,6 +37,7 @@
 	<xsl:apply-templates/>
       </rdf:Description>
   </xsl:template>
+
 
   <!-- could be either in the form fr:Paris or just Paris -->
   <xsl:template match="tag[@k = 'wikipedia']">
