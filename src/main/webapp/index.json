@@ -5,6 +5,9 @@
       "hrefVars": {
         "id": "OSM node ID",
         "format": "rdf (default) or json (GeoJSON)"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "way": {
@@ -12,6 +15,9 @@
       "hrefVars": {
         "id": "OSM way ID",
         "format": "rdf (default) or json (GeoJSON)"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "relation": {
@@ -19,6 +25,9 @@
       "hrefVars": {
         "id": "OSM relation ID",
         "format": "rdf (default) or json (GeoJSON)"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "changeset": {
@@ -26,6 +35,9 @@
       "hrefVars": {
         "id": "OSM changeset ID",
         "format": "rdf (default)"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "geo-osm": {
@@ -34,6 +46,9 @@
         "type": "node, way, or relation",
         "id": "OSM element ID",
         "format": "json (GeoJSON, default), wkt, or kml"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "geo-overpass": {
@@ -42,24 +57,36 @@
         "type": "node, way, or relation",
         "id": "OSM element ID",
         "format": "json (GeoJSON, default), wkt, or kml"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "search": {
       "hrefTemplate": "/search{?q}",
       "hrefVars": {
         "q": "search query (Nominatim)"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "map": {
       "hrefTemplate": "/map{?bbox}",
       "hrefVars": {
         "bbox": "bounding box as west,south,east,north"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "poi": {
       "hrefTemplate": "/poi{?bbox}",
       "hrefVars": {
         "bbox": "bounding box as west,south,east,north"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     },
     "tag": {
@@ -67,6 +94,9 @@
       "hrefVars": {
         "key": "OSM tag key (e.g. amenity, highway) or 'index' for all keys",
         "format": "rdf (SKOS/RDF, default) or json (SKOS JSON-LD)"
+      },
+      "hints": {
+        "allow": ["GET"]
       }
     }
   }
