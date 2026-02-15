@@ -82,6 +82,26 @@ public final class UrlBuilder {
         return "[out:json];" + elementType + "(" + id + ");out geom;";
     }
 
+    /**
+     * Builds Overpass API query for nodes around a point.
+     *
+     * @param lat WGS84 latitude
+     * @param lon WGS84 longitude
+     * @param radius search radius in meters
+     * @return Overpass query string
+     */
+    public static String buildOverpassAroundQuery(String lat, String lon, String radius) {
+        if (lat == null || lon == null || radius == null) {
+            throw new IllegalArgumentException("lat, lon, and radius must not be null");
+        }
+
+        return "[out:xml][timeout:25];\n" +
+               "(\n" +
+               "  node(around:" + radius + "," + lat + "," + lon + ");\n" +
+               ");\n" +
+               "out meta;";
+    }
+
     private UrlBuilder() {
         // Utility class
     }

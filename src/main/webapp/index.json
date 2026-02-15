@@ -89,6 +89,17 @@
         "allow": ["GET"]
       }
     },
+    "around": {
+      "hrefTemplate": "/around{?lon,lat}{&radius}",
+      "hrefVars": {
+        "lon": "WGS84 longitude",
+        "lat": "WGS84 latitude",
+        "radius": "search radius in meters (default 1000)"
+      },
+      "hints": {
+        "allow": ["GET"]
+      }
+    },
     "tag": {
       "hrefTemplate": "/tag/{key}{.format}",
       "hrefVars": {

@@ -33,6 +33,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-class>com.ontologycentral.osmwrap.webapp.POIServlet</servlet-class>
 	</servlet>
 	<servlet>
+		<servlet-name>around</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.AroundServlet</servlet-class>
+	</servlet>
+	<servlet>
 		<servlet-name>changeset</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.ChangesetServlet</servlet-class>
 	</servlet>
@@ -72,6 +76,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>poi</servlet-name>
 		<url-pattern>/poi</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>around</servlet-name>
+		<url-pattern>/around</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>changeset</servlet-name>
