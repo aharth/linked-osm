@@ -150,4 +150,10 @@
     </owl:sameAs>
   </xsl:template>
 
+  <xsl:template match="tag[@k = 'wikidata']">
+    <owl:sameAs>
+      <xsl:attribute name="rdf:resource">http://www.wikidata.org/entity/<xsl:value-of select="@v"/></xsl:attribute>
+    </owl:sameAs>
+  </xsl:template>
+
 </xsl:stylesheet>
