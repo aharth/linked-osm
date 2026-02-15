@@ -3,6 +3,7 @@
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
 ## [2026-02-15]
+- Added W3C PROV provenance to search/poi/map stylesheets, blank node result wrappers with rdfs:seeAlso, encode-for-uri for whitespace in URIs, XSLT 2.0
 - Added `/around` endpoint for radius-based spatial search via Overpass API (lon, lat, optional radius in meters)
 
 ## [2025-11-25]

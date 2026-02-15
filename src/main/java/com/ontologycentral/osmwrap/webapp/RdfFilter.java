@@ -76,10 +76,9 @@ public class RdfFilter implements Filter {
 				httpResponse.setContentLength(result.length);
 				httpResponse.getOutputStream().write(result);
 			} catch (Exception e) {
-				_log.warning("RDF parse error, passing through original: " + e.getMessage());
-				httpResponse.setContentType(contentType);
-				httpResponse.setContentLength(original.length);
-				httpResponse.getOutputStream().write(original);
+				_log.warning("RDF parse error: " + e.getMessage());
+				httpResponse.sendError(500, "RDF parse error: " + e.getMessage());
+				return;
 			}
 		} else {
 			byte[] data = capture.toByteArray();

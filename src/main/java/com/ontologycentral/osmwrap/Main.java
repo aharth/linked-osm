@@ -62,6 +62,15 @@ public class Main {
             } else if (cmd.hasOption("changeset")) {
                 String changesetId = cmd.getOptionValue("changeset");
                 fetchChangeset(changesetId);
+            } else if (cmd.hasOption("around")) {
+                String around = cmd.getOptionValue("around");
+                String[] parts = around.split(",");
+                if (parts.length < 2 || parts.length > 3) {
+                    System.err.println("Error: around requires lon,lat or lon,lat,radius");
+                    System.exit(1);
+                }
+                String radius = (parts.length == 3) ? parts[2] : "1000";
+                fetchAroundData(parts[1], parts[0], radius);
             } else if (cmd.hasOption("tag")) {
                 String tagKey = cmd.getOptionValue("tag");
                 fetchTagInfo(tagKey);
@@ -133,6 +142,13 @@ public class Main {
                 .desc("Fetch OSM changeset by ID")
                 .build());
 
+        options.addOption(Option.builder("a")
+                .longOpt("around")
+                .hasArg()
+                .argName("LON,LAT[,RADIUS]")
+                .desc("Fetch features around a point (lon,lat,radius in meters; default radius 1000)")
+                .build());
+
         options.addOption(Option.builder("t")
                 .longOpt("tag")
                 .hasArg()
@@ -166,6 +182,7 @@ public class Main {
                 "  linked-osm --search \"London\"\n" +
                 "  linked-osm --map \"-118.241,34.050,-118.240,34.051\"\n" +
                 "  linked-osm --poi \"-118.9448,32.8007,-117.6462,34.8233\"\n" +
+                "  linked-osm --around \"8.4,49.0,500\"\n" +
                 "  linked-osm --tag amenity\n" +
                 "  linked-osm --tag name:en\n\n" +
                 "For more information, visit: https://github.com/aharth/linked-osm");
@@ -201,7 +218,7 @@ public class Main {
     }
 
     private static void searchFeatures(String query) throws IOException {
-        String url = UrlBuilder.buildSearchUrl(query);
+        String url = UrlBuilder.buildSearchUrl(query, null);
         logger.info("Searching for '" + query + "' via " + url);
 
         HttpURLConnection connection = HttpClientUtil.createConnection(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.SEARCH_READ_TIMEOUT);
@@ -241,7 +258,7 @@ public class Main {
     }
 
     private static void fetchPOIData(String bbox) throws IOException {
-        String overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox);
+        String overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox, null);
         logger.info("Fetching POI data for bbox " + bbox + " from Overpass API");
 
         HttpURLConnection connection = HttpClientUtil.createConnection(ApiConstants.OVERPASS_API_BASE, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.POI_READ_TIMEOUT);
@@ -260,6 +277,32 @@ public class Main {
             HttpClientUtil.checkResponseCode(connection, "Overpass API");
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw Overpass XML
+            try (InputStream input = connection.getInputStream()) {
+                HttpClientUtil.copyStream(input, System.out);
+            }
+        } catch (IOException e) {
+            System.err.println("Error: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
+    private static void fetchAroundData(String lat, String lon, String radius) throws IOException {
+        String overpassQuery = UrlBuilder.buildOverpassAroundQuery(lat, lon, radius, null);
+        logger.info("Fetching features around " + lat + "," + lon + " (radius " + radius + "m) from Overpass API");
+
+        HttpURLConnection connection = HttpClientUtil.createConnection(ApiConstants.OVERPASS_API_BASE, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.AROUND_READ_TIMEOUT);
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setDoOutput(true);
+
+        String postData = "data=" + java.net.URLEncoder.encode(overpassQuery, "UTF-8");
+        try (OutputStream os = connection.getOutputStream()) {
+            os.write(postData.getBytes("UTF-8"));
+            os.flush();
+        }
+
+        try {
+            HttpClientUtil.checkResponseCode(connection, "Overpass API");
             try (InputStream input = connection.getInputStream()) {
                 HttpClientUtil.copyStream(input, System.out);
             }

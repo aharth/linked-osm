@@ -29,10 +29,11 @@ public class SearchServlet extends HttpServlet {
 		OutputStream os = resp.getOutputStream();
 
 		String query = req.getParameter("q");
-		
+		String limit = req.getParameter("limit");
+
 		ServletContext ctx = getServletContext();
 
-		String archive = UrlBuilder.buildSearchUrl(query);
+		String archive = UrlBuilder.buildSearchUrl(query, limit);
 		
 		URL u = new URL(archive);
 

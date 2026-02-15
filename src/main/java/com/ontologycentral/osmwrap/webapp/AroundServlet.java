@@ -31,6 +31,7 @@ public class AroundServlet extends HttpServlet {
 		String lon = req.getParameter("lon");
 		String lat = req.getParameter("lat");
 		String radius = req.getParameter("radius");
+		String limit = req.getParameter("limit");
 
 		if (lon == null || lat == null) {
 			resp.sendError(400, "lon and lat parameters are required");
@@ -45,7 +46,7 @@ public class AroundServlet extends HttpServlet {
 
 		String overpassQuery;
 		try {
-			overpassQuery = UrlBuilder.buildOverpassAroundQuery(lat, lon, radius);
+			overpassQuery = UrlBuilder.buildOverpassAroundQuery(lat, lon, radius, limit);
 		} catch (IllegalArgumentException e) {
 			resp.sendError(400, e.getMessage());
 			return;

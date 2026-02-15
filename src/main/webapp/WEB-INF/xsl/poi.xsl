@@ -6,8 +6,9 @@
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:sioc="http://rdfs.org/sioc/ns#"
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+   xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-   version="1.0">
+   version="2.0">
   
   <xsl:output method="xml"/>
 
@@ -18,24 +19,44 @@
       <rdf:Description rdf:about="">
 	<rdfs:comment><xsl:value-of select="@generator"/></rdfs:comment>
 	<dc:attribution>Overpass API (https://overpass-api.de/)</dc:attribution>
+	<dc:publisher>Overpass API (https://overpass-api.de/) via Linked OSM (http://osmwrap.ontologycentral.com/)</dc:publisher>
 	<xsl:for-each select="note">
 	  <rdfs:comment><xsl:value-of select="."/></rdfs:comment>
 	</xsl:for-each>
+	<prov:wasGeneratedBy rdf:resource="#transformation"/>
+	<xsl:apply-templates select="node"/>
       </rdf:Description>
 
-      <xsl:apply-templates select="node"/>
+      <!-- PROV: Transformation activity -->
+      <prov:Activity rdf:about="#transformation">
+        <rdfs:label>Overpass XML to RDF POI Transformation</rdfs:label>
+        <prov:used rdf:resource="https://overpass-api.de/api/interpreter"/>
+        <prov:wasAssociatedWith rdf:resource="#osmwrap"/>
+        <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
+      </prov:Activity>
+
+      <!-- PROV: Agent (osmwrap service) -->
+      <prov:SoftwareAgent rdf:about="#osmwrap">
+        <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
+        <foaf:homepage rdf:resource="http://osmwrap.ontologycentral.com/"/>
+        <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
+      </prov:SoftwareAgent>
     </rdf:RDF>
   </xsl:template>
 
   <xsl:template match="node">
-      <rdf:Description>
-	<xsl:attribute name="rdf:about">/node/<xsl:value-of select="@id"/>#id</xsl:attribute>
-	<geo:lat><xsl:value-of select="@lat"/></geo:lat>
-	<geo:long><xsl:value-of select="@lon"/></geo:long>
-
-	
-	<xsl:apply-templates/>
-      </rdf:Description>
+      <rdfs:seeAlso>
+	<rdf:Description>
+	  <rdfs:seeAlso>
+	    <rdf:Description>
+	      <xsl:attribute name="rdf:about">/node/<xsl:value-of select="@id"/>#id</xsl:attribute>
+	      <geo:lat><xsl:value-of select="@lat"/></geo:lat>
+	      <geo:long><xsl:value-of select="@lon"/></geo:long>
+	      <xsl:apply-templates/>
+	    </rdf:Description>
+	  </rdfs:seeAlso>
+	</rdf:Description>
+      </rdfs:seeAlso>
   </xsl:template>
 
 
@@ -44,22 +65,22 @@
     <xsl:choose>
       <xsl:when test="contains(@v, ':')">
 	<foaf:page>
-	  <xsl:attribute name="rdf:resource">http://<xsl:value-of select="substring(@v, 0, 3)"/>.wikipedia.org/wiki/<xsl:value-of select="substring(@v, 4)"/></xsl:attribute>
+	  <xsl:attribute name="rdf:resource">http://<xsl:value-of select="substring(@v, 0, 3)"/>.wikipedia.org/wiki/<xsl:value-of select="encode-for-uri(substring(@v, 4))"/></xsl:attribute>
 	</foaf:page>
 	<owl:sameAs>
 	  <xsl:choose>
 	    <xsl:when test="substring(@v, 0, 3) = 'en'">
-	      <xsl:attribute name="rdf:resource">http://dbpedia.org/resource/<xsl:value-of select="substring(@v, 4)"/></xsl:attribute>
+	      <xsl:attribute name="rdf:resource">http://dbpedia.org/resource/<xsl:value-of select="encode-for-uri(substring(@v, 4))"/></xsl:attribute>
 	    </xsl:when>
 	    <xsl:otherwise>
-	      <xsl:attribute name="rdf:resource">http://<xsl:value-of select="substring(@v, 0, 3)"/>.dbpedia.org/resource/<xsl:value-of select="substring(@v, 4)"/></xsl:attribute>
+	      <xsl:attribute name="rdf:resource">http://<xsl:value-of select="substring(@v, 0, 3)"/>.dbpedia.org/resource/<xsl:value-of select="encode-for-uri(substring(@v, 4))"/></xsl:attribute>
 	    </xsl:otherwise>
 	  </xsl:choose>
 	</owl:sameAs>
       </xsl:when>
       <xsl:otherwise>
 	<owl:sameAs>
-	  <xsl:attribute name="rdf:resource">http://dbpedia.org/resource/<xsl:value-of select="@v"/></xsl:attribute>
+	  <xsl:attribute name="rdf:resource">http://dbpedia.org/resource/<xsl:value-of select="encode-for-uri(@v)"/></xsl:attribute>
 	</owl:sameAs>
       </xsl:otherwise>
     </xsl:choose>

@@ -29,12 +29,13 @@ public class POIServlet extends HttpServlet {
 		OutputStream os = resp.getOutputStream();
 
 		String bbox = req.getParameter("bbox");
-		
+		String limit = req.getParameter("limit");
+
 		ServletContext ctx = getServletContext();
-		
+
 		String overpassQuery;
 		try {
-			overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox);
+			overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox, limit);
 		} catch (IllegalArgumentException e) {
 			resp.sendError(400, e.getMessage());
 			return;

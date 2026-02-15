@@ -63,9 +63,10 @@
       }
     },
     "search": {
-      "hrefTemplate": "/search{?q}",
+      "hrefTemplate": "/search{?q}{&limit}",
       "hrefVars": {
-        "q": "search query (Nominatim)"
+        "q": "search query (Nominatim)",
+        "limit": "maximum number of results (default 10, max 50)"
       },
       "hints": {
         "allow": ["GET"]
@@ -81,20 +82,22 @@
       }
     },
     "poi": {
-      "hrefTemplate": "/poi{?bbox}",
+      "hrefTemplate": "/poi{?bbox}{&limit}",
       "hrefVars": {
-        "bbox": "bounding box as west,south,east,north"
+        "bbox": "bounding box as west,south,east,north",
+        "limit": "maximum number of results"
       },
       "hints": {
         "allow": ["GET"]
       }
     },
     "around": {
-      "hrefTemplate": "/around{?lon,lat}{&radius}",
+      "hrefTemplate": "/around{?lon,lat}{&radius,limit}",
       "hrefVars": {
         "lon": "WGS84 longitude",
         "lat": "WGS84 latitude",
-        "radius": "search radius in meters (default 1000)"
+        "radius": "search radius in meters (default 1000)",
+        "limit": "maximum number of results"
       },
       "hints": {
         "allow": ["GET"]

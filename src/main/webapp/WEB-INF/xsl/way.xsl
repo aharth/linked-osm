@@ -10,7 +10,7 @@
    xmlns:spatial="http://geovocab.org/spatial#"
    xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-   version="1.0">
+   version="2.0">
   
   <xsl:output method="xml"/>
 
@@ -75,7 +75,7 @@
 	    <prov:Agent>
 	      <foaf:accountName><xsl:value-of select="@user"/></foaf:accountName>
 	      <foaf:accountServiceHomepage rdf:resource="https://www.openstreetmap.org"/>
-	      <foaf:homepage rdf:resource="https://www.openstreetmap.org/user/{@user}"/>
+	      <foaf:homepage><xsl:attribute name="rdf:resource">https://www.openstreetmap.org/user/<xsl:value-of select="encode-for-uri(@user)"/></xsl:attribute></foaf:homepage>
 	    </prov:Agent>
 	  </prov:wasAttributedTo>
 	</xsl:if>
@@ -100,7 +100,7 @@
 	    <prov:Agent>
 	      <foaf:accountName><xsl:value-of select="@user"/></foaf:accountName>
 	      <foaf:accountServiceHomepage rdf:resource="https://www.openstreetmap.org"/>
-	      <foaf:homepage rdf:resource="https://www.openstreetmap.org/user/{@user}"/>
+	      <foaf:homepage><xsl:attribute name="rdf:resource">https://www.openstreetmap.org/user/<xsl:value-of select="encode-for-uri(@user)"/></xsl:attribute></foaf:homepage>
 	    </prov:Agent>
 	  </prov:wasAssociatedWith>
 	</prov:Activity>
@@ -123,10 +123,10 @@
     <foaf:page>
       <xsl:choose>
 	<xsl:when test="contains(@v, ':')">
-	  <xsl:attribute name="rdf:resource">http://<xsl:value-of select="substring(@v, 0, 3)"/>.wikipedia.org/wiki/<xsl:value-of select="substring(@v, 4)"/></xsl:attribute>
+	  <xsl:attribute name="rdf:resource">http://<xsl:value-of select="substring(@v, 0, 3)"/>.wikipedia.org/wiki/<xsl:value-of select="encode-for-uri(substring(@v, 4))"/></xsl:attribute>
 	</xsl:when>
 	<xsl:otherwise>
-	  <xsl:attribute name="rdf:resource">http://en.wikipedia.org/wiki/<xsl:value-of select="@v"/></xsl:attribute>
+	  <xsl:attribute name="rdf:resource">http://en.wikipedia.org/wiki/<xsl:value-of select="encode-for-uri(@v)"/></xsl:attribute>
 	</xsl:otherwise>
       </xsl:choose>
     </foaf:page>
@@ -136,15 +136,15 @@
 	<xsl:when test="contains(@v, ':')">
 	  <xsl:choose>
 	    <xsl:when test="substring(@v, 0, 3) = 'en'">
-	      <xsl:attribute name="rdf:resource">http://dbpedia.org/resource/<xsl:value-of select="substring(@v, 4)"/></xsl:attribute>
+	      <xsl:attribute name="rdf:resource">http://dbpedia.org/resource/<xsl:value-of select="encode-for-uri(substring(@v, 4))"/></xsl:attribute>
 	    </xsl:when>
 	    <xsl:otherwise>
-	      <xsl:attribute name="rdf:resource">http://<xsl:value-of select="substring(@v, 0, 3)"/>.dbpedia.org/resource/<xsl:value-of select="substring(@v, 4)"/></xsl:attribute>
+	      <xsl:attribute name="rdf:resource">http://<xsl:value-of select="substring(@v, 0, 3)"/>.dbpedia.org/resource/<xsl:value-of select="encode-for-uri(substring(@v, 4))"/></xsl:attribute>
 	    </xsl:otherwise>
 	  </xsl:choose>
 	</xsl:when>
 	<xsl:otherwise>
-	  <xsl:attribute name="rdf:resource">http://dbpedia.org/resource/<xsl:value-of select="@v"/></xsl:attribute>
+	  <xsl:attribute name="rdf:resource">http://dbpedia.org/resource/<xsl:value-of select="encode-for-uri(@v)"/></xsl:attribute>
 	</xsl:otherwise>
       </xsl:choose>
     </owl:sameAs>

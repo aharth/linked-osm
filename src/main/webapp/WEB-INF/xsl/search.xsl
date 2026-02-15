@@ -8,8 +8,9 @@
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:geom="http://geovocab.org/geometry#"
    xmlns:spatial="http://geovocab.org/spatial#"
+   xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-   version="1.0">
+   version="2.0">
   
   <xsl:output method="xml"/>
 
@@ -20,17 +21,43 @@
       <rdf:Description rdf:about="">
 	<dc:attribution><xsl:value-of select="@attribution"/></dc:attribution>
 	<dc:date><xsl:value-of select="@timestamp"/></dc:date>
+	<dc:publisher>Nominatim (https://nominatim.openstreetmap.org/) via Linked OSM (http://osmwrap.ontologycentral.com/)</dc:publisher>
+	<prov:wasGeneratedBy rdf:resource="#transformation"/>
+	<xsl:apply-templates/>
       </rdf:Description>
 
-      <xsl:apply-templates/>
+      <!-- PROV: Transformation activity -->
+      <prov:Activity rdf:about="#transformation">
+        <rdfs:label>Nominatim XML to RDF Search Transformation</rdfs:label>
+        <prov:used rdf:resource="https://nominatim.openstreetmap.org/"/>
+        <prov:wasAssociatedWith rdf:resource="#osmwrap"/>
+        <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
+      </prov:Activity>
+
+      <!-- PROV: Agent (osmwrap service) -->
+      <prov:SoftwareAgent rdf:about="#osmwrap">
+        <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
+        <foaf:homepage rdf:resource="http://osmwrap.ontologycentral.com/"/>
+        <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
+      </prov:SoftwareAgent>
     </rdf:RDF>
   </xsl:template>
 
   <xsl:template match="place">
-      <rdf:Description>
-	<xsl:attribute name="rdf:about">./<xsl:value-of select="@osm_type"/>/<xsl:value-of select="@osm_id"/>#id</xsl:attribute>
-	<rdf:type><xsl:attribute name="rdf:resource">http://geovocab.org/spatial#Feature</xsl:attribute></rdf:type>
-	<rdfs:label><xsl:value-of select="@display_name"/></rdfs:label>
-      </rdf:Description>
+      <rdfs:seeAlso>
+	<rdf:Description>
+	  <rdfs:seeAlso>
+	    <rdf:Description>
+	      <xsl:attribute name="rdf:about">./<xsl:value-of select="@osm_type"/>/<xsl:value-of select="@osm_id"/>#id</xsl:attribute>
+	      <rdfs:label><xsl:value-of select="@display_name"/></rdfs:label>
+	      <geo:lat><xsl:value-of select="@lat"/></geo:lat>
+	      <geo:long><xsl:value-of select="@lon"/></geo:long>
+	    </rdf:Description>
+	  </rdfs:seeAlso>
+	  <xsl:if test="@importance">
+	    <rdfs:comment>importance: <xsl:value-of select="@importance"/></rdfs:comment>
+	  </xsl:if>
+	</rdf:Description>
+      </rdfs:seeAlso>
   </xsl:template>
 </xsl:stylesheet>
