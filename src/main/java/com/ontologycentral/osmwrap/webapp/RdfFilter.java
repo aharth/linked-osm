@@ -50,10 +50,12 @@ public class RdfFilter implements Filter {
 			try {
 				Model model = ModelFactory.createDefaultModel();
 
+				String base = "http://localhost/";
+
 				RDFParser.create()
 						.source(new java.io.ByteArrayInputStream(original))
 						.lang(Lang.RDFXML)
-						.base("")
+						.base(base)
 						.parse(model);
 
 				ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -61,21 +63,29 @@ public class RdfFilter implements Filter {
 				RDFWriter.create()
 						.source(model)
 						.lang(Lang.TURTLE)
-						.base("")
+						.base(base)
 						.output(out);
 
-				byte[] result = out.toByteArray();
+				String turtle = out.toString("UTF-8");
+				if (turtle.startsWith("BASE")) {
+					turtle = turtle.substring(turtle.indexOf('\n') + 1);
+				}
+				byte[] result = turtle.getBytes("UTF-8");
 
 				httpResponse.setContentType("text/turtle");
 				httpResponse.setContentLength(result.length);
 				httpResponse.getOutputStream().write(result);
 			} catch (Exception e) {
 				_log.warning("RDF parse error, passing through original: " + e.getMessage());
+				httpResponse.setContentType(contentType);
 				httpResponse.setContentLength(original.length);
 				httpResponse.getOutputStream().write(original);
 			}
 		} else {
 			byte[] data = capture.toByteArray();
+			if (contentType != null) {
+				httpResponse.setContentType(contentType);
+			}
 			httpResponse.setContentLength(data.length);
 			httpResponse.getOutputStream().write(data);
 		}
@@ -85,10 +95,45 @@ public class RdfFilter implements Filter {
 		private final ByteArrayOutputStream capture;
 		private ServletOutputStream outputStream;
 		private PrintWriter writer;
+		private String contentType;
+		private int status = 200;
 
 		CaptureResponseWrapper(HttpServletResponse response, ByteArrayOutputStream capture) {
 			super(response);
 			this.capture = capture;
+		}
+
+		@Override
+		public void setContentType(String type) {
+			this.contentType = type;
+		}
+
+		@Override
+		public String getContentType() {
+			return contentType;
+		}
+
+		@Override
+		public void setStatus(int sc) {
+			this.status = sc;
+			super.setStatus(sc);
+		}
+
+		@Override
+		public void sendError(int sc, String msg) throws IOException {
+			this.status = sc;
+			super.sendError(sc, msg);
+		}
+
+		@Override
+		public void sendError(int sc) throws IOException {
+			this.status = sc;
+			super.sendError(sc);
+		}
+
+		@Override
+		public int getStatus() {
+			return status;
 		}
 
 		@Override
