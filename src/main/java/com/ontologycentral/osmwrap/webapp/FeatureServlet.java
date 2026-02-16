@@ -103,7 +103,7 @@ public class FeatureServlet extends HttpServlet {
 			int responseCode = conn.getResponseCode();
 			if (responseCode != 200) {
 				// Pass through the original status code instead of always returning 500
-				resp.sendError(responseCode, "Upstream API returned: " + conn.getResponseMessage());
+				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
 				return;
 			}
 

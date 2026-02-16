@@ -98,7 +98,7 @@ public class GeometryOSMServlet extends HttpServlet {
 
 			int responseCode = conn.getResponseCode();
 			if (responseCode != 200) {
-				resp.sendError(responseCode, "OSM API returned: " + conn.getResponseMessage());
+				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
 				return;
 			}
 

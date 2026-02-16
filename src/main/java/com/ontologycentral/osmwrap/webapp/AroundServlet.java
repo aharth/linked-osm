@@ -6,9 +6,12 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.ApiConstants;
+import com.ontologycentral.osmwrap.GeoJsonConverter;
 import com.ontologycentral.osmwrap.HttpClientUtil;
 import com.ontologycentral.osmwrap.UrlBuilder;
 
@@ -42,6 +45,8 @@ public class AroundServlet extends HttpServlet {
 			radius = "1000";
 		}
 
+		boolean wantJson = isJsonRequested(req);
+
 		ServletContext ctx = getServletContext();
 
 		String overpassQuery;
@@ -73,29 +78,37 @@ public class AroundServlet extends HttpServlet {
 
 			int responseCode = conn.getResponseCode();
 			if (responseCode != 200) {
-				resp.sendError(responseCode, "Upstream API returned: " + conn.getResponseMessage());
+				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
 				return;
 			}
 
 			InputStream is = conn.getInputStream();
 
-			String encoding = conn.getContentEncoding();
-			if (encoding == null) {
-				encoding = "ISO-8859-1";
+			if (wantJson) {
+				String xml = readInputStream(is);
+				is.close();
+				String geoJson = GeoJsonConverter.overpassNodesToGeoJson(xml);
+				resp.setContentType("application/geo+json");
+				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
+			} else {
+				String encoding = conn.getContentEncoding();
+				if (encoding == null) {
+					encoding = "ISO-8859-1";
+				}
+
+				Transformer t = (Transformer)ctx.getAttribute(Listener.POI);
+
+				resp.setContentType("application/rdf+xml");
+
+				StreamSource ssource = new StreamSource(is);
+				StreamResult sresult = new StreamResult(os);
+
+				_log.info("applying xslt");
+
+				t.transform(ssource, sresult);
+
+				is.close();
 			}
-
-			Transformer t = (Transformer)ctx.getAttribute(Listener.POI);
-
-			resp.setContentType("application/rdf+xml");
-
-			StreamSource ssource = new StreamSource(is);
-			StreamResult sresult = new StreamResult(os);
-
-			_log.info("applying xslt");
-
-			t.transform(ssource, sresult);
-
-			is.close();
 		} catch (TransformerException e) {
 			e.printStackTrace();
 			resp.sendError(500, e.getMessage());
@@ -111,5 +124,19 @@ public class AroundServlet extends HttpServlet {
 		}
 
 		os.close();
+	}
+
+	private boolean isJsonRequested(HttpServletRequest req) {
+		String path = req.getServletPath();
+		if (path != null && path.endsWith(".json")) return true;
+		String accept = req.getHeader("Accept");
+		if (accept != null && (accept.contains("application/geo+json") || accept.contains("application/json"))) return true;
+		return false;
+	}
+
+	private String readInputStream(InputStream is) throws IOException {
+		Scanner scanner = new Scanner(is, StandardCharsets.UTF_8);
+		scanner.useDelimiter("\\A");
+		return scanner.hasNext() ? scanner.next() : "";
 	}
 }

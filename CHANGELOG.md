@@ -2,6 +2,12 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-02-16]
+- Added GeoJSON output for `/search`, `/poi`, `/around`, `/map` endpoints via `.json` suffix or Accept header
+- Map GeoJSON includes ways as LineStrings/Polygons (not just nodes), with tag properties
+- view.html: clickable feature popups with links to RDF/JSON/OSM, highlight on click, bbox rectangle overlay
+- Improved upstream error reporting: servlets now pass through actual error body text
+
 ## [2026-02-15]
 - Added W3C PROV provenance to search/poi/map stylesheets, blank node result wrappers with rdfs:seeAlso, encode-for-uri for whitespace in URIs, XSLT 2.0
 - Added `/around` endpoint for radius-based spatial search via Overpass API (lon, lat, optional radius in meters)

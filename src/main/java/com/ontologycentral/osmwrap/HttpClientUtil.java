@@ -216,6 +216,28 @@ public final class HttpClientUtil {
         return wayNodes;
     }
 
+    /**
+     * Read the error body from a failed HTTP connection.
+     * Returns the response body text, or the status message if no body is available.
+     */
+    public static String readErrorBody(HttpURLConnection conn) {
+        try {
+            InputStream es = conn.getErrorStream();
+            if (es == null) return conn.getResponseMessage();
+            StringBuilder sb = new StringBuilder();
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = es.read(buffer)) != -1) {
+                sb.append(new String(buffer, 0, bytesRead, "UTF-8"));
+            }
+            es.close();
+            String body = sb.toString().trim();
+            return body.isEmpty() ? conn.getResponseMessage() : body;
+        } catch (IOException e) {
+            return "unknown error";
+        }
+    }
+
     private HttpClientUtil() {
         // Utility class
     }
