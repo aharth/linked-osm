@@ -3,9 +3,8 @@ package com.ontologycentral.osmwrap.webapp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.logging.Logger;
@@ -93,21 +92,20 @@ public class GeometryOverpassServlet extends HttpServlet {
 		String query = UrlBuilder.buildOverpassGeometryQuery(elementType, id);
 		String archive = ApiConstants.OVERPASS_API_BASE + "?data=" + URLEncoder.encode(query, "UTF-8");
 
-		URL u = new URL(archive);
-
-		_log.info("retrieving " + u);
-		System.out.println("retrieving " + u);
+		_log.info("retrieving " + archive);
+		System.out.println("retrieving " + archive);
 
 		try {
-			HttpURLConnection conn = HttpClientUtil.createConnection(archive, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.GEOMETRY_READ_TIMEOUT);
+			HttpResponse<InputStream> response = HttpClientUtil.get(archive);
 
-			int responseCode = conn.getResponseCode();
+			int responseCode = response.statusCode();
 			if (responseCode != 200) {
-				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
+				resp.sendError(responseCode,
+						new String(response.body().readAllBytes(), StandardCharsets.UTF_8).trim());
 				return;
 			}
 
-			InputStream is = conn.getInputStream();
+			InputStream is = response.body();
 			String osmJson = readInputStream(is);
 
 			if ("json".equals(format)) {
@@ -141,11 +139,11 @@ public class GeometryOverpassServlet extends HttpServlet {
 
 			is.close();
 		} catch (IOException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		} catch (RuntimeException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		}

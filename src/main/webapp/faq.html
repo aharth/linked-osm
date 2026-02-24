@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Linked OSM &mdash; FAQ</title>
+</head>
+<body>
+  <p><a href="/">Overview</a> &gt; FAQ</p>
+
+  <h1>Frequently Asked Questions</h1>
+
+  <a name="feature-vs-geometry"></a>
+  <h2>What is the difference between feature data and geometry data?</h2>
+
+  <p>
+    There are two distinct kinds of endpoints:
+  </p>
+
+  <dl>
+    <dt><code>/node/{id}.rdf</code>, <code>/way/{id}.rdf</code>, <code>/relation/{id}.rdf</code></dt>
+    <dd>
+      <strong>Feature data</strong> &mdash; rich semantic descriptions including all OSM tags,
+      provenance information (PROV-O), and links to related resources.
+      Returns RDF/XML by default; requesting with
+      <code>Accept: text/turtle</code> returns Turtle format.
+      Uses <a href="https://api.openstreetmap.org/">OSM API 0.6</a>.
+    </dd>
+
+    <dt><code>/geo/osm/{type}/{id}.json</code>, <code>/geo/overpass/{type}/{id}.json</code></dt>
+    <dd>
+      <strong>Geometry data</strong> &mdash; bare coordinate geometry for map rendering,
+      with no semantic enrichment.
+      Returns GeoJSON. Two upstream sources are available: the OSM API and the Overpass API
+      (useful for complex multipolygon relations).
+      Use the <a href="/view.html">GeoJSON viewer</a> to display results on a map.
+    </dd>
+  </dl>
+
+  <p>
+    Each OSM element also has a <em>resource URI</em> with a hash fragment
+    (e.g. <code>/node/1#id</code>) that identifies the geographic feature itself
+    (distinct from any document describing it), following
+    <a href="https://www.w3.org/TR/cooluris/">W3C Linked Data best practices</a>.
+  </p>
+
+  <a name="uri-patterns"></a>
+  <h2>What URI patterns are supported?</h2>
+
+  <h3>Feature URIs (RDF + GeoJSON)</h3>
+  <dl>
+    <dt><code>/node/{id}</code>, <code>/node/{id}.rdf</code></dt>
+    <dd>OSM node as RDF/XML (XSLT-transformed from OSM API XML)</dd>
+    <dt><code>/way/{id}</code>, <code>/way/{id}.rdf</code></dt>
+    <dd>OSM way as RDF/XML</dd>
+    <dt><code>/relation/{id}</code>, <code>/relation/{id}.rdf</code></dt>
+    <dd>OSM relation as RDF/XML</dd>
+    <dt><code>/changeset/{id}.rdf</code></dt>
+    <dd>OSM changeset as RDF/XML</dd>
+  </dl>
+
+  <h3>Geometry URIs</h3>
+  <dl>
+    <dt><code>/geo/osm/{type}/{id}.json</code></dt>
+    <dd>GeoJSON geometry from OSM API</dd>
+    <dt><code>/geo/osm/{type}/{id}.wkt</code></dt>
+    <dd>WKT geometry from OSM API</dd>
+    <dt><code>/geo/osm/{type}/{id}.kml</code></dt>
+    <dd>KML geometry from OSM API</dd>
+    <dt><code>/geo/overpass/{type}/{id}.json</code></dt>
+    <dd>GeoJSON geometry from Overpass API (better for complex multipolygons)</dd>
+  </dl>
+
+  <h3>Derived data URIs</h3>
+  <dl>
+    <dt><code>/search?q={query}</code>, <code>/search.json?q={query}</code></dt>
+    <dd>Nominatim place search; returns RDF/XML or GeoJSON</dd>
+    <dt><code>/map?bbox={W,S,E,N}</code>, <code>/map.json?bbox={W,S,E,N}</code></dt>
+    <dd>OSM API map data for a bounding box; returns RDF/XML or GeoJSON</dd>
+    <dt><code>/poi?bbox={W,S,E,N}</code>, <code>/poi.json?bbox={W,S,E,N}</code></dt>
+    <dd>Overpass points of interest (amenity nodes) in a bounding box</dd>
+    <dt><code>/around?lon={lon}&amp;lat={lat}&amp;radius={m}</code></dt>
+    <dd>Overpass nodes within radius metres of a point; returns RDF/XML or GeoJSON</dd>
+    <dt><code>/tag/{key}</code></dt>
+    <dd>Tag statistics from taginfo.openstreetmap.org</dd>
+  </dl>
+
+  <a name="content-negotiation"></a>
+  <h2>How does content negotiation work?</h2>
+
+  <p>
+    All endpoints support two methods for selecting the response format:
+  </p>
+  <ul>
+    <li><strong>File extension</strong>: append <code>.rdf</code>, <code>.json</code>,
+      <code>.wkt</code>, or <code>.kml</code> to the URI.</li>
+    <li><strong>HTTP Accept header</strong>:
+      <code>Accept: application/rdf+xml</code> (RDF/XML),
+      <code>Accept: text/turtle</code> (Turtle, via Apache Jena),
+      <code>Accept: application/geo+json</code> or
+      <code>Accept: application/json</code> (GeoJSON).
+    </li>
+  </ul>
+
+  <a name="bot"></a>
+  <h2>What is the automated HTTP client?</h2>
+
+  <p>
+    See the <a href="/bot.html">bot page</a> for information about the User-Agent string
+    and upstream service usage.
+  </p>
+
+  <hr/>
+  <a href="http://ontologycentral.com/">OntologyCentral</a>, 2009-2026.
+</body>
+</html>

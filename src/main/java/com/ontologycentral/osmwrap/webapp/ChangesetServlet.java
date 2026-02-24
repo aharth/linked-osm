@@ -3,8 +3,8 @@ package com.ontologycentral.osmwrap.webapp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.ApiConstants;
@@ -62,27 +62,20 @@ public class ChangesetServlet extends HttpServlet {
 
 		String archive = UrlBuilder.buildChangesetUrl(changesetId);
 
-		URL u = new URL(archive);
-
-		_log.info("retrieving " + u);
-		System.out.println("retrieving " + u);
+		_log.info("retrieving " + archive);
+		System.out.println("retrieving " + archive);
 
 		try {
-			HttpURLConnection conn = HttpClientUtil.createConnection(archive);
+			HttpResponse<InputStream> response = HttpClientUtil.get(archive);
 
-			int responseCode = conn.getResponseCode();
+			int responseCode = response.statusCode();
 			if (responseCode != 200) {
-				// Pass through the original status code instead of always returning 500
-				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
+				resp.sendError(responseCode,
+						new String(response.body().readAllBytes(), StandardCharsets.UTF_8).trim());
 				return;
 			}
 
-			InputStream is = conn.getInputStream();
-
-			String encoding = conn.getContentEncoding();
-			if (encoding == null) {
-				encoding = "ISO-8859-1";
-			}
+			InputStream is = response.body();
 
 			if (format.equals("json")) {
 				// For JSON format, return raw OSM API response

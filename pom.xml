@@ -3,7 +3,7 @@
   <groupId>linked-osm</groupId>
   <artifactId>linked-osm</artifactId>
   <version>1.0.0-SNAPSHOT</version>
-  <packaging>jar</packaging>
+  <packaging>war</packaging>
   <name>Linked OpenStreetMap</name>
 
   <!-- Properties -->

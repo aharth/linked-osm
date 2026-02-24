@@ -2,11 +2,9 @@ package com.ontologycentral.osmwrap.webapp;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.logging.Logger;
@@ -92,27 +90,20 @@ public class FeatureServlet extends HttpServlet {
 			archive = ApiConstants.OSM_API_BASE + ctrl + id;
 		}
 
-		URL u = new URL(archive);
-
-		_log.info("retrieving " + u);
-		System.out.println("retrieving " + u);
+		_log.info("retrieving " + archive);
+		System.out.println("retrieving " + archive);
 
 		try {
-			HttpURLConnection conn = HttpClientUtil.createConnection(archive);
+			HttpResponse<InputStream> response = HttpClientUtil.get(archive);
 
-			int responseCode = conn.getResponseCode();
+			int responseCode = response.statusCode();
 			if (responseCode != 200) {
-				// Pass through the original status code instead of always returning 500
-				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
+				resp.sendError(responseCode,
+						new String(response.body().readAllBytes(), StandardCharsets.UTF_8).trim());
 				return;
 			}
 
-			InputStream is = conn.getInputStream();
-
-			String encoding = conn.getContentEncoding();
-			if (encoding == null) {
-				encoding = "ISO-8859-1";
-			}
+			InputStream is = response.body();
 
 			if (format.equals("json")) {
 				// For JSON format, convert Overpass JSON to GeoJSON
@@ -144,11 +135,11 @@ public class FeatureServlet extends HttpServlet {
 			resp.sendError(500, e.getMessage());
 			return;
 		} catch (IOException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		} catch (RuntimeException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;			
 		}

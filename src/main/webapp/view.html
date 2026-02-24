@@ -1,135 +1,75 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>View Geometry</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        body { margin: 0; font-family: sans-serif; }
-        #map { height: 70vh; }
-        #info { padding: 1em; }
-        #error { color: red; padding: 1em; }
-    </style>
+  <meta charset="UTF-8">
+  <title>View Geometry</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="map.css">
 </head>
 <body>
-    <div id="map"></div>
-    <div id="info"></div>
-    <div id="error"></div>
+  <p><a href="/">Overview</a> &gt; View Geometry</p>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        var params = new URLSearchParams(window.location.search);
-        var uri = params.get('uri');
+  <div id="map-view" class="map"></div>
+  <p id="bbox-view" class="map-controls" style="font-family:monospace;font-size:0.8em;color:#555">&mdash;</p>
+  <p id="links-view" class="map-controls"></p>
+  <p id="status-view" class="map-controls"></p>
 
-        if (!uri) {
-            document.getElementById('info').innerHTML =
-                '<form action="view.html">' +
-                '<label>URI: <input type="text" name="uri" size="40" value="/geo/osm/way/100.json"></label> ' +
-                '<input type="submit" value="View">' +
-                '</form>';
-        } else {
-            var map = L.map('map').setView([0, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
+  <div id="form-view" style="display:none">
+    <h2>View Geometry</h2>
+    <form action="view.html">
+      <label>URI: <input type="text" name="uri" size="60" value="/geo/osm/way/100.json"></label>
+      <input type="submit" value="View">
+    </form>
+    <p>Examples:
+      <a href="view.html?uri=%2Fgeo%2Fosm%2Fway%2F100.json">/geo/osm/way/100.json</a>,
+      <a href="view.html?uri=%2Fgeo%2Fosm%2Frelation%2F71525.json">/geo/osm/relation/71525.json</a>
+    </p>
+  </div>
 
-            // Points get their own pane so they render above polygons/lines
-            map.createPane('pointsPane');
-            map.getPane('pointsPane').style.zIndex = 450;
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="map.js"></script>
+  <script>
+    initOsmMap('map-view', 0, 0, 2);
 
-            var defaultStyle = { color: '#3388ff', weight: 3, opacity: 0.65, fillOpacity: 0.2 };
-            var pointStyle = { color: '#3388ff', weight: 2, opacity: 0.8, fillOpacity: 0.6, radius: 6, pane: 'pointsPane' };
-            var highlightStyle = { color: '#ff3333', weight: 5, opacity: 1, fillOpacity: 0.4 };
-            var highlightPointStyle = { color: '#ff3333', weight: 3, opacity: 1, fillOpacity: 0.8, radius: 8, pane: 'pointsPane' };
-            var selected = null;
-            var selectedIsPoint = false;
+    var params = new URLSearchParams(window.location.search);
+    var uri = params.get('uri');
 
-            function wrapGeometry(obj) {
-                if (obj.type && obj.type !== 'Feature' && obj.type !== 'FeatureCollection') {
-                    return { type: 'Feature', geometry: obj, properties: {} };
-                }
-                return obj;
-            }
-
-            // Always show a link to the GeoJSON source
-            var infoEl = document.getElementById('info');
-            var links = 'GeoJSON: <a href="' + uri + '">' + uri + '</a>';
-            var match = uri.match(/\/geo\/(osm|overpass)\/(\w+)\/(\d+)/);
-            if (match) {
-                var source = match[1];
-                var type = match[2];
-                var id = match[3];
-                var other = source === 'osm' ? 'overpass' : 'osm';
-                links += ' | <a href="/geo/' + other + '/' + type + '/' + id + '.json">geo/' + other + '</a>';
-                links += ' | <a href="/' + type + '/' + id + '.rdf">' + type + '/' + id + '.rdf</a>';
-            }
-            infoEl.innerHTML = links;
-
-            // Show bbox parameter as a dashed rectangle if present
-            var bboxMatch = uri.match(/[?&]bbox=([^&]+)/);
-            if (bboxMatch) {
-                var parts = bboxMatch[1].split(',');
-                if (parts.length === 4) {
-                    var west = parseFloat(parts[0]), south = parseFloat(parts[1]);
-                    var east = parseFloat(parts[2]), north = parseFloat(parts[3]);
-                    L.rectangle([[south, west], [north, east]], {
-                        color: '#666', weight: 2, dashArray: '6 4',
-                        fill: false, interactive: false
-                    }).addTo(map);
-                }
-            }
-
-            fetch(uri)
-                .then(function(r) {
-                    if (!r.ok) return r.text().then(function(body) { throw new Error(r.status + ' - ' + body); });
-                    return r.json();
-                })
-                .then(function(data) {
-                    var feature = wrapGeometry(data);
-                    var layer = L.geoJSON(feature, {
-                        style: function() { return defaultStyle; },
-                        pointToLayer: function(feature, latlng) {
-                            return L.circleMarker(latlng, pointStyle);
-                        },
-                        onEachFeature: function(feature, layer) {
-                            var isPoint = feature.geometry && feature.geometry.type === 'Point';
-                            layer.on('click', function() {
-                                if (selected && selected !== layer) {
-                                    selected.setStyle(selectedIsPoint ? pointStyle : defaultStyle);
-                                }
-                                layer.setStyle(isPoint ? highlightPointStyle : highlightStyle);
-                                selected = layer;
-                                selectedIsPoint = isPoint;
-                            });
-                            if (feature.properties && Object.keys(feature.properties).length > 0) {
-                                var html = '<table style="border-collapse:collapse">';
-                                var p = feature.properties;
-                                for (var key in p) {
-                                    var val = p[key];
-                                    if (key === 'osm_id' && p.osm_type) {
-                                        val = '<a href="/' + p.osm_type + '/' + val + '.rdf">' + val + '</a>';
-                                        val += ' (<a href="/' + p.osm_type + '/' + p.osm_id + '.json">json</a>)';
-                                        val += ' (<a href="https://www.openstreetmap.org/' + p.osm_type + '/' + p.osm_id + '" target="_blank">osm</a>)';
-                                    }
-                                    html += '<tr><td style="padding:1px 6px 1px 0;font-weight:bold;vertical-align:top">' + key + '</td><td style="padding:1px 0">' + val + '</td></tr>';
-                                }
-                                html += '</table>';
-                                layer.bindPopup(html, { maxWidth: 400 });
-                            }
-                        }
-                    }).addTo(map);
-                    map.on('popupclose', function() {
-                        if (selected) {
-                            selected.setStyle(selectedIsPoint ? pointStyle : defaultStyle);
-                            selected = null;
-                            selectedIsPoint = false;
-                        }
-                    });
-                    map.fitBounds(layer.getBounds(), { maxZoom: 16, padding: [20, 20] });
-                })
-                .catch(function(err) {
-                    document.getElementById('error').textContent = 'Error loading geometry: ' + err.message;
-                });
+    if (!uri) {
+        document.getElementById('form-view').style.display = '';
+        document.getElementById('status-view').textContent = 'Enter a URI below to view geometry.';
+    } else {
+        // Build links
+        var linksEl = document.getElementById('links-view');
+        var links = 'GeoJSON: <a href="' + escHtml(uri) + '">' + escHtml(uri) + '</a>';
+        var match = uri.match(/\/geo\/(osm|overpass)\/(\w+)\/(\d+)/);
+        if (match) {
+            var source = match[1];
+            var osmType = match[2];
+            var osmId = match[3];
+            var other = source === 'osm' ? 'overpass' : 'osm';
+            links += ' | <a href="/geo/' + other + '/' + osmType + '/' + osmId + '.json">geo/' + other + '</a>';
+            links += ' | <a href="/' + osmType + '/' + osmId + '.rdf">' + escHtml(osmType) + '/' + escHtml(osmId) + '.rdf</a>';
+            links += ' | <a href="https://www.openstreetmap.org/' + osmType + '/' + osmId + '" target="_blank">osm.org</a>';
         }
-    </script>
+        linksEl.innerHTML = links;
+
+        // Draw bbox rectangle if present in uri
+        var bboxMatch = uri.match(/[?&]bbox=([^&]+)/);
+        if (bboxMatch) {
+            var parts = decodeURIComponent(bboxMatch[1]).split(',');
+            if (parts.length === 4) {
+                var west = parseFloat(parts[0]), south = parseFloat(parts[1]);
+                var east = parseFloat(parts[2]), north = parseFloat(parts[3]);
+                var state = window.osmMaps['map-view'];
+                L.rectangle([[south, west], [north, east]], {
+                    color: '#666', weight: 2, dashArray: '6 4',
+                    fill: false, interactive: false
+                }).addTo(state.map);
+            }
+        }
+
+        loadGeoJsonUrl('map-view', uri, document.getElementById('status-view'));
+    }
+  </script>
 </body>
 </html>

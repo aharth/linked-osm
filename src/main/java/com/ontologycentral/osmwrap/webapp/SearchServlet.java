@@ -3,9 +3,8 @@ package com.ontologycentral.osmwrap.webapp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import java.util.logging.Logger;
@@ -40,22 +39,20 @@ public class SearchServlet extends HttpServlet {
 
 		String archive = UrlBuilder.buildSearchUrl(query, limit);
 
-		URL u = new URL(archive);
-
-		_log.info("retrieving " + u);
-		System.out.println("retrieving " + u);
+		_log.info("retrieving " + archive);
+		System.out.println("retrieving " + archive);
 
 		try {
-			HttpURLConnection conn = HttpClientUtil.createConnection(archive, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.SEARCH_READ_TIMEOUT);
+			HttpResponse<InputStream> response = HttpClientUtil.get(archive);
 
-			int responseCode = conn.getResponseCode();
+			int responseCode = response.statusCode();
 			if (responseCode != 200) {
-				// Pass through the original status code instead of always returning 500
-				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
+				resp.sendError(responseCode,
+						new String(response.body().readAllBytes(), StandardCharsets.UTF_8).trim());
 				return;
 			}
 
-			InputStream is = conn.getInputStream();
+			InputStream is = response.body();
 
 			if (wantJson) {
 				String xml = readInputStream(is);
@@ -64,11 +61,6 @@ public class SearchServlet extends HttpServlet {
 				resp.setContentType("application/geo+json");
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else {
-				String encoding = conn.getContentEncoding();
-				if (encoding == null) {
-					encoding = "ISO-8859-1";
-				}
-
 				Transformer t = (Transformer)ctx.getAttribute(Listener.SEARCH);
 
 				resp.setContentType("application/rdf+xml");
@@ -87,11 +79,11 @@ public class SearchServlet extends HttpServlet {
 			resp.sendError(500, e.getMessage());
 			return;
 		} catch (IOException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		} catch (RuntimeException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		}

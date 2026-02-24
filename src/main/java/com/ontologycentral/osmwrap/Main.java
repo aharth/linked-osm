@@ -2,9 +2,9 @@ package com.ontologycentral.osmwrap;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URLEncoder;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 import org.apache.commons.cli.CommandLine;
@@ -201,14 +201,15 @@ public class Main {
         String url = UrlBuilder.buildFeatureUrl(type, id);
         logger.info("Fetching " + type + " " + id + " from " + url);
 
-        HttpURLConnection connection = HttpClientUtil.createConnection(url);
-        connection.setRequestMethod("GET");
-
         try {
-            HttpClientUtil.checkResponseCode(connection, type + " " + id);
+            HttpResponse<InputStream> response = HttpClientUtil.get(url);
+            if (response.statusCode() != 200) {
+                System.err.println("Error: HTTP " + response.statusCode() + " from " + type + " " + id);
+                System.exit(1);
+            }
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw OSM XML
-            try (InputStream input = connection.getInputStream()) {
+            try (InputStream input = response.body()) {
                 HttpClientUtil.copyStream(input, System.out);
             }
         } catch (IOException e) {
@@ -221,14 +222,15 @@ public class Main {
         String url = UrlBuilder.buildSearchUrl(query, null);
         logger.info("Searching for '" + query + "' via " + url);
 
-        HttpURLConnection connection = HttpClientUtil.createConnection(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.SEARCH_READ_TIMEOUT);
-        connection.setRequestMethod("GET");
-
         try {
-            HttpClientUtil.checkResponseCode(connection, "Nominatim search");
+            HttpResponse<InputStream> response = HttpClientUtil.get(url);
+            if (response.statusCode() != 200) {
+                System.err.println("Error: HTTP " + response.statusCode() + " from Nominatim search");
+                System.exit(1);
+            }
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw Nominatim XML
-            try (InputStream input = connection.getInputStream()) {
+            try (InputStream input = response.body()) {
                 HttpClientUtil.copyStream(input, System.out);
             }
         } catch (IOException e) {
@@ -241,14 +243,15 @@ public class Main {
         String url = UrlBuilder.buildMapUrl(bbox);
         logger.info("Fetching map data for bbox " + bbox + " from " + url);
 
-        HttpURLConnection connection = HttpClientUtil.createConnection(url);
-        connection.setRequestMethod("GET");
-
         try {
-            HttpClientUtil.checkResponseCode(connection, "map data");
+            HttpResponse<InputStream> response = HttpClientUtil.get(url);
+            if (response.statusCode() != 200) {
+                System.err.println("Error: HTTP " + response.statusCode() + " from map data");
+                System.exit(1);
+            }
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw OSM XML
-            try (InputStream input = connection.getInputStream()) {
+            try (InputStream input = response.body()) {
                 HttpClientUtil.copyStream(input, System.out);
             }
         } catch (IOException e) {
@@ -261,23 +264,16 @@ public class Main {
         String overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox, null);
         logger.info("Fetching POI data for bbox " + bbox + " from Overpass API");
 
-        HttpURLConnection connection = HttpClientUtil.createConnection(ApiConstants.OVERPASS_API_BASE, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.POI_READ_TIMEOUT);
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        connection.setDoOutput(true);
-
-        // Send Overpass query as POST data
-        String postData = "data=" + java.net.URLEncoder.encode(overpassQuery, "UTF-8");
-        try (OutputStream os = connection.getOutputStream()) {
-            os.write(postData.getBytes("UTF-8"));
-            os.flush();
-        }
-
         try {
-            HttpClientUtil.checkResponseCode(connection, "Overpass API");
+            String postData = "data=" + URLEncoder.encode(overpassQuery, StandardCharsets.UTF_8);
+            HttpResponse<InputStream> response = HttpClientUtil.post(ApiConstants.OVERPASS_API_BASE, postData);
+            if (response.statusCode() != 200) {
+                System.err.println("Error: HTTP " + response.statusCode() + " from Overpass API");
+                System.exit(1);
+            }
             // TODO: Apply XSLT transformation to convert to RDF/XML
             // For now, just output the raw Overpass XML
-            try (InputStream input = connection.getInputStream()) {
+            try (InputStream input = response.body()) {
                 HttpClientUtil.copyStream(input, System.out);
             }
         } catch (IOException e) {
@@ -290,20 +286,14 @@ public class Main {
         String overpassQuery = UrlBuilder.buildOverpassAroundQuery(lat, lon, radius, null);
         logger.info("Fetching features around " + lat + "," + lon + " (radius " + radius + "m) from Overpass API");
 
-        HttpURLConnection connection = HttpClientUtil.createConnection(ApiConstants.OVERPASS_API_BASE, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.AROUND_READ_TIMEOUT);
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        connection.setDoOutput(true);
-
-        String postData = "data=" + java.net.URLEncoder.encode(overpassQuery, "UTF-8");
-        try (OutputStream os = connection.getOutputStream()) {
-            os.write(postData.getBytes("UTF-8"));
-            os.flush();
-        }
-
         try {
-            HttpClientUtil.checkResponseCode(connection, "Overpass API");
-            try (InputStream input = connection.getInputStream()) {
+            String postData = "data=" + URLEncoder.encode(overpassQuery, StandardCharsets.UTF_8);
+            HttpResponse<InputStream> response = HttpClientUtil.post(ApiConstants.OVERPASS_API_BASE, postData);
+            if (response.statusCode() != 200) {
+                System.err.println("Error: HTTP " + response.statusCode() + " from Overpass API");
+                System.exit(1);
+            }
+            try (InputStream input = response.body()) {
                 HttpClientUtil.copyStream(input, System.out);
             }
         } catch (IOException e) {
@@ -316,11 +306,13 @@ public class Main {
         String url = UrlBuilder.buildChangesetUrl(changesetId);
         logger.info("Fetching changeset " + changesetId + " from " + url);
 
-        HttpURLConnection connection = HttpClientUtil.createConnection(url);
-
         try {
-            HttpClientUtil.checkResponseCode(connection, "changeset " + changesetId);
-            try (InputStream input = connection.getInputStream()) {
+            HttpResponse<InputStream> response = HttpClientUtil.get(url);
+            if (response.statusCode() != 200) {
+                System.err.println("Error: HTTP " + response.statusCode() + " from changeset " + changesetId);
+                System.exit(1);
+            }
+            try (InputStream input = response.body()) {
                 HttpClientUtil.copyStream(input, System.out);
             }
         } catch (IOException e) {

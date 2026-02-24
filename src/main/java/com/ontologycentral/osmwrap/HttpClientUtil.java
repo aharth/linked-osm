@@ -3,46 +3,108 @@ package com.ontologycentral.osmwrap;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Shared HTTP client utilities for OpenStreetMap API access.
+ *
+ * <p>Uses {@code java.net.http.HttpClient} (Java 11+). All upstream HTTP calls
+ * go through {@link #get(String)} or {@link #post(String, String)}.
  */
 public final class HttpClientUtil {
 
+    private static final HttpClient CLIENT =
+            HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(10))
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .build();
+
+    private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(60);
+
     /**
-     * Creates an HTTP connection with standard timeout and User-Agent settings.
+     * Perform an HTTP GET request.
      *
-     * @param url the URL to connect to
-     * @return configured HttpURLConnection
-     * @throws IOException if connection creation fails
+     * @param url the URL to fetch
+     * @return the HTTP response with an InputStream body
+     * @throws IOException if the request fails
      */
-    public static HttpURLConnection createConnection(String url) throws IOException {
-        return createConnection(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.DEFAULT_READ_TIMEOUT);
+    public static HttpResponse<InputStream> get(String url) throws IOException {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(RESPONSE_TIMEOUT)
+                .header("User-Agent", BuildInfo.getUserAgent())
+                .GET()
+                .build();
+        try {
+            return CLIENT.send(req, HttpResponse.BodyHandlers.ofInputStream());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("HTTP GET interrupted: " + url, e);
+        }
     }
 
     /**
-     * Creates an HTTP connection with custom timeout settings.
+     * Perform an HTTP POST request with form-encoded body.
      *
-     * @param url the URL to connect to
-     * @param connectTimeout connection timeout in milliseconds
-     * @param readTimeout read timeout in milliseconds
-     * @return configured HttpURLConnection
-     * @throws IOException if connection creation fails
+     * @param url the URL to post to
+     * @param formData the form-encoded body (e.g. {@code "data=..."})
+     * @return the HTTP response with an InputStream body
+     * @throws IOException if the request fails
      */
-    public static HttpURLConnection createConnection(String url, int connectTimeout, int readTimeout) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-        conn.setConnectTimeout(connectTimeout);
-        conn.setReadTimeout(readTimeout);
-        conn.setRequestProperty("User-Agent", BuildInfo.getUserAgent());
-        return conn;
+    public static HttpResponse<InputStream> post(String url, String formData) throws IOException {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(RESPONSE_TIMEOUT)
+                .header("User-Agent", BuildInfo.getUserAgent())
+                .header("Content-Type", "application/x-www-form-urlencoded")
+                .POST(HttpRequest.BodyPublishers.ofString(formData))
+                .build();
+        try {
+            return CLIENT.send(req, HttpResponse.BodyHandlers.ofInputStream());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("HTTP POST interrupted: " + url, e);
+        }
+    }
+
+    /**
+     * Fetch content from a URL and return as String.
+     *
+     * @param url the URL to fetch from
+     * @param connectTimeout unused (kept for API compatibility)
+     * @param readTimeout unused (kept for API compatibility)
+     * @return the response body as a String
+     * @throws IOException if fetch fails or response code is not 200
+     */
+    public static String fetchUrl(String url, int connectTimeout, int readTimeout)
+            throws IOException {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(RESPONSE_TIMEOUT)
+                .header("User-Agent", BuildInfo.getUserAgent())
+                .GET()
+                .build();
+        HttpResponse<String> resp;
+        try {
+            resp = CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("HTTP GET interrupted: " + url, e);
+        }
+        if (resp.statusCode() != 200) {
+            throw new IOException("HTTP " + resp.statusCode() + " from " + url);
+        }
+        return resp.body();
     }
 
     /**
@@ -61,54 +123,11 @@ public final class HttpClientUtil {
     }
 
     /**
-     * Checks HTTP response code and throws IOException for non-200 responses.
-     *
-     * @param connection the HTTP connection to check
-     * @param context descriptive context for error messages
-     * @throws IOException if response code is not 200
-     */
-    public static void checkResponseCode(HttpURLConnection connection, String context) throws IOException {
-        int responseCode = connection.getResponseCode();
-        if (responseCode == 404) {
-            throw new IOException(context + " not found");
-        } else if (responseCode != 200) {
-            throw new IOException("HTTP " + responseCode + " from " + context + ": " + connection.getResponseMessage());
-        }
-    }
-
-    /**
-     * Fetch content from a URL and return as String.
-     *
-     * @param url the URL to fetch from
-     * @param connectTimeout connection timeout in milliseconds
-     * @param readTimeout read timeout in milliseconds
-     * @return the response body as a String
-     * @throws IOException if fetch fails or response code is not 200
-     */
-    public static String fetchUrl(String url, int connectTimeout, int readTimeout) throws IOException {
-        HttpURLConnection conn = createConnection(url, connectTimeout, readTimeout);
-        checkResponseCode(conn, url);
-
-        try (InputStream is = conn.getInputStream()) {
-            // Read the response into a StringBuilder
-            StringBuilder sb = new StringBuilder();
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = is.read(buffer)) != -1) {
-                sb.append(new String(buffer, 0, bytesRead, "UTF-8"));
-            }
-            return sb.toString();
-        } finally {
-            conn.disconnect();
-        }
-    }
-
-    /**
      * Fetch multiple nodes in bulk using OSM API.
      * Reduces number of HTTP requests by fetching up to 50 nodes per request.
      *
      * @param nodeIds list of node IDs to fetch
-     * @return map of nodeId -> [lon, lat] coordinate pair
+     * @return map of nodeId -&gt; [lon, lat] coordinate pair
      * @throws IOException if fetch fails
      */
     public static Map<String, double[]> fetchNodesBulk(List<String> nodeIds) throws IOException {
@@ -118,7 +137,6 @@ public final class HttpClientUtil {
             return coordinates;
         }
 
-        // Batch requests in groups of 50 (OSM API limit)
         final int BATCH_SIZE = 50;
         for (int i = 0; i < nodeIds.size(); i += BATCH_SIZE) {
             int end = Math.min(i + BATCH_SIZE, nodeIds.size());
@@ -128,14 +146,10 @@ public final class HttpClientUtil {
             String url = ApiConstants.OSM_API_BASE + "/nodes?nodes=" + nodeIds_str;
 
             try {
-                String xmlResponse = fetchUrl(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT,
-                        ApiConstants.GEOMETRY_READ_TIMEOUT);
+                String xmlResponse = fetchUrl(url, 0, 0);
 
-                // Parse XML response for node coordinates
-                Pattern latPattern = Pattern.compile("lat=['\"]([^'\"]+)['\"]");
-                Pattern lonPattern = Pattern.compile("lon=['\"]([^'\"]+)['\"]");
-                Pattern nodePattern = Pattern.compile("<node id=['\"]([^'\"]+)['\"][^>]*lat=['\"]([^'\"]+)['\"][^>]*lon=['\"]([^'\"]+)['\"]");
-
+                Pattern nodePattern = Pattern.compile(
+                        "<node id=['\"]([^'\"]+)['\"][^>]*lat=['\"]([^'\"]+)['\"][^>]*lon=['\"]([^'\"]+)['\"]");
                 Matcher nodeMatcher = nodePattern.matcher(xmlResponse);
                 while (nodeMatcher.find()) {
                     String nodeId = nodeMatcher.group(1);
@@ -144,7 +158,6 @@ public final class HttpClientUtil {
                     coordinates.put(nodeId, new double[]{lon, lat});
                 }
             } catch (IOException e) {
-                // Log warning but continue with remaining batches
                 System.err.println("Warning: Failed to fetch node batch: " + e.getMessage());
             }
         }
@@ -157,7 +170,7 @@ public final class HttpClientUtil {
      * Reduces number of HTTP requests by fetching up to 50 ways per request.
      *
      * @param wayIds list of way IDs to fetch
-     * @return map of wayId -> list of node IDs in the way
+     * @return map of wayId -&gt; list of node IDs in the way
      * @throws IOException if fetch fails
      */
     public static Map<String, List<String>> fetchWaysBulk(List<String> wayIds) throws IOException {
@@ -167,7 +180,6 @@ public final class HttpClientUtil {
             return wayNodes;
         }
 
-        // Batch requests in groups of 50 (OSM API limit)
         final int BATCH_SIZE = 50;
         for (int i = 0; i < wayIds.size(); i += BATCH_SIZE) {
             int end = Math.min(i + BATCH_SIZE, wayIds.size());
@@ -177,15 +189,12 @@ public final class HttpClientUtil {
             String url = ApiConstants.OSM_API_BASE + "/ways?ways=" + wayIds_str;
 
             try {
-                String xmlResponse = fetchUrl(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT,
-                        ApiConstants.GEOMETRY_READ_TIMEOUT);
+                String xmlResponse = fetchUrl(url, 0, 0);
 
-                // Parse XML response for ways and their node references
                 Pattern wayPattern = Pattern.compile("<way id=['\"]([^'\"]+)['\"]");
                 Pattern ndPattern = Pattern.compile("<nd ref=['\"]([^'\"]+)['\"]");
 
                 Matcher wayMatcher = wayPattern.matcher(xmlResponse);
-                int lastWayEnd = 0;
 
                 while (wayMatcher.find()) {
                     String wayId = wayMatcher.group(1);
@@ -196,7 +205,6 @@ public final class HttpClientUtil {
                         wayEnd = xmlResponse.length();
                     }
 
-                    // Extract node references for this way
                     String wayXml = xmlResponse.substring(wayStart, wayEnd);
                     List<String> nodeRefs = new ArrayList<>();
 
@@ -208,34 +216,11 @@ public final class HttpClientUtil {
                     wayNodes.put(wayId, nodeRefs);
                 }
             } catch (IOException e) {
-                // Log warning but continue with remaining batches
                 System.err.println("Warning: Failed to fetch way batch: " + e.getMessage());
             }
         }
 
         return wayNodes;
-    }
-
-    /**
-     * Read the error body from a failed HTTP connection.
-     * Returns the response body text, or the status message if no body is available.
-     */
-    public static String readErrorBody(HttpURLConnection conn) {
-        try {
-            InputStream es = conn.getErrorStream();
-            if (es == null) return conn.getResponseMessage();
-            StringBuilder sb = new StringBuilder();
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = es.read(buffer)) != -1) {
-                sb.append(new String(buffer, 0, bytesRead, "UTF-8"));
-            }
-            es.close();
-            String body = sb.toString().trim();
-            return body.isEmpty() ? conn.getResponseMessage() : body;
-        } catch (IOException e) {
-            return "unknown error";
-        }
     }
 
     private HttpClientUtil() {

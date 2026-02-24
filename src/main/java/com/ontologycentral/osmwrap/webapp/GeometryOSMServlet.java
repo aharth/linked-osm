@@ -3,9 +3,8 @@ package com.ontologycentral.osmwrap.webapp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -88,21 +87,21 @@ public class GeometryOSMServlet extends HttpServlet {
 
 		// Fetch element from OSM API to get coordinates and member references
 		String osmApiUrl = ApiConstants.OSM_API_BASE + "/" + elementType + "/" + id;
-		URL u = new URL(osmApiUrl);
 
-		_log.info("retrieving OSM element " + u);
-		System.out.println("retrieving OSM element " + u);
+		_log.info("retrieving OSM element " + osmApiUrl);
+		System.out.println("retrieving OSM element " + osmApiUrl);
 
 		try {
-			HttpURLConnection conn = HttpClientUtil.createConnection(osmApiUrl, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.GEOMETRY_READ_TIMEOUT);
+			HttpResponse<InputStream> response = HttpClientUtil.get(osmApiUrl);
 
-			int responseCode = conn.getResponseCode();
+			int responseCode = response.statusCode();
 			if (responseCode != 200) {
-				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
+				resp.sendError(responseCode,
+						new String(response.body().readAllBytes(), StandardCharsets.UTF_8).trim());
 				return;
 			}
 
-			InputStream is = conn.getInputStream();
+			InputStream is = response.body();
 			String osmXml = readInputStream(is);
 			is.close();
 
@@ -131,11 +130,11 @@ public class GeometryOSMServlet extends HttpServlet {
 			resp.setHeader("Expires", Listener.RFC822.format(c.getTime()));
 
 		} catch (IOException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, osmApiUrl + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		} catch (RuntimeException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, osmApiUrl + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		}
@@ -249,14 +248,13 @@ public class GeometryOSMServlet extends HttpServlet {
 
 	private List<String> fetchWayNodeReferences(String wayId) throws IOException {
 		String url = ApiConstants.OSM_API_BASE + "/way/" + wayId;
-		HttpURLConnection conn = HttpClientUtil.createConnection(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.GEOMETRY_READ_TIMEOUT);
+		HttpResponse<InputStream> response = HttpClientUtil.get(url);
 
-		int responseCode = conn.getResponseCode();
-		if (responseCode != 200) {
+		if (response.statusCode() != 200) {
 			return new ArrayList<>();
 		}
 
-		InputStream is = conn.getInputStream();
+		InputStream is = response.body();
 		String osmXml = readInputStream(is);
 		is.close();
 

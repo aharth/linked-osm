@@ -1,257 +1,183 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OpenStreetMap Linked Data Wrapper</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="map.css">
+</head>
 
-<!DOCTYPE html
-     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<body>
+  <h1>OpenStreetMap Linked Data Wrapper</h1>
 
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-  <head>
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8"></meta>
-    <title>OpenStreetMap Linked Data Wrapper</title>
-  </head>
+  <p>
+    Welcome to the EXPERIMENTAL <a href="http://openstreetmap.org/">OpenStreetMap</a> wrapper to <a href="http://en.wikipedia.org/wiki/Linked_Data">Linked Data</a>.
+    OpenStreetMap data is licensed under the <a href="https://www.openstreetmap.org/copyright">Open Database License (ODbL)</a>.
+  </p>
 
-  <body>
-    <h1>OpenStreetMap Linked Data Wrapper</h1>
+  <p>
+    We maintain a document with <a href="faq.html">Frequently Asked Questions</a> and a <a href="bot.html">bot page</a>.
+  </p>
 
-    <h2>Introduction</h2>
-    <p>
-      Welcome to the EXPERIMENTAL <a href="http://openstreetmap.org/">OpenStreetMap</a> wrapper to <a href="http://en.wikipedia.org/wiki/Linked_Data">Linked Data</a>.
-    </p>
-
-    <p>
-      OpenStreetMap data is licensed under the <a href="https://www.openstreetmap.org/copyright">Open Database License (ODbL)</a>.
-    </p>
-
-
-    <h2>Resources</h2>
-
-    <p>
-      Core element data (nodes, ways, relations) and changeset metadata via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a> (<a href="https://operations.osmfoundation.org/policies/api/">usage policy</a>).
-    </p>
-
-    <dl>
-      <dt>node/{id}.rdf</dt>
-      <dd>Node descriptions in RDF</dd>
-      <dt>node/{id}.json</dt>
-      <dd>Node geometry in GeoJSON</dd>
-      <dt>way/{id}.rdf</dt>
-      <dd>Way descriptions in RDF</dd>
-      <dt>way/{id}.json</dt>
-      <dd>Way geometry in GeoJSON</dd>
-      <dt>relation/{id}.rdf</dt>
-      <dd>Relation descriptions in RDF</dd>
-      <dt>relation/{id}.json</dt>
-      <dd>Relation geometry in GeoJSON</dd>
-      <dt>changeset/{id}.rdf</dt>
-      <dd>Changeset metadata in RDF</dd>
-    </dl>
-
-    <h3>Understanding URIs</h3>
-
-    <p>
-      For each OSM element, three URI patterns are used:
-    </p>
-
-    <dl>
-      <dt><code>/node/{id}.rdf</code>, <code>/way/{id}.rdf</code>, <code>/relation/{id}.rdf</code></dt>
-      <dd>Document URI that returns RDF/XML with semantic metadata and provenance information</dd>
-
-      <dt><code>/node/{id}.json</code>, <code>/way/{id}.json</code>, <code>/relation/{id}.json</code></dt>
-      <dd>Document URI that returns GeoJSON with geometry coordinates</dd>
-
-      <dt><code>/node/{id}#id</code>, <code>/way/{id}#id</code>, <code>/relation/{id}#id</code></dt>
-      <dd>Resource URI identifying the geographic feature itself (the thing with properties like
-      location and tags). This hash URI appears within RDF responses and follows
-      <a href="https://www.w3.org/TR/cooluris/">W3C Linked Data best practices</a> to distinguish
-      the feature from documents describing it. The RDF output includes <code>foaf:page</code> links
-      to both the RDF and JSON representations.</dd>
-    </dl>
-
-    <p>
-      Requesting a URI without an extension (e.g., <code>/node/{id}</code>) defaults to RDF format.
-    </p>
-
-    <h3>Examples</h3>
-    <dl>
-      <dt><a href="node/1.rdf">node/1.rdf</a> | <a href="node/1.json">node/1.json</a> (<a href="view.html?uri=/geo/osm/node/1.json">map</a>)</dt>
-      <dd>Monte Piselli radio mast, Italy - The very first node in OpenStreetMap! - <a href="https://www.openstreetmap.org/node/1">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/node/1">API</a></dd>
-      <dt><a href="node/1675605507.rdf">node/1675605507.rdf</a> | <a href="node/1675605507.json">node/1675605507.json</a> (<a href="view.html?uri=/geo/osm/node/1675605507.json">map</a>)</dt>
-      <dd>Café Wanderer, Nuremberg - <a href="https://www.openstreetmap.org/node/1675605507">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/node/1675605507">API</a></dd>
-      <dt><a href="way/100.rdf">way/100.rdf</a> | <a href="way/100.json">way/100.json</a> (<a href="view.html?uri=/geo/osm/way/100.json">map</a>)</dt>
-      <dd>Roundabout, Germany - <a href="https://www.openstreetmap.org/way/100">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/way/100">API</a></dd>
-      <dt><a href="way/32113829.rdf">way/32113829.rdf</a> | <a href="way/32113829.json">way/32113829.json</a> (<a href="view.html?uri=/geo/osm/way/32113829.json">map</a>)</dt>
-      <dd>Palas building, Kaiserburg Nuremberg - <a href="https://www.openstreetmap.org/way/32113829">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/way/32113829">API</a></dd>
-      <dt><a href="relation/147.rdf">relation/147.rdf</a> | <a href="relation/147.json">relation/147.json</a> (<a href="view.html?uri=/geo/osm/relation/147.json">map</a>)</dt>
-      <dd>Tigris River multipolygon - Earliest surviving relation! - <a href="https://www.openstreetmap.org/relation/147">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/relation/147">API</a></dd>
-      <dt><a href="relation/71525.rdf">relation/71525.rdf</a> | <a href="relation/71525.json">relation/71525.json</a> (<a href="view.html?uri=/geo/osm/relation/71525.json">map</a>)</dt>
-      <dd>Paris administrative boundary - <a href="https://www.openstreetmap.org/relation/71525">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/relation/71525">API</a></dd>
-      <dt><a href="relation/13986332.rdf">relation/13986332.rdf</a> | <a href="relation/13986332.json">relation/13986332.json</a> (<a href="view.html?uri=/geo/osm/relation/13986332.json">map</a>)</dt>
-      <dd>Sebalder Reichswald forest - <a href="https://www.openstreetmap.org/relation/13986332">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/relation/13986332">API</a></dd>
-      <dt><a href="changeset/137.rdf">changeset/137.rdf</a> | <a href="changeset/137.json">changeset/137.json</a></dt>
-      <dd>One of the earliest changesets - <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/changeset/137">API</a></dd>
-      <dt><a href="changeset/123456789.rdf">changeset/123456789.rdf</a> | <a href="changeset/123456789.json">changeset/123456789.json</a></dt>
-      <dd>Recent changeset example - <a href="https://www.openstreetmap.org/changeset/123456789">view on OSM</a>, <a href="https://api.openstreetmap.org/api/0.6/changeset/123456789">API</a></dd>
-    </dl>
-
-    <h2>Geometry Data</h2>
-
-    <p>
-      Get raw geometry data for OSM features via linked geometry sources. Supports multiple formats via file extension or HTTP Accept header content negotiation.
-    </p>
-
-    <dl>
-      <dt><code>/geo/osm/{type}/{id}.{format}</code></dt>
-      <dd>Geometry from OpenStreetMap API. Supported formats: <code>json</code> (GeoJSON, default), <code>wkt</code> (Well-Known Text), <code>kml</code> (Keyhole Markup Language)</dd>
-
-      <dt><code>/geo/overpass/{type}/{id}.{format}</code></dt>
-      <dd>Geometry from Overpass API (useful for complex geometries). Same format options as OSM endpoint</dd>
-    </dl>
-
-    <h3>Content Negotiation</h3>
-
-    <p>Request different formats using file extensions or HTTP Accept headers:</p>
-
-    <dl>
-      <dt>File extension method</dt>
-      <dd><code>/geo/osm/node/1.json</code> → GeoJSON<br/>
-          <code>/geo/osm/node/1.wkt</code> → WKT<br/>
-          <code>/geo/osm/node/1.kml</code> → KML</dd>
-
-      <dt>HTTP Accept header method</dt>
-      <dd><code>Accept: application/geo+json</code> → GeoJSON (default)<br/>
-          <code>Accept: application/wkt</code> → WKT<br/>
-          <code>Accept: application/vnd.google-earth.kml+xml</code> → KML</dd>
-    </dl>
-
-    <h3>Examples</h3>
-
-    <dl>
-      <dt><a href="geo/osm/node/1.json">geo/osm/node/1.json</a> (<a href="view.html?uri=/geo/osm/node/1.json">map</a>)</dt>
-      <dd>Point geometry for Monte Piselli node (GeoJSON format)</dd>
-
-      <dt><a href="geo/osm/node/1.wkt">geo/osm/node/1.wkt</a></dt>
-      <dd>Same node in WKT format: <code>POINT(lon lat)</code></dd>
-
-      <dt><a href="geo/osm/node/1.kml">geo/osm/node/1.kml</a></dt>
-      <dd>Same node in KML format for Google Earth</dd>
-
-      <dt><a href="geo/osm/way/100.json">geo/osm/way/100.json</a> (<a href="view.html?uri=/geo/osm/way/100.json">map</a>)</dt>
-      <dd>Geometry for Roundabout way in Germany (GeoJSON)</dd>
-
-      <dt><a href="geo/osm/relation/71525.json">geo/osm/relation/71525.json</a> (<a href="view.html?uri=/geo/osm/relation/71525.json">map</a>)</dt>
-      <dd>Geometry for Paris administrative boundary relation (GeoJSON)</dd>
-
-      <dt><a href="geo/overpass/way/100.json">geo/overpass/way/100.json</a> (<a href="view.html?uri=/geo/overpass/way/100.json">map</a>)</dt>
-      <dd>Geometry from Overpass API for way (GeoJSON)</dd>
-    </dl>
-
-    <h2>Map</h2>
-
-    <p>
-      Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a> (<a href="https://operations.osmfoundation.org/policies/api/">usage policy</a>).
-    </p>
-
-    <form name="input" action="map">
-      <input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051"></input>
-      <input type="submit"/>
-    </form>
-
-    <h3>Examples</h3>
-
-    <dl>
-      <dt><a href="map?bbox=11.075,49.457,11.077,49.459">map?bbox=11.075,49.457,11.077,49.459</a> (<a href="view.html?uri=/map.json?bbox=11.075,49.457,11.077,49.459">map</a>)</dt>
-      <dd>Map data around Kaiserburg Nuremberg - <a href="https://api.openstreetmap.org/api/0.6/map?bbox=11.075,49.457,11.077,49.459">OSM API</a></dd>
-      <dt><a href="map?bbox=2.348,48.856,2.350,48.858">map?bbox=2.348,48.856,2.350,48.858</a> (<a href="view.html?uri=/map.json?bbox=2.348,48.856,2.350,48.858">map</a>)</dt>
-      <dd>Map data around Louvre, Paris - <a href="https://api.openstreetmap.org/api/0.6/map?bbox=2.348,48.856,2.350,48.858">OSM API</a></dd>
-      <dt><a href="map?bbox=-0.128,51.500,-0.126,51.502">map?bbox=-0.128,51.500,-0.126,51.502</a> (<a href="view.html?uri=/map.json?bbox=-0.128,51.500,-0.126,51.502">map</a>)</dt>
-      <dd>Map data around Westminster, London - <a href="https://api.openstreetmap.org/api/0.6/map?bbox=-0.128,51.500,-0.126,51.502">OSM API</a></dd>
-    </dl>
-
-    <h2>Search</h2>
-
-    <p>
-      Search for nodes, relations and ways via <a href="https://nominatim.openstreetmap.org">Nominatim API</a> (<a href="https://operations.osmfoundation.org/policies/nominatim/">usage policy</a>).
-    </p>
-
-    <form name="input" action="search">
-      <input type="text" name="q"></input>
-      <label>limit: <input type="text" name="limit" size="4"></input></label>
-      <input type="submit"/>
-    </form>
-
-    <h3>Examples</h3>
-
-    <dl>
-      <dt><a href="search?q=Kaiserburg">search?q=Kaiserburg</a> (<a href="view.html?uri=/search.json?q=Kaiserburg">map</a>)</dt>
-      <dd>Search for "Kaiserburg" - <a href="https://nominatim.openstreetmap.org/search?q=Kaiserburg&amp;format=xml">Nominatim API</a></dd>
-      <dt><a href="search?q=Nuremberg">search?q=Nuremberg</a> (<a href="view.html?uri=/search.json?q=Nuremberg">map</a>)</dt>
-      <dd>Search for "Nuremberg" - <a href="https://nominatim.openstreetmap.org/search?q=Nuremberg&amp;format=xml">Nominatim API</a></dd>
-      <dt><a href="search?q=restaurant">search?q=restaurant</a> (<a href="view.html?uri=/search.json?q=restaurant">map</a>)</dt>
-      <dd>Search for "restaurant" - <a href="https://nominatim.openstreetmap.org/search?q=restaurant&amp;format=xml">Nominatim API</a></dd>
-    </dl>
-
-    
-    <h2>Points of Interest</h2>
-
-    <p>
-      Get points of interest (nodes with an amenity tag) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a> (<a href="https://dev.overpass-api.de/overpass-doc/en/preface/commons.html">terms</a>).
-    </p>
-
-    <form name="input" action="poi">
-      <input type="text" name="bbox" value="11.075,49.457,11.077,49.459"></input>
-      <label>limit: <input type="text" name="limit" size="4"></input></label>
-      <input type="submit"/>
-    </form>
-
-    <h3>Examples</h3>
-
-    <dl>
-      <dt><a href="poi?bbox=11.075,49.457,11.077,49.459">poi?bbox=11.075,49.457,11.077,49.459</a> (<a href="view.html?uri=/poi.json?bbox=11.075,49.457,11.077,49.459">map</a>)</dt>
-      <dd>Points of interest near Kaiserburg Nuremberg - <a href="https://overpass-api.de/api/interpreter?data=[out:xml];node[amenity](49.457,11.075,49.459,11.077);out;">Overpass API</a></dd>
-      <dt><a href="poi?bbox=2.348,48.856,2.350,48.858">poi?bbox=2.348,48.856,2.350,48.858</a> (<a href="view.html?uri=/poi.json?bbox=2.348,48.856,2.350,48.858">map</a>)</dt>
-      <dd>Points of interest near the Louvre, Paris - <a href="https://overpass-api.de/api/interpreter?data=[out:xml];node[amenity](48.856,2.348,48.858,2.350);out;">Overpass API</a></dd>
-      <dt><a href="poi?bbox=-0.128,51.500,-0.126,51.502">poi?bbox=-0.128,51.500,-0.126,51.502</a> (<a href="view.html?uri=/poi.json?bbox=-0.128,51.500,-0.126,51.502">map</a>)</dt>
-      <dd>Points of interest near Westminster, London - <a href="https://overpass-api.de/api/interpreter?data=[out:xml];node[amenity](51.500,-0.128,51.502,-0.126);out;">Overpass API</a></dd>
-    </dl>
+  <div id="map-main" class="map"></div>
+  <p id="bbox-main" class="map-controls" style="font-family:monospace;font-size:0.8em;color:#555">&mdash;</p>
+  <p class="map-controls"><span id="status-main" style="font-size:0.85em"></span></p>
 
 
-    <h2>Around</h2>
+  <h2>Search by place name</h2>
 
-    <p>
-      Get nodes within a radius around a point via <a href="https://overpass-api.de/">Overpass API</a> (<a href="https://dev.overpass-api.de/overpass-doc/en/preface/commons.html">terms</a>).
-    </p>
+  <p>
+    Search for countries, cities, or other places via <a href="https://nominatim.openstreetmap.org">Nominatim</a>
+    (<a href="https://operations.osmfoundation.org/policies/nominatim/">usage policy</a>).
+  </p>
 
-    <form name="input" action="around">
-      <label>lon: <input type="text" name="lon" value="11.08"></input></label>
-      <label>lat: <input type="text" name="lat" value="49.45"></input></label>
-      <label>radius: <input type="text" name="radius" value="30"></input></label>
-      <label>limit: <input type="text" name="limit" size="4"></input></label>
-      <input type="submit"/>
-    </form>
+  <form name="search-form" action="search">
+    <input type="text" name="q">
+    <label>limit: <input type="text" name="limit" size="4"></label>
+    <input type="submit">
+    <input type="button" value="Show on map" onclick="loadGeoJsonUrl('map-main', '/search.json?q=' + encodeURIComponent(this.form.elements['q'].value), document.getElementById('status-main'));">
+  </form>
 
-    <h3>Examples</h3>
+  <h3>Example countries</h3>
 
-    <dl>
-      <dt><a href="around?lon=11.077&amp;lat=49.458&amp;radius=30">around?lon=11.077&amp;lat=49.458&amp;radius=30</a> (<a href="view.html?uri=/around.json?lon=11.077&amp;lat=49.458&amp;radius=30">map</a>)</dt>
-      <dd>Nodes within 30m of Kaiserburg Nuremberg</dd>
-      <dt><a href="around?lon=2.349&amp;lat=48.857&amp;radius=30">around?lon=2.349&amp;lat=48.857&amp;radius=30</a> (<a href="view.html?uri=/around.json?lon=2.349&amp;lat=48.857&amp;radius=30">map</a>)</dt>
-      <dd>Nodes within 30m of the Louvre, Paris</dd>
-      <dt><a href="around?lon=-0.127&amp;lat=51.501&amp;radius=30">around?lon=-0.127&amp;lat=51.501&amp;radius=30</a> (<a href="view.html?uri=/around.json?lon=-0.127&amp;lat=51.501&amp;radius=30">map</a>)</dt>
-      <dd>Nodes within 30m of Westminster, London</dd>
-    </dl>
+  <dl>
+    <dt><a href="search?q=Germany">search?q=Germany</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=Germany', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Germany &mdash; <a href="https://nominatim.openstreetmap.org/search?q=Germany&amp;format=xml">Nominatim API</a></dd>
+    <dt><a href="search?q=France">search?q=France</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=France', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>France</dd>
+    <dt><a href="search?q=United+Kingdom">search?q=United+Kingdom</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=United+Kingdom', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>United Kingdom</dd>
+    <dt><a href="search?q=Netherlands">search?q=Netherlands</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=Netherlands', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Netherlands</dd>
+    <dt><a href="search?q=Kaiserburg">search?q=Kaiserburg</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=Kaiserburg', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Kaiserburg, Nuremberg</dd>
+  </dl>
 
 
-    <h2>Documentation</h2>
+  <h2>Features (nodes, ways, relations)</h2>
 
-    <p>
-      For project updates and changes, see the <a href="https://github.com/aharth/linked-osm/blob/main/CHANGELOG.md">CHANGELOG</a>.
-    </p>
+  <p>
+    Core element data (nodes, ways, relations) and changeset metadata via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
+    See <a href="faq.html#feature-vs-geometry">FAQ: feature vs. geometry</a> and
+    <a href="faq.html#uri-patterns">FAQ: URI patterns</a>.
+  </p>
 
-    <p>
-      For information about the OSM data model and how it's represented as Linked Data, see the <a href="https://github.com/aharth/linked-osm/blob/main/ONTOLOGY.md">ONTOLOGY</a> documentation.
-    </p>
+  <dl>
+    <dt><a href="node/1.rdf">node/1.rdf</a> | <a href="node/1.json">node/1.json</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/node/1.json', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Monte Piselli radio mast, Italy &mdash; The very first node in OpenStreetMap! &mdash; <a href="https://www.openstreetmap.org/node/1">view on OSM</a></dd>
+    <dt><a href="node/1675605507.rdf">node/1675605507.rdf</a> | <a href="node/1675605507.json">node/1675605507.json</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/node/1675605507.json', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Caf&#xe9; Wanderer, Nuremberg &mdash; <a href="https://www.openstreetmap.org/node/1675605507">view on OSM</a></dd>
+    <dt><a href="way/100.rdf">way/100.rdf</a> | <a href="way/100.json">way/100.json</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/way/100.json', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Roundabout, Germany &mdash; <a href="https://www.openstreetmap.org/way/100">view on OSM</a></dd>
+    <dt><a href="way/32113829.rdf">way/32113829.rdf</a> | <a href="way/32113829.json">way/32113829.json</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/way/32113829.json', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Palas building, Kaiserburg Nuremberg &mdash; <a href="https://www.openstreetmap.org/way/32113829">view on OSM</a></dd>
+    <dt><a href="relation/147.rdf">relation/147.rdf</a> | <a href="relation/147.json">relation/147.json</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/relation/147.json', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Tigris River multipolygon &mdash; Earliest surviving relation! &mdash; <a href="https://www.openstreetmap.org/relation/147">view on OSM</a></dd>
+    <dt><a href="relation/71525.rdf">relation/71525.rdf</a> | <a href="relation/71525.json">relation/71525.json</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/relation/71525.json', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Paris administrative boundary &mdash; <a href="https://www.openstreetmap.org/relation/71525">view on OSM</a></dd>
+    <dt><a href="relation/13986332.rdf">relation/13986332.rdf</a> | <a href="relation/13986332.json">relation/13986332.json</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/relation/13986332.json', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Sebalder Reichswald forest &mdash; <a href="https://www.openstreetmap.org/relation/13986332">view on OSM</a></dd>
+    <dt><a href="changeset/137.rdf">changeset/137.rdf</a></dt>
+    <dd>One of the earliest changesets &mdash; <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a></dd>
+  </dl>
 
-    <hr/>
-    <a href="http://ontologycentral.com/">OntologyCentral</a>, 2009-2026.
-  </body>
+
+  <h2>Map data by bounding box</h2>
+
+  <p>
+    Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
+  </p>
+
+  <form name="map-form" action="map">
+    <input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051">
+    <input type="submit">
+    <input type="button" value="Show on map" onclick="loadGeoJsonUrl('map-main', '/map.json?bbox=' + encodeURIComponent(this.form.elements['bbox'].value), document.getElementById('status-main'));">
+  </form>
+
+  <dl>
+    <dt><a href="map?bbox=11.075,49.457,11.077,49.459">map?bbox=11.075,49.457,11.077,49.459</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/map.json?bbox=11.075,49.457,11.077,49.459', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Kaiserburg Nuremberg</dd>
+    <dt><a href="map?bbox=2.348,48.856,2.350,48.858">map?bbox=2.348,48.856,2.350,48.858</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/map.json?bbox=2.348,48.856,2.350,48.858', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Louvre, Paris</dd>
+  </dl>
+
+
+  <h2>Points of Interest</h2>
+
+  <p>
+    Get points of interest (amenity nodes) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a>.
+  </p>
+
+  <form name="poi-form" action="poi">
+    <input type="text" name="bbox" value="11.075,49.457,11.077,49.459">
+    <label>limit: <input type="text" name="limit" size="4"></label>
+    <input type="submit">
+    <input type="button" value="Show on map" onclick="var f=this.form; var u='/poi.json?bbox='+encodeURIComponent(f.elements['bbox'].value); if(f.elements['limit'].value) u+='&amp;limit='+encodeURIComponent(f.elements['limit'].value); loadGeoJsonUrl('map-main', u, document.getElementById('status-main'));">
+  </form>
+
+  <dl>
+    <dt><a href="poi?bbox=11.075,49.457,11.077,49.459">poi?bbox=11.075,49.457,11.077,49.459</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/poi.json?bbox=11.075,49.457,11.077,49.459', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Points of interest near Kaiserburg Nuremberg</dd>
+    <dt><a href="poi?bbox=2.348,48.856,2.350,48.858">poi?bbox=2.348,48.856,2.350,48.858</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/poi.json?bbox=2.348,48.856,2.350,48.858', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Points of interest near the Louvre, Paris</dd>
+  </dl>
+
+
+  <h2>Around a point</h2>
+
+  <p>
+    Get nodes within a radius around a point via <a href="https://overpass-api.de/">Overpass API</a>.
+  </p>
+
+  <form name="around-form" action="around">
+    <label>lon: <input type="text" name="lon" value="11.08"></label>
+    <label>lat: <input type="text" name="lat" value="49.45"></label>
+    <label>radius (m): <input type="text" name="radius" value="100"></label>
+    <label>limit: <input type="text" name="limit" size="4"></label>
+    <input type="submit">
+    <input type="button" value="Show on map" onclick="var f=this.form; var u='/around.json?lon='+encodeURIComponent(f.elements['lon'].value)+'&amp;lat='+encodeURIComponent(f.elements['lat'].value)+'&amp;radius='+encodeURIComponent(f.elements['radius'].value); if(f.elements['limit'].value) u+='&amp;limit='+encodeURIComponent(f.elements['limit'].value); loadGeoJsonUrl('map-main', u, document.getElementById('status-main'));">
+  </form>
+
+  <dl>
+    <dt><a href="around?lon=11.077&amp;lat=49.458&amp;radius=100">around?lon=11.077&amp;lat=49.458&amp;radius=100</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/around.json?lon=11.077&amp;lat=49.458&amp;radius=100', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Nodes within 100m of Kaiserburg Nuremberg</dd>
+    <dt><a href="around?lon=2.349&amp;lat=48.857&amp;radius=100">around?lon=2.349&amp;lat=48.857&amp;radius=100</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/around.json?lon=2.349&amp;lat=48.857&amp;radius=100', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Nodes within 100m of the Louvre, Paris</dd>
+    <dt><a href="around?lon=-0.127&amp;lat=51.501&amp;radius=100">around?lon=-0.127&amp;lat=51.501&amp;radius=100</a>
+      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/around.json?lon=-0.127&amp;lat=51.501&amp;radius=100', document.getElementById('status-main')); return false;">map</a>)</dt>
+    <dd>Nodes within 100m of Westminster, London</dd>
+  </dl>
+
+
+  <h2>Documentation</h2>
+
+  <p>
+    For project updates and changes, see the <a href="https://github.com/aharth/linked-osm/blob/main/CHANGELOG.md">CHANGELOG</a>.
+  </p>
+
+  <hr>
+  <a href="http://ontologycentral.com/">OntologyCentral</a>, 2009-2026.
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="map.js"></script>
+  <script>initOsmMap('map-main', 50, 10, 4);</script>
+</body>
 </html>

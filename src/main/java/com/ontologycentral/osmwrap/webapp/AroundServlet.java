@@ -3,9 +3,8 @@ package com.ontologycentral.osmwrap.webapp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 import java.util.logging.Logger;
@@ -42,7 +41,16 @@ public class AroundServlet extends HttpServlet {
 		}
 
 		if (radius == null) {
-			radius = "1000";
+			radius = "100";
+		}
+
+		try {
+			Double.parseDouble(lon);
+			Double.parseDouble(lat);
+			Double.parseDouble(radius);
+		} catch (NumberFormatException e) {
+			resp.sendError(400, "lon, lat, and radius must be numbers");
+			return;
 		}
 
 		boolean wantJson = isJsonRequested(req);
@@ -59,30 +67,21 @@ public class AroundServlet extends HttpServlet {
 
 		String archive = ApiConstants.OVERPASS_API_BASE;
 
-		URL u = new URL(archive);
-
-		_log.info("retrieving " + u);
-		System.out.println("retrieving " + u);
+		_log.info("retrieving " + archive);
+		System.out.println("retrieving " + archive);
 
 		try {
-			HttpURLConnection conn = HttpClientUtil.createConnection(archive, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.AROUND_READ_TIMEOUT);
-			conn.setRequestMethod("POST");
-			conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-			conn.setDoOutput(true);
-
-			// Send Overpass query as POST data
 			String postData = "data=" + URLEncoder.encode(overpassQuery, "UTF-8");
-			conn.getOutputStream().write(postData.getBytes("UTF-8"));
-			conn.getOutputStream().flush();
-			conn.getOutputStream().close();
+			HttpResponse<InputStream> response = HttpClientUtil.post(archive, postData);
 
-			int responseCode = conn.getResponseCode();
+			int responseCode = response.statusCode();
 			if (responseCode != 200) {
-				resp.sendError(responseCode, HttpClientUtil.readErrorBody(conn));
+				resp.sendError(responseCode,
+						new String(response.body().readAllBytes(), StandardCharsets.UTF_8).trim());
 				return;
 			}
 
-			InputStream is = conn.getInputStream();
+			InputStream is = response.body();
 
 			if (wantJson) {
 				String xml = readInputStream(is);
@@ -91,11 +90,6 @@ public class AroundServlet extends HttpServlet {
 				resp.setContentType("application/geo+json");
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else {
-				String encoding = conn.getContentEncoding();
-				if (encoding == null) {
-					encoding = "ISO-8859-1";
-				}
-
 				Transformer t = (Transformer)ctx.getAttribute(Listener.POI);
 
 				resp.setContentType("application/rdf+xml");
@@ -114,11 +108,11 @@ public class AroundServlet extends HttpServlet {
 			resp.sendError(500, e.getMessage());
 			return;
 		} catch (IOException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		} catch (RuntimeException e) {
-			resp.sendError(500, u + ": " + e.getMessage());
+			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		}
