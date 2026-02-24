@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OpenStreetMap Linked Data Wrapper</title>
+  <title>OpenStreetMap Wrapper</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="map.css">
 </head>
 
 <body>
-  <h1>OpenStreetMap Linked Data Wrapper</h1>
+  <h1>OpenStreetMap Wrapper</h1>
 
   <p>
     Welcome to the EXPERIMENTAL <a href="http://openstreetmap.org/">OpenStreetMap</a> wrapper to <a href="http://en.wikipedia.org/wiki/Linked_Data">Linked Data</a>.
@@ -25,141 +25,119 @@
   <p id="geojson-link-main" class="map-controls" style="display:none;font-size:0.85em"></p>
   <p id="source-main"       class="map-controls" style="display:none;font-size:0.8em;color:#555"></p>
 
-
-  <h2>Search by place name</h2>
-
-  <p>
-    Search for countries, cities, or other places via <a href="https://nominatim.openstreetmap.org">Nominatim</a>
-    (<a href="https://operations.osmfoundation.org/policies/nominatim/">usage policy</a>).
-  </p>
-
-  <form name="search-form" action="search">
-    <input type="text" name="q">
-    <label>limit: <input type="text" name="limit" size="4"></label>
-    <input type="submit">
-    <input type="button" value="Show on map" onclick="loadGeoJsonUrl('map-main', '/search.json?q=' + encodeURIComponent(this.form.elements['q'].value), document.getElementById('status-main'));">
-  </form>
-
-  <h3>Example countries</h3>
-
   <dl>
-    <dt><a href="search?q=Germany">search?q=Germany</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=Germany', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Germany &mdash; <a href="https://nominatim.openstreetmap.org/search?q=Germany&amp;format=xml">Nominatim API</a></dd>
-    <dt><a href="search?q=France">search?q=France</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=France', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>France</dd>
-    <dt><a href="search?q=United+Kingdom">search?q=United+Kingdom</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=United+Kingdom', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>United Kingdom</dd>
-    <dt><a href="search?q=Netherlands">search?q=Netherlands</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=Netherlands', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Netherlands</dd>
-    <dt><a href="search?q=Kaiserburg">search?q=Kaiserburg</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/search.json?q=Kaiserburg', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Kaiserburg, Nuremberg</dd>
+    <dt>Nodes, ways and relations</dt>
+
+    <dd>
+      Core element data (nodes, ways, relations) and changeset metadata via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
+    </dd>
+
+    <dd>
+      <select id="geo-example-select">
+	<option value="">&#x2014; select element &#x2014;</option>
+	<option value="/geo/osm/node/1.json">node/1 &mdash; Monte Piselli</option>
+	<option value="/geo/osm/node/1675605507.json">node/1675605507 &mdash; Caf&eacute; Wanderer</option>
+	<option value="/geo/osm/way/100.json">way/100 &mdash; Roundabout</option>
+	<option value="/geo/osm/way/32113829.json">way/32113829 &mdash; Palas building</option>
+	<option value="/geo/osm/relation/147.json">relation/147 &mdash; Tigris River</option>
+	<option value="/geo/osm/relation/71525.json">relation/71525 &mdash; Paris boundary</option>
+	<option value="/geo/osm/relation/13986332.json">relation/13986332 &mdash; Sebalder Reichswald</option>
+      </select>
+      <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Show on map</button>
+    </dd>
+  </dl>
+  
+  <dl>
+    <dt>Search by place name</dt>
+
+    <dd>
+      Search for countries, cities or other places via <a href="https://nominatim.openstreetmap.org">Nominatim</a>
+      (<a href="https://operations.osmfoundation.org/policies/nominatim/">usage policy</a>).
+    </dd>
+    <dd>
+      <select id="search-example-select" onchange="if(this.value) document.forms['search-form'].elements['q'].value=this.value;">
+	<option value="">&#x2014; select example &#x2014;</option>
+	<option value="Kaiserburg">Kaiserburg</option>
+	<option value="Germany">Germany</option>
+	<option value="France">France</option>
+	<option value="United Kingdom">United Kingdom</option>
+	<option value="Netherlands">Netherlands</option>
+      </select>
+    </dd>
+    <dd>
+      <form name="search-form" action="search">
+	<input type="text" name="q">
+	<label>limit: <input type="text" name="limit" size="4"></label>
+	<button onclick="loadGeoJsonUrl('map-main', '/search.json?q=' + encodeURIComponent(this.form.elements['q'].value), document.getElementById('status-main')); return false;">Show on map</button>
+      </form>
+    </dd>
+
+    <dt>Map data by bounding box</dt>
+
+    <dd>
+      Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
+    </dd>
+
+    <dd>
+      <select id="map-example-select" onchange="if(this.value) document.forms['map-form'].elements['bbox'].value=this.value;">
+	<option value="">&#x2014; select example &#x2014;</option>
+	<option value="11.075,49.457,11.077,49.459">Kaiserburg, Nuremberg</option>
+	<option value="2.348,48.856,2.350,48.858">Louvre, Paris</option>
+      </select>
+    </dd>
+    <dd>
+      <form name="map-form" action="map">
+	<input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051">
+	<button onclick="loadGeoJsonUrl('map-main', '/map.json?bbox=' + encodeURIComponent(this.form.elements['bbox'].value), document.getElementById('status-main')); return false;">Show on map</button>
+      </form>
+    </dd>
+
+    <dt>Points of Interest by bounding box</dt>
+
+    <dd>
+      Get points of interest (amenity nodes) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a>.
+    </dd>
+
+    <dd>
+      <select id="poi-example-select" onchange="if(this.value) document.forms['poi-form'].elements['bbox'].value=this.value;">
+	<option value="">&#x2014; select example &#x2014;</option>
+	<option value="11.075,49.457,11.077,49.459">Points of interest near Kaiserburg, Nuremberg</option>
+	<option value="2.348,48.856,2.350,48.858">Points of interest near the Louvre, Paris</option>
+      </select>
+    </dd>
+    <dd>
+      <form name="poi-form" action="poi">
+	<input type="text" name="bbox" value="11.075,49.457,11.077,49.459">
+	<label>limit: <input type="text" name="limit" size="4"></label>
+	<button onclick="var f=this.form; var u='/poi.json?bbox='+encodeURIComponent(f.elements['bbox'].value); if(f.elements['limit'].value) u+='&amp;limit='+encodeURIComponent(f.elements['limit'].value); loadGeoJsonUrl('map-main', u, document.getElementById('status-main')); return false;">Show on map</button>
+      </form>
+    </dd>
+
+    <dt>Nodes around a point</dt>
+
+    <dd>
+      Get nodes within a radius around a point via <a href="https://overpass-api.de/">Overpass API</a>.
+    </dd>
+
+    <dd>
+      <select id="around-example-select" onchange="if(this.value){var p=this.value.split('|'),f=document.forms['around-form']; f.elements['lon'].value=p[0]; f.elements['lat'].value=p[1]; f.elements['radius'].value=p[2];}">
+	<option value="">&#x2014; select example &#x2014;</option>
+	<option value="11.077|49.458|100">Nodes within 100m of Kaiserburg, Nuremberg</option>
+	<option value="2.349|48.857|100">Nodes within 100m of the Louvre, Paris</option>
+	<option value="-0.127|51.501|100">Nodes within 100m of Westminster, London</option>
+      </select>
+    </dd>
+    <dd>
+      <form name="around-form" action="around">
+	<label>lon: <input type="text" name="lon" value="11.08"></label>
+	<label>lat: <input type="text" name="lat" value="49.45"></label>
+	<label>radius (m): <input type="text" name="radius" value="100"></label>
+	<label>limit: <input type="text" name="limit" size="4"></label>
+	<button onclick="var f=this.form; var u='/around.json?lon='+encodeURIComponent(f.elements['lon'].value)+'&amp;lat='+encodeURIComponent(f.elements['lat'].value)+'&amp;radius='+encodeURIComponent(f.elements['radius'].value); if(f.elements['limit'].value) u+='&amp;limit='+encodeURIComponent(f.elements['limit'].value); loadGeoJsonUrl('map-main', u, document.getElementById('status-main')); return false;">Show on map</button>
+      </form>
+    </dd>
   </dl>
 
-
-  <h2>Nodes, ways and relations</h2>
-
-  <p>
-    Core element data (nodes, ways, relations) and changeset metadata via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
-  </p>
-
-  <p class="map-controls">
-    <select id="geo-example-select">
-      <option value="">&#x2014; select element &#x2014;</option>
-      <option value="/geo/osm/node/1.json">node/1 &mdash; Monte Piselli</option>
-      <option value="/geo/osm/node/1675605507.json">node/1675605507 &mdash; Caf&eacute; Wanderer</option>
-      <option value="/geo/osm/way/100.json">way/100 &mdash; Roundabout</option>
-      <option value="/geo/osm/way/32113829.json">way/32113829 &mdash; Palas building</option>
-      <option value="/geo/osm/relation/147.json">relation/147 &mdash; Tigris River</option>
-      <option value="/geo/osm/relation/71525.json">relation/71525 &mdash; Paris boundary</option>
-      <option value="/geo/osm/relation/13986332.json">relation/13986332 &mdash; Sebalder Reichswald</option>
-    </select>
-    <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Show on map</button>
-  </p>
-
-
-  <h2>Map data by bounding box</h2>
-
-  <p>
-    Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
-  </p>
-
-  <form name="map-form" action="map">
-    <input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051">
-    <input type="submit">
-    <input type="button" value="Show on map" onclick="loadGeoJsonUrl('map-main', '/map.json?bbox=' + encodeURIComponent(this.form.elements['bbox'].value), document.getElementById('status-main'));">
-  </form>
-
-  <dl>
-    <dt><a href="map?bbox=11.075,49.457,11.077,49.459">map?bbox=11.075,49.457,11.077,49.459</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/map.json?bbox=11.075,49.457,11.077,49.459', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Kaiserburg Nuremberg</dd>
-    <dt><a href="map?bbox=2.348,48.856,2.350,48.858">map?bbox=2.348,48.856,2.350,48.858</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/map.json?bbox=2.348,48.856,2.350,48.858', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Louvre, Paris</dd>
-  </dl>
-
-
-  <h2>Points of Interest</h2>
-
-  <p>
-    Get points of interest (amenity nodes) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a>.
-  </p>
-
-  <form name="poi-form" action="poi">
-    <input type="text" name="bbox" value="11.075,49.457,11.077,49.459">
-    <label>limit: <input type="text" name="limit" size="4"></label>
-    <input type="submit">
-    <input type="button" value="Show on map" onclick="var f=this.form; var u='/poi.json?bbox='+encodeURIComponent(f.elements['bbox'].value); if(f.elements['limit'].value) u+='&amp;limit='+encodeURIComponent(f.elements['limit'].value); loadGeoJsonUrl('map-main', u, document.getElementById('status-main'));">
-  </form>
-
-  <dl>
-    <dt><a href="poi?bbox=11.075,49.457,11.077,49.459">poi?bbox=11.075,49.457,11.077,49.459</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/poi.json?bbox=11.075,49.457,11.077,49.459', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Points of interest near Kaiserburg Nuremberg</dd>
-    <dt><a href="poi?bbox=2.348,48.856,2.350,48.858">poi?bbox=2.348,48.856,2.350,48.858</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/poi.json?bbox=2.348,48.856,2.350,48.858', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Points of interest near the Louvre, Paris</dd>
-  </dl>
-
-
-  <h2>Around a point</h2>
-
-  <p>
-    Get nodes within a radius around a point via <a href="https://overpass-api.de/">Overpass API</a>.
-  </p>
-
-  <form name="around-form" action="around">
-    <label>lon: <input type="text" name="lon" value="11.08"></label>
-    <label>lat: <input type="text" name="lat" value="49.45"></label>
-    <label>radius (m): <input type="text" name="radius" value="100"></label>
-    <label>limit: <input type="text" name="limit" size="4"></label>
-    <input type="submit">
-    <input type="button" value="Show on map" onclick="var f=this.form; var u='/around.json?lon='+encodeURIComponent(f.elements['lon'].value)+'&amp;lat='+encodeURIComponent(f.elements['lat'].value)+'&amp;radius='+encodeURIComponent(f.elements['radius'].value); if(f.elements['limit'].value) u+='&amp;limit='+encodeURIComponent(f.elements['limit'].value); loadGeoJsonUrl('map-main', u, document.getElementById('status-main'));">
-  </form>
-
-  <dl>
-    <dt><a href="around?lon=11.077&amp;lat=49.458&amp;radius=100">around?lon=11.077&amp;lat=49.458&amp;radius=100</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/around.json?lon=11.077&amp;lat=49.458&amp;radius=100', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Nodes within 100m of Kaiserburg Nuremberg</dd>
-    <dt><a href="around?lon=2.349&amp;lat=48.857&amp;radius=100">around?lon=2.349&amp;lat=48.857&amp;radius=100</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/around.json?lon=2.349&amp;lat=48.857&amp;radius=100', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Nodes within 100m of the Louvre, Paris</dd>
-    <dt><a href="around?lon=-0.127&amp;lat=51.501&amp;radius=100">around?lon=-0.127&amp;lat=51.501&amp;radius=100</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/around.json?lon=-0.127&amp;lat=51.501&amp;radius=100', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Nodes within 100m of Westminster, London</dd>
-  </dl>
-
-
-  <h2>Documentation</h2>
-
-  <p>
-    For project updates and changes, see the <a href="https://github.com/aharth/linked-osm/blob/main/CHANGELOG.md">CHANGELOG</a>.
-  </p>
 
   <hr>
   <a href="http://ontologycentral.com/">OntologyCentral</a>, 2009-2026.
