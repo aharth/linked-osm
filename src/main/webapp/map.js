@@ -13,6 +13,7 @@ function escHtml(s) {
 function _propsToHtml(props) {
     var html = '<table style="border-collapse:collapse;font-size:0.9em">';
     for (var k in props) {
+        if (k === 'osm_type' && props.osm_id) continue;  // shown via osm_id row
         var v = props[k];
         var vHtml;
         if (k === 'osm_id' && props.osm_type) {
@@ -31,6 +32,16 @@ function _propsToHtml(props) {
     }
     html += '</table>';
     return html;
+}
+
+function _sourceAttribution(url) {
+    if (url.indexOf('/search.json') !== -1) {
+        return 'Data: \u00a9 OpenStreetMap contributors via Nominatim (ODbL)';
+    }
+    if (url.indexOf('/poi.json') !== -1 || url.indexOf('/around.json') !== -1 || url.indexOf('/geo/overpass/') !== -1) {
+        return 'Data: \u00a9 OpenStreetMap contributors via Overpass API (ODbL)';
+    }
+    return 'Data: \u00a9 OpenStreetMap contributors (ODbL)';
 }
 
 function initOsmMap(id, lat, lon, zoom) {
@@ -117,6 +128,12 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
     state.featureLayer.clearLayers();
     if (statusEl) statusEl.textContent = 'Loading\u2026';
 
+    var suffix = mapId.replace('map-', '');
+    var linkEl = document.getElementById('geojson-link-' + suffix);
+    if (linkEl) { linkEl.style.display = 'none'; linkEl.innerHTML = ''; }
+    var srcEl  = document.getElementById('source-' + suffix);
+    if (srcEl)  { srcEl.style.display  = 'none'; srcEl.textContent  = ''; }
+
     var controller = new AbortController();
     var timer = setTimeout(function() { controller.abort(); }, FETCH_TIMEOUT);
 
@@ -129,6 +146,16 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
         .then(function(data) {
             if (state.fetchEpoch !== epoch) return;
             var geojson = _wrapGeometry(data);
+
+            // /geo/osm/{type}/{id} returns bare geometry with no properties.
+            // Inject osm_type + osm_id so the popup can link to the feature endpoints.
+            if (geojson.type === 'Feature' && Object.keys(geojson.properties).length === 0) {
+                var osmGeoMatch = url.match(/\/geo\/osm\/(node|way|relation)\/(\d+)/);
+                if (osmGeoMatch) {
+                    geojson.properties = { osm_type: osmGeoMatch[1], osm_id: osmGeoMatch[2] };
+                }
+            }
+
             if (geojson.type !== 'FeatureCollection') {
                 geojson = { type: 'FeatureCollection', features: [geojson] };
             }
@@ -136,7 +163,15 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
             var count = state.featureLayer.getLayers().length;
             if (statusEl) statusEl.textContent = count + (count === 1 ? ' feature' : ' features');
             if (count > 0) {
-                try { state.map.fitBounds(state.featureLayer.getBounds()); } catch (e) {}
+                try { state.map.fitBounds(state.featureLayer.getBounds(), { maxZoom: 16 }); } catch (e) {}
+            }
+            if (linkEl) {
+                linkEl.innerHTML = 'GeoJSON: <a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
+                linkEl.style.display = '';
+            }
+            if (srcEl) {
+                srcEl.textContent = _sourceAttribution(url);
+                srcEl.style.display = '';
             }
         })
         .catch(function(err) {

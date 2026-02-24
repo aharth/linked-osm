@@ -22,6 +22,8 @@
   <div id="map-main" class="map"></div>
   <p id="bbox-main" class="map-controls" style="font-family:monospace;font-size:0.8em;color:#555">&mdash;</p>
   <p class="map-controls"><span id="status-main" style="font-size:0.85em"></span></p>
+  <p id="geojson-link-main" class="map-controls" style="display:none;font-size:0.85em"></p>
+  <p id="source-main"       class="map-controls" style="display:none;font-size:0.8em;color:#555"></p>
 
 
   <h2>Search by place name</h2>
@@ -59,39 +61,25 @@
   </dl>
 
 
-  <h2>Features (nodes, ways, relations)</h2>
+  <h2>Nodes, ways and relations</h2>
 
   <p>
     Core element data (nodes, ways, relations) and changeset metadata via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
-    See <a href="faq.html#feature-vs-geometry">FAQ: feature vs. geometry</a> and
-    <a href="faq.html#uri-patterns">FAQ: URI patterns</a>.
   </p>
 
-  <dl>
-    <dt><a href="node/1.rdf">node/1.rdf</a> | <a href="node/1.json">node/1.json</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/node/1.json', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Monte Piselli radio mast, Italy &mdash; The very first node in OpenStreetMap! &mdash; <a href="https://www.openstreetmap.org/node/1">view on OSM</a></dd>
-    <dt><a href="node/1675605507.rdf">node/1675605507.rdf</a> | <a href="node/1675605507.json">node/1675605507.json</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/node/1675605507.json', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Caf&#xe9; Wanderer, Nuremberg &mdash; <a href="https://www.openstreetmap.org/node/1675605507">view on OSM</a></dd>
-    <dt><a href="way/100.rdf">way/100.rdf</a> | <a href="way/100.json">way/100.json</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/way/100.json', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Roundabout, Germany &mdash; <a href="https://www.openstreetmap.org/way/100">view on OSM</a></dd>
-    <dt><a href="way/32113829.rdf">way/32113829.rdf</a> | <a href="way/32113829.json">way/32113829.json</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/way/32113829.json', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Palas building, Kaiserburg Nuremberg &mdash; <a href="https://www.openstreetmap.org/way/32113829">view on OSM</a></dd>
-    <dt><a href="relation/147.rdf">relation/147.rdf</a> | <a href="relation/147.json">relation/147.json</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/relation/147.json', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Tigris River multipolygon &mdash; Earliest surviving relation! &mdash; <a href="https://www.openstreetmap.org/relation/147">view on OSM</a></dd>
-    <dt><a href="relation/71525.rdf">relation/71525.rdf</a> | <a href="relation/71525.json">relation/71525.json</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/relation/71525.json', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Paris administrative boundary &mdash; <a href="https://www.openstreetmap.org/relation/71525">view on OSM</a></dd>
-    <dt><a href="relation/13986332.rdf">relation/13986332.rdf</a> | <a href="relation/13986332.json">relation/13986332.json</a>
-      (<a href="#map-main" onclick="loadGeoJsonUrl('map-main', '/geo/osm/relation/13986332.json', document.getElementById('status-main')); return false;">map</a>)</dt>
-    <dd>Sebalder Reichswald forest &mdash; <a href="https://www.openstreetmap.org/relation/13986332">view on OSM</a></dd>
-    <dt><a href="changeset/137.rdf">changeset/137.rdf</a></dt>
-    <dd>One of the earliest changesets &mdash; <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a></dd>
-  </dl>
+  <p class="map-controls">
+    <select id="geo-example-select">
+      <option value="">&#x2014; select element &#x2014;</option>
+      <option value="/geo/osm/node/1.json">node/1 &mdash; Monte Piselli</option>
+      <option value="/geo/osm/node/1675605507.json">node/1675605507 &mdash; Caf&eacute; Wanderer</option>
+      <option value="/geo/osm/way/100.json">way/100 &mdash; Roundabout</option>
+      <option value="/geo/osm/way/32113829.json">way/32113829 &mdash; Palas building</option>
+      <option value="/geo/osm/relation/147.json">relation/147 &mdash; Tigris River</option>
+      <option value="/geo/osm/relation/71525.json">relation/71525 &mdash; Paris boundary</option>
+      <option value="/geo/osm/relation/13986332.json">relation/13986332 &mdash; Sebalder Reichswald</option>
+    </select>
+    <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Show on map</button>
+  </p>
 
 
   <h2>Map data by bounding box</h2>

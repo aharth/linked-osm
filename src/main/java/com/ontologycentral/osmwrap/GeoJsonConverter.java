@@ -259,6 +259,49 @@ public final class GeoJsonConverter {
 		return sb.toString();
 	}
 
+	/**
+	 * Convert an OSM API XML response for a single feature (node/way/relation)
+	 * to a GeoJSON Feature with geometry:null and all OSM tags as properties.
+	 * Geometry is served separately via /geo/osm/{type}/{id}.
+	 */
+	public static String osmFeatureToGeoJson(String xml, String elementType) {
+		Pattern elemPattern = Pattern.compile("<" + elementType + "\\s([^>]*?)(?:/>|>)", Pattern.DOTALL);
+		Matcher elemMatcher = elemPattern.matcher(xml);
+		if (!elemMatcher.find()) {
+			return "{\"type\":\"Feature\",\"geometry\":null,\"properties\":{}}";
+		}
+		String elemAttrs = elemMatcher.group(1);
+		String id = extractAttr(elemAttrs, "id");
+		if (id == null) {
+			return "{\"type\":\"Feature\",\"geometry\":null,\"properties\":{}}";
+		}
+
+		// Nodes carry lat/lon directly; emit a Point geometry for them.
+		String geometry = "null";
+		if ("node".equals(elementType)) {
+			String lat = extractAttr(elemAttrs, "lat");
+			String lon = extractAttr(elemAttrs, "lon");
+			if (lat != null && lon != null) {
+				geometry = "{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}";
+			}
+		}
+
+		StringBuilder sb = new StringBuilder();
+		sb.append("{\"type\":\"Feature\",\"geometry\":").append(geometry).append(",\"properties\":{");
+		sb.append("\"osm_type\":\"").append(escapeJson(elementType)).append("\"");
+		sb.append(",\"osm_id\":\"").append(escapeJson(id)).append("\"");
+
+		Pattern tagPattern = Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
+		Matcher tagMatcher = tagPattern.matcher(xml);
+		while (tagMatcher.find()) {
+			sb.append(",\"").append(escapeJson(decodeXmlEntities(tagMatcher.group(1)))).append("\":\"");
+			sb.append(escapeJson(decodeXmlEntities(tagMatcher.group(2)))).append("\"");
+		}
+
+		sb.append("}}");
+		return sb.toString();
+	}
+
 	private static String extractAttr(String element, String attrName) {
 		Pattern p = Pattern.compile(attrName + "=['\"]([^'\"]*)['\"]");
 		Matcher m = p.matcher(element);
