@@ -1,14 +1,28 @@
 package com.ontologycentral.osmwrap;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.ontologycentral.osmwrap.geometry.MultipolygonGeometry;
+import com.ontologycentral.osmwrap.geometry.MultipolygonHandler;
 
 /**
  * Converts upstream XML responses to GeoJSON FeatureCollections.
  */
 public final class GeoJsonConverter {
+
+	private static final Logger LOG = Logger.getLogger(GeoJsonConverter.class.getName());
 
 	private GeoJsonConverter() {}
 
@@ -261,33 +275,19 @@ public final class GeoJsonConverter {
 
 	/**
 	 * Convert an OSM API XML response for a single feature (node/way/relation)
-	 * to a GeoJSON Feature with geometry:null and all OSM tags as properties.
-	 * Geometry is served separately via /geo/osm/{type}/{id}.
+	 * to a GeoJSON Feature with inline geometry and all OSM tags as properties.
+	 *
+	 * @param xml         OSM API XML for the element
+	 * @param elementType "node", "way", or "relation"
+	 * @param id          the OSM element ID (used for the GeoJSON "id" field)
+	 * @param geometryJson pre-computed GeoJSON geometry object string, or null
 	 */
-	public static String osmFeatureToGeoJson(String xml, String elementType) {
-		Pattern elemPattern = Pattern.compile("<" + elementType + "\\s([^>]*?)(?:/>|>)", Pattern.DOTALL);
-		Matcher elemMatcher = elemPattern.matcher(xml);
-		if (!elemMatcher.find()) {
-			return "{\"type\":\"Feature\",\"geometry\":null,\"properties\":{}}";
-		}
-		String elemAttrs = elemMatcher.group(1);
-		String id = extractAttr(elemAttrs, "id");
-		if (id == null) {
-			return "{\"type\":\"Feature\",\"geometry\":null,\"properties\":{}}";
-		}
-
-		// Nodes carry lat/lon directly; emit a Point geometry for them.
-		String geometry = "null";
-		if ("node".equals(elementType)) {
-			String lat = extractAttr(elemAttrs, "lat");
-			String lon = extractAttr(elemAttrs, "lon");
-			if (lat != null && lon != null) {
-				geometry = "{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}";
-			}
-		}
-
+	public static String osmFeatureToGeoJson(String xml, String elementType, String id, String geometryJson) {
 		StringBuilder sb = new StringBuilder();
-		sb.append("{\"type\":\"Feature\",\"geometry\":").append(geometry).append(",\"properties\":{");
+		sb.append("{\"type\":\"Feature\"");
+		sb.append(",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#id\"");
+		sb.append(",\"geometry\":").append(geometryJson != null ? geometryJson : "null");
+		sb.append(",\"properties\":{");
 		sb.append("\"osm_type\":\"").append(escapeJson(elementType)).append("\"");
 		sb.append(",\"osm_id\":\"").append(escapeJson(id)).append("\"");
 
@@ -299,6 +299,143 @@ public final class GeoJsonConverter {
 		}
 
 		sb.append("}}");
+		return sb.toString();
+	}
+
+	/**
+	 * Extract a GeoJSON geometry object from an OSM API XML response.
+	 * Handles nodes (inline lat/lon), ways (bulk node fetch), and relations
+	 * (multipolygon or generic member traversal).
+	 *
+	 * @param osmXml      OSM API XML response body
+	 * @param elementType "node", "way", or "relation"
+	 * @param id          the OSM element ID (used for logging)
+	 * @return GeoJSON geometry object string (e.g. {@code {"type":"Point",...}})
+	 * @throws IOException if an upstream HTTP call fails
+	 */
+	public static String extractGeometryJson(String osmXml, String elementType, String id)
+			throws IOException {
+		try {
+			if ("node".equals(elementType)) {
+				Pattern latPattern = Pattern.compile("lat=['\"]([^'\"]+)['\"]");
+				Pattern lonPattern = Pattern.compile("lon=['\"]([^'\"]+)['\"]");
+				Matcher latMatcher = latPattern.matcher(osmXml);
+				Matcher lonMatcher = lonPattern.matcher(osmXml);
+				if (latMatcher.find() && lonMatcher.find()) {
+					String lon = lonMatcher.group(1);
+					String lat = latMatcher.group(1);
+					return "{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}";
+				}
+			} else if ("way".equals(elementType)) {
+				List<String> nodeRefs = extractNodeReferences(osmXml);
+				if (nodeRefs.isEmpty()) {
+					return "{\"type\":\"LineString\",\"coordinates\":[]}";
+				}
+				List<double[]> coordinates = fetchNodeCoordinates(nodeRefs);
+				return buildLineStringGeometry(coordinates);
+			} else if ("relation".equals(elementType)) {
+				if (MultipolygonHandler.isMultipolygon(osmXml)) {
+					try {
+						LOG.info("Processing multipolygon relation " + id);
+						MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(osmXml, id);
+						return MultipolygonHandler.toGeoJSON(geom);
+					} catch (Exception e) {
+						LOG.warning("Error processing multipolygon: " + e.getMessage());
+					}
+				}
+				List<Map<String, String>> members = extractMemberReferences(osmXml);
+				List<double[]> coordinates = new ArrayList<>();
+				for (Map<String, String> member : members) {
+					String memberType = member.get("type");
+					String memberRef = member.get("ref");
+					if ("node".equals(memberType)) {
+						coordinates.addAll(fetchNodeCoordinates(java.util.Arrays.asList(memberRef)));
+					} else if ("way".equals(memberType)) {
+						List<String> wayNodeRefs = fetchWayNodeReferences(memberRef);
+						coordinates.addAll(fetchNodeCoordinates(wayNodeRefs));
+					}
+				}
+				if (coordinates.isEmpty()) {
+					return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
+				}
+				return buildLineStringGeometry(coordinates);
+			}
+			return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
+		} catch (IOException e) {
+			throw e;
+		} catch (Exception e) {
+			LOG.warning("Error extracting geometry from OSM: " + e.getMessage());
+			return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
+		}
+	}
+
+	private static List<String> extractNodeReferences(String osmXml) {
+		List<String> nodeRefs = new ArrayList<>();
+		Pattern pattern = Pattern.compile("<nd ref=['\"]([^'\"]+)['\"]");
+		Matcher matcher = pattern.matcher(osmXml);
+		while (matcher.find()) {
+			nodeRefs.add(matcher.group(1));
+		}
+		return nodeRefs;
+	}
+
+	private static List<Map<String, String>> extractMemberReferences(String osmXml) {
+		List<Map<String, String>> members = new ArrayList<>();
+		Pattern pattern = Pattern.compile("<member type=['\"]([^'\"]+)['\"] ref=['\"]([^'\"]+)['\"]");
+		Matcher matcher = pattern.matcher(osmXml);
+		while (matcher.find()) {
+			Map<String, String> member = new HashMap<>();
+			member.put("type", matcher.group(1));
+			member.put("ref", matcher.group(2));
+			members.add(member);
+		}
+		return members;
+	}
+
+	private static List<String> fetchWayNodeReferences(String wayId) throws IOException {
+		String url = ApiConstants.OSM_API_BASE + "/way/" + wayId;
+		HttpResponse<InputStream> response = HttpClientUtil.get(url);
+		if (response.statusCode() != 200) {
+			return new ArrayList<>();
+		}
+		Scanner scanner = new Scanner(response.body(), java.nio.charset.StandardCharsets.UTF_8);
+		scanner.useDelimiter("\\A");
+		String osmXml = scanner.hasNext() ? scanner.next() : "";
+		response.body().close();
+		return extractNodeReferences(osmXml);
+	}
+
+	private static List<double[]> fetchNodeCoordinates(List<String> nodeIds) throws IOException {
+		List<double[]> coordinates = new ArrayList<>();
+		if (nodeIds == null || nodeIds.isEmpty()) {
+			return coordinates;
+		}
+		Set<String> uniqueNodeIds = new HashSet<>(nodeIds);
+		try {
+			Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(new ArrayList<>(uniqueNodeIds));
+			for (String nodeId : nodeIds) {
+				if (nodeCoordinates.containsKey(nodeId)) {
+					coordinates.add(nodeCoordinates.get(nodeId));
+				}
+			}
+		} catch (Exception e) {
+			LOG.warning("Error fetching node coordinates in bulk: " + e.getMessage());
+		}
+		return coordinates;
+	}
+
+	private static String buildLineStringGeometry(List<double[]> coordinates) {
+		if (coordinates.isEmpty()) {
+			return "{\"type\":\"LineString\",\"coordinates\":[]}";
+		}
+		StringBuilder sb = new StringBuilder();
+		sb.append("{\"type\":\"LineString\",\"coordinates\":[");
+		for (int i = 0; i < coordinates.size(); i++) {
+			if (i > 0) sb.append(",");
+			double[] coord = coordinates.get(i);
+			sb.append("[").append(coord[0]).append(",").append(coord[1]).append("]");
+		}
+		sb.append("]}");
 		return sb.toString();
 	}
 

@@ -105,6 +105,33 @@
     <dd>One of the earliest changesets &mdash; <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a></dd>
   </dl>
 
+  <a name="hash-uris"></a>
+  <h2>What do the <code>#id</code> and <code>#geo</code> URI fragments mean?</h2>
+  <p>
+    Each OSM element is described by two related resources, distinguished by a hash fragment:
+  </p>
+  <dl>
+    <dt><code>/way/100#id</code></dt>
+    <dd>
+      The <strong>feature</strong> &mdash; the real-world geographic object (a road, building,
+      etc.) typed as <code>spatial:Feature</code>. Requesting <code>/way/100</code> (or
+      <code>/way/100.rdf</code>) returns an RDF document describing this resource. The hash
+      fragment means the feature itself is never directly retrievable as a document; it is
+      identified <em>within</em> the document at <code>/way/100</code>, following the
+      <a href="https://www.w3.org/TR/cooluris/#hashuri">W3C hash-URI pattern</a> for
+      non-information resources.
+    </dd>
+    <dt><code>/way/100#geo</code></dt>
+    <dd>
+      The <strong>geometry</strong> &mdash; a <code>geom:Geometry</code> resource carrying
+      the spatial representation of the feature: WKT literal
+      (<code>locn:geometry</code> with datatype
+      <code>geosparql:wktLiteral</code>), centroid coordinates
+      (<code>geo:lat</code>, <code>geo:long</code>), and links to the GeoJSON endpoints.
+      The feature links to its geometry via <code>geom:geometry</code>.
+    </dd>
+  </dl>
+
   <a name="content-negotiation"></a>
   <h2>How does content negotiation work?</h2>
 

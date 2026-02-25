@@ -7,14 +7,17 @@
    xmlns:sioc="http://rdfs.org/sioc/ns#"
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:geom="http://geovocab.org/geometry#"
+   xmlns:locn="http://www.w3.org/ns/locn#"
    xmlns:spatial="http://geovocab.org/spatial#"
    xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    version="2.0">
-  
+
   <xsl:output method="xml"/>
 
   <xsl:strip-space elements="*"/>
+
+  <xsl:key name="nodeById" match="node" use="@id"/>
 
   <xsl:template match="osm">
     <rdf:RDF>
@@ -86,9 +89,22 @@
 
 	<xsl:apply-templates/>
 
-	<geom:geometry rdf:resource="/geo/overpass/relation/{@id}"/>
-	<geom:geometry rdf:resource="/geo/osm/relation/{@id}"/>
+	<geom:geometry rdf:resource="/relation/{@id}#geo"/>
       </spatial:Feature>
+
+      <!-- Geometry resource -->
+      <geom:Geometry>
+	<xsl:attribute name="rdf:about">/relation/<xsl:value-of select="@id"/>#geo</xsl:attribute>
+	<foaf:page rdf:resource="/geo/osm/relation/{@id}"/>
+	<foaf:page rdf:resource="/geo/overpass/relation/{@id}"/>
+
+	<!-- Centroid: mean of all node coordinates from /full response -->
+	<xsl:variable name="allNodes" select="//node[normalize-space(@lat)]"/>
+	<xsl:if test="count($allNodes) > 0">
+	  <geo:lat><xsl:value-of select="sum($allNodes/@lat) div count($allNodes)"/></geo:lat>
+	  <geo:long><xsl:value-of select="sum($allNodes/@lon) div count($allNodes)"/></geo:long>
+	</xsl:if>
+      </geom:Geometry>
 
       <!-- Changeset as Activity -->
       <xsl:if test="@changeset and @timestamp and @user">

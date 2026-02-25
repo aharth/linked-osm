@@ -41,15 +41,17 @@
     } else {
         // Build links
         var linksEl = document.getElementById('links-view');
-        var links = 'GeoJSON: <a href="' + escHtml(uri) + '">' + escHtml(uri) + '</a>';
-        var match = uri.match(/\/geo\/(osm|overpass)\/(\w+)\/(\d+)/);
-        if (match) {
-            var source = match[1];
-            var osmType = match[2];
-            var osmId = match[3];
+        var geoMatch = uri.match(/\/geo\/(osm|overpass)\/(node|way|relation)\/(\d+)/);
+        var featureUrl = geoMatch ? '/' + geoMatch[2] + '/' + geoMatch[3] : null;
+        var links = featureUrl
+            ? '<a href="' + escHtml(featureUrl) + '">' + escHtml(featureUrl) + '</a>'
+            : 'GeoJSON: <a href="' + escHtml(uri) + '">' + escHtml(uri) + '</a>';
+        if (geoMatch) {
+            var source = geoMatch[1];
+            var osmType = geoMatch[2];
+            var osmId = geoMatch[3];
             var other = source === 'osm' ? 'overpass' : 'osm';
             links += ' | <a href="/geo/' + other + '/' + osmType + '/' + osmId + '.json">geo/' + other + '</a>';
-            links += ' | <a href="/' + osmType + '/' + osmId + '.rdf">' + escHtml(osmType) + '/' + escHtml(osmId) + '.rdf</a>';
             links += ' | <a href="https://www.openstreetmap.org/' + osmType + '/' + osmId + '" target="_blank">osm.org</a>';
         }
         linksEl.innerHTML = links;

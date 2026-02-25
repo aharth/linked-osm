@@ -18,6 +18,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import javax.xml.transform.Templates;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.stream.StreamResult;
@@ -90,7 +91,8 @@ public class AroundServlet extends HttpServlet {
 				resp.setContentType("application/geo+json");
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else {
-				Transformer t = (Transformer)ctx.getAttribute(Listener.POI);
+				Templates tmpl = (Templates) ctx.getAttribute(Listener.POI);
+			Transformer t = tmpl.newTransformer();
 
 				resp.setContentType("application/rdf+xml");
 

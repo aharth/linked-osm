@@ -6,7 +6,10 @@
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:sioc="http://rdfs.org/sioc/ns#"
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
+   xmlns:spatial="http://geovocab.org/spatial#"
    xmlns:geom="http://geovocab.org/geometry#"
+   xmlns:geosparql="http://www.opengis.net/ont/geosparql#"
+   xmlns:locn="http://www.w3.org/ns/locn#"
    xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    xmlns="http://osm.geovocab.org/vocab#"
@@ -53,7 +56,7 @@
   </xsl:template>
 
   <xsl:template match="node">
-      <rdf:Description>
+      <spatial:Feature>
 	<xsl:attribute name="rdf:about">/node/<xsl:value-of select="@id"/>#id</xsl:attribute>
 	<geo:lat><xsl:value-of select="@lat"/></geo:lat>
 	<geo:long><xsl:value-of select="@lon"/></geo:long>
@@ -64,8 +67,7 @@
 	<foaf:page rdf:resource="/node/{@id}.json"/>
 
 	<!-- Geometry representation -->
-	<geom:geometry rdf:resource="/geo/overpass/node/{@id}"/>
-	<geom:geometry rdf:resource="/geo/osm/node/{@id}"/>
+	<geom:geometry rdf:resource="/node/{@id}#geo"/>
 
 	<!-- PROV-O properties -->
 	<xsl:if test="@changeset">
@@ -91,7 +93,18 @@
 	</xsl:if>
 
 	<xsl:apply-templates/>
-      </rdf:Description>
+      </spatial:Feature>
+
+      <!-- Geometry resource -->
+      <geom:Geometry>
+	<xsl:attribute name="rdf:about">/node/<xsl:value-of select="@id"/>#geo</xsl:attribute>
+	<geo:lat><xsl:value-of select="@lat"/></geo:lat>
+	<geo:long><xsl:value-of select="@lon"/></geo:long>
+	<locn:geometry rdf:datatype="http://www.opengis.net/ont/geosparql#wktLiteral"
+	    >POINT(<xsl:value-of select="@lon"/><xsl:text> </xsl:text><xsl:value-of select="@lat"/>)</locn:geometry>
+	<foaf:page rdf:resource="/geo/osm/node/{@id}"/>
+	<foaf:page rdf:resource="/geo/overpass/node/{@id}"/>
+      </geom:Geometry>
 
       <!-- Changeset as Activity -->
       <xsl:if test="@changeset and @timestamp and @user">

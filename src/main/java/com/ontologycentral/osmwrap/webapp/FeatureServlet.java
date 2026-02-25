@@ -17,6 +17,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import javax.xml.transform.Templates;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.stream.StreamResult;
@@ -78,8 +79,13 @@ public class FeatureServlet extends HttpServlet {
 
 		ServletContext ctx = getServletContext();
 
-		// Both JSON and RDF use the OSM API; geometry is served separately via /geo/osm/{type}/{id}
-		String archive = ApiConstants.OSM_API_BASE + ctrl + id;
+		// RDF path for way/relation uses /full to get node coordinates inline
+		String archive;
+		if (format.equals("rdf") && (ctrl.equals("/way/") || ctrl.equals("/relation/"))) {
+			archive = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
+		} else {
+			archive = ApiConstants.OSM_API_BASE + ctrl + id;
+		}
 
 		_log.info("retrieving " + archive);
 		System.out.println("retrieving " + archive);
@@ -100,11 +106,13 @@ public class FeatureServlet extends HttpServlet {
 				resp.setContentType("application/geo+json");
 				String elementType = ctrl.substring(1, ctrl.length() - 1);
 				String osmXml = readInputStream(is);
-				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(osmXml, elementType);
+				String geometryJson = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
+				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(osmXml, elementType, id, geometryJson);
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else {
 				// RDF format - use existing XSLT transformation
-				Transformer t = (Transformer)ctx.getAttribute(ctrl);
+				Templates tmpl = (Templates) ctx.getAttribute(ctrl);
+				Transformer t = tmpl.newTransformer();
 				resp.setContentType("application/rdf+xml");
 
 				StreamSource ssource = new StreamSource(is);

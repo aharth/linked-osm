@@ -19,7 +19,8 @@ function _propsToHtml(props) {
         if (k === 'osm_id' && props.osm_type) {
             var osmType = String(props.osm_type);
             var osmId = String(v);
-            vHtml = '<a href="/' + escHtml(osmType) + '/' + escHtml(osmId) + '.rdf">' + escHtml(osmId) + '</a>'
+            vHtml = '<a href="/' + escHtml(osmType) + '/' + escHtml(osmId) + '">' + escHtml(osmId) + '</a>'
+                  + ' (<a href="/' + escHtml(osmType) + '/' + escHtml(osmId) + '.rdf">rdf</a>)'
                   + ' (<a href="/' + escHtml(osmType) + '/' + escHtml(osmId) + '.json">json</a>)'
                   + ' (<a href="https://www.openstreetmap.org/' + escHtml(osmType) + '/' + escHtml(osmId) + '" target="_blank">osm</a>)';
         } else {
@@ -166,7 +167,13 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
                 try { state.map.fitBounds(state.featureLayer.getBounds(), { maxZoom: 16 }); } catch (e) {}
             }
             if (linkEl) {
-                linkEl.innerHTML = 'GeoJSON: <a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
+                var geoMatch = url.match(/\/geo\/(osm|overpass)\/(node|way|relation)\/(\d+)/);
+                if (geoMatch) {
+                    var featureUrl = '/' + geoMatch[2] + '/' + geoMatch[3];
+                    linkEl.innerHTML = '<a href="' + escHtml(featureUrl) + '">' + escHtml(featureUrl) + '</a>';
+                } else {
+                    linkEl.innerHTML = '<a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
+                }
                 linkEl.style.display = '';
             }
             if (srcEl) {

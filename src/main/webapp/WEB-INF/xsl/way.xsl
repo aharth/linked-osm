@@ -7,14 +7,17 @@
    xmlns:sioc="http://rdfs.org/sioc/ns#"
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:geom="http://geovocab.org/geometry#"
+   xmlns:locn="http://www.w3.org/ns/locn#"
    xmlns:spatial="http://geovocab.org/spatial#"
    xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    version="2.0">
-  
+
   <xsl:output method="xml"/>
 
   <xsl:strip-space elements="*"/>
+
+  <xsl:key name="nodeById" match="node" use="@id"/>
 
   <xsl:template match="osm">
     <rdf:RDF>
@@ -86,9 +89,47 @@
 
 	<xsl:apply-templates/>
 
-	<geom:geometry rdf:resource="/geo/overpass/way/{@id}"/>
-	<geom:geometry rdf:resource="/geo/osm/way/{@id}"/>
+	<geom:geometry rdf:resource="/way/{@id}#geo"/>
       </spatial:Feature>
+
+      <!-- Geometry resource -->
+      <geom:Geometry>
+	<xsl:attribute name="rdf:about">/way/<xsl:value-of select="@id"/>#geo</xsl:attribute>
+	<foaf:page rdf:resource="/geo/osm/way/{@id}"/>
+	<foaf:page rdf:resource="/geo/overpass/way/{@id}"/>
+
+	<!-- Centroid: mean of node coordinates -->
+	<xsl:variable name="nodes" select="nd/key('nodeById', @ref)[normalize-space(@lat)]"/>
+	<xsl:if test="count($nodes) > 0">
+	  <geo:lat><xsl:value-of select="sum($nodes/@lat) div count($nodes)"/></geo:lat>
+	  <geo:long><xsl:value-of select="sum($nodes/@lon) div count($nodes)"/></geo:long>
+	</xsl:if>
+
+	<!-- WKT geometry (LineString or Polygon if closed) -->
+	<xsl:variable name="firstRef" select="nd[1]/@ref"/>
+	<xsl:variable name="lastRef"  select="nd[last()]/@ref"/>
+	<xsl:variable name="closed"
+	  select="count($nodes) >= 4 and $firstRef = $lastRef"/>
+	<xsl:variable name="wktCoords">
+	  <xsl:for-each select="nd">
+	    <xsl:variable name="n" select="key('nodeById', @ref)"/>
+	    <xsl:if test="$n/@lon and $n/@lat">
+	      <xsl:if test="position() > 1">, </xsl:if>
+	      <xsl:value-of select="$n/@lon"/>
+	      <xsl:text> </xsl:text>
+	      <xsl:value-of select="$n/@lat"/>
+	    </xsl:if>
+	  </xsl:for-each>
+	</xsl:variable>
+	<xsl:if test="normalize-space($wktCoords) != ''">
+	  <locn:geometry rdf:datatype="http://www.opengis.net/ont/geosparql#wktLiteral">
+	    <xsl:choose>
+	      <xsl:when test="$closed">POLYGON((<xsl:value-of select="$wktCoords"/>))</xsl:when>
+	      <xsl:otherwise>LINESTRING(<xsl:value-of select="$wktCoords"/>)</xsl:otherwise>
+	    </xsl:choose>
+	  </locn:geometry>
+	</xsl:if>
+      </geom:Geometry>
 
       <!-- Changeset as Activity -->
       <xsl:if test="@changeset and @timestamp and @user">

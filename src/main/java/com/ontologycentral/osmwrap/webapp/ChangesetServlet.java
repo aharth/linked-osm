@@ -15,6 +15,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import javax.xml.transform.Templates;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.stream.StreamResult;
@@ -85,7 +86,8 @@ public class ChangesetServlet extends HttpServlet {
 				return;
 			} else {
 				// Use XSLT for RDF transformation
-				Transformer t = (Transformer)ctx.getAttribute(Listener.CHANGESET);
+				Templates tmpl = (Templates) ctx.getAttribute(Listener.CHANGESET);
+			Transformer t = tmpl.newTransformer();
 
 				resp.setContentType("application/rdf+xml");
 

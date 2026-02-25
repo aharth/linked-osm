@@ -50,7 +50,12 @@ public class RdfFilter implements Filter {
 			try {
 				Model model = ModelFactory.createDefaultModel();
 
-				String base = "http://localhost/";
+				String proto = httpRequest.getHeader("X-Forwarded-Proto");
+				if (proto == null) proto = httpRequest.getScheme();
+				String host = httpRequest.getHeader("X-Forwarded-Host");
+				if (host == null) host = httpRequest.getHeader("Host");
+				if (host == null) host = httpRequest.getServerName();
+				String base = proto + "://" + host + httpRequest.getRequestURI();
 
 				RDFParser.create()
 						.source(new java.io.ByteArrayInputStream(original))
@@ -67,9 +72,6 @@ public class RdfFilter implements Filter {
 						.output(out);
 
 				String turtle = out.toString("UTF-8");
-				if (turtle.startsWith("BASE")) {
-					turtle = turtle.substring(turtle.indexOf('\n') + 1);
-				}
 				byte[] result = turtle.getBytes("UTF-8");
 
 				httpResponse.setContentType("text/turtle");

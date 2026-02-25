@@ -26,7 +26,7 @@ import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
-import javax.xml.transform.Transformer;
+import javax.xml.transform.Templates;
 import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.stream.StreamSource;
 
@@ -71,8 +71,8 @@ public class Listener implements ServletContextListener {
 		    		  Thread.currentThread().getContextClassLoader()); 
 
 		try {
-			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/node.xsl")));
-			ctx.setAttribute(NODE, t);
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/node.xsl")));
+			ctx.setAttribute(NODE, tmpl);
 		} catch (TransformerConfigurationException e) {
 			_log.severe(e.getMessage());
 			e.printStackTrace();
@@ -80,26 +80,8 @@ public class Listener implements ServletContextListener {
 		}
 
 		try {
-			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/relation.xsl")));
-			ctx.setAttribute(RELATION, t);
-		} catch (TransformerConfigurationException e) {
-			_log.severe(e.getMessage());
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-		
-		try {
-			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/way.xsl")));
-			ctx.setAttribute(WAY, t);
-		} catch (TransformerConfigurationException e) {
-			_log.severe(e.getMessage());
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-		
-		try {
-			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/geo.xsl")));
-			ctx.setAttribute(GEO, t);
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/relation.xsl")));
+			ctx.setAttribute(RELATION, tmpl);
 		} catch (TransformerConfigurationException e) {
 			_log.severe(e.getMessage());
 			e.printStackTrace();
@@ -107,17 +89,8 @@ public class Listener implements ServletContextListener {
 		}
 
 		try {
-			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/search.xsl")));
-			ctx.setAttribute(SEARCH, t);
-		} catch (TransformerConfigurationException e) {
-			_log.severe(e.getMessage());
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-		
-		try {
-			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/map.xsl")));
-			ctx.setAttribute(MAP, t);
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/way.xsl")));
+			ctx.setAttribute(WAY, tmpl);
 		} catch (TransformerConfigurationException e) {
 			_log.severe(e.getMessage());
 			e.printStackTrace();
@@ -125,8 +98,8 @@ public class Listener implements ServletContextListener {
 		}
 
 		try {
-			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/poi.xsl")));
-			ctx.setAttribute(POI, t);
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/geo.xsl")));
+			ctx.setAttribute(GEO, tmpl);
 		} catch (TransformerConfigurationException e) {
 			_log.severe(e.getMessage());
 			e.printStackTrace();
@@ -134,8 +107,35 @@ public class Listener implements ServletContextListener {
 		}
 
 		try {
-			Transformer t = tf.newTransformer(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/changeset.xsl")));
-			ctx.setAttribute(CHANGESET, t);
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/search.xsl")));
+			ctx.setAttribute(SEARCH, tmpl);
+		} catch (TransformerConfigurationException e) {
+			_log.severe(e.getMessage());
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/map.xsl")));
+			ctx.setAttribute(MAP, tmpl);
+		} catch (TransformerConfigurationException e) {
+			_log.severe(e.getMessage());
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/poi.xsl")));
+			ctx.setAttribute(POI, tmpl);
+		} catch (TransformerConfigurationException e) {
+			_log.severe(e.getMessage());
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/changeset.xsl")));
+			ctx.setAttribute(CHANGESET, tmpl);
 		} catch (TransformerConfigurationException e) {
 			_log.severe(e.getMessage());
 			e.printStackTrace();
