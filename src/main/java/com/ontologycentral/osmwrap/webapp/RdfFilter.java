@@ -55,7 +55,9 @@ public class RdfFilter implements Filter {
 				String host = httpRequest.getHeader("X-Forwarded-Host");
 				if (host == null) host = httpRequest.getHeader("Host");
 				if (host == null) host = httpRequest.getServerName();
-				String base = proto + "://" + host + httpRequest.getRequestURI();
+				String requestPath = httpRequest.getRequestURI()
+						.substring(httpRequest.getContextPath().length());
+				String base = proto + "://" + host + requestPath;
 
 				RDFParser.create()
 						.source(new java.io.ByteArrayInputStream(original))
