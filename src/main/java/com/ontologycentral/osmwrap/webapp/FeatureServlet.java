@@ -53,6 +53,9 @@ public class FeatureServlet extends HttpServlet {
 			} else if (path.endsWith(".rdf")) {
 				format = "rdf";
 				id = path.substring(0, path.length() - 4); // remove .rdf
+			} else if (path.endsWith(".gml")) {
+				format = "gml";
+				id = path.substring(0, path.length() - 4); // remove .gml
 			} else {
 				// No extension - content-negotiate on Accept header
 				id = path;
@@ -61,7 +64,10 @@ public class FeatureServlet extends HttpServlet {
 						AcceptHeader.maxQ(accepted, "application", "json"));
 				double qRdf = Math.max(AcceptHeader.maxQ(accepted, "application", "rdf+xml"),
 						AcceptHeader.maxQ(accepted, "text", "turtle"));
-				if (qJson > qRdf) {
+				double qGml = AcceptHeader.maxQ(accepted, "application", "gml+xml");
+				if (qGml > qRdf && qGml > qJson) {
+					format = "gml";
+				} else if (qJson > qRdf) {
 					format = "json";
 				}
 			}
@@ -89,9 +95,9 @@ public class FeatureServlet extends HttpServlet {
 
 		ServletContext ctx = getServletContext();
 
-		// RDF path for way/relation uses /full to get node coordinates inline
+		// RDF and GML paths for way/relation use /full to get node coordinates inline
 		String archive;
-		if (format.equals("rdf") && (ctrl.equals("/way/") || ctrl.equals("/relation/"))) {
+		if ((format.equals("rdf") || format.equals("gml")) && (ctrl.equals("/way/") || ctrl.equals("/relation/"))) {
 			archive = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
 		} else {
 			archive = ApiConstants.OSM_API_BASE + ctrl + id;
@@ -119,6 +125,11 @@ public class FeatureServlet extends HttpServlet {
 				String geometryJson = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
 				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(osmXml, elementType, id, geometryJson);
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
+			} else if (format.equals("gml")) {
+				Templates tmpl = (Templates) ctx.getAttribute(ctrl + ".gml");
+				Transformer t = tmpl.newTransformer();
+				resp.setContentType("application/gml+xml");
+				t.transform(new StreamSource(is), new StreamResult(os));
 			} else {
 				// RDF format - use existing XSLT transformation
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl);

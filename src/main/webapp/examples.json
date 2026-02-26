@@ -1,0 +1,30 @@
+{
+  "features": [
+    {"type": "node",     "id": "1",         "label": "Monte Piselli"},
+    {"type": "node",     "id": "1675605507","label": "Café Wanderer"},
+    {"type": "way",      "id": "100",        "label": "Roundabout"},
+    {"type": "way",      "id": "32113829",   "label": "Palas building"},
+    {"type": "relation", "id": "147",        "label": "Tigris River"},
+    {"type": "relation", "id": "51477",      "label": "Baden-Württemberg"},
+    {"type": "relation", "id": "71525",      "label": "Paris boundary"},
+    {"type": "relation", "id": "13986332",   "label": "Sebalder Reichswald"}
+  ],
+  "search": [
+    {"q": "Kaiserburg"},
+    {"q": "Germany"},
+    {"q": "France"},
+    {"q": "United Kingdom"},
+    {"q": "Netherlands"}
+  ],
+  "map": [
+    {"bbox": "11.075,49.457,11.077,49.459",     "label": "Kaiserburg, Nuremberg"},
+    {"bbox": "2.348,48.856,2.350,48.858",        "label": "Louvre, Paris"},
+    {"bbox": "-118.498,34.015,-118.496,34.018",  "label": "Santa Monica, Third Street"}
+  ],
+  "around": [
+    {"lon": "11.077",   "lat": "49.458", "radius": "100", "label": "Kaiserburg, Nuremberg"},
+    {"lon": "2.349",    "lat": "48.857", "radius": "100", "label": "Louvre, Paris"},
+    {"lon": "-0.127",   "lat": "51.501", "radius": "30",  "label": "Westminster, London"},
+    {"lon": "-118.496", "lat": "34.017", "radius": "100", "label": "Santa Monica, Third Street"}
+  ]
+}

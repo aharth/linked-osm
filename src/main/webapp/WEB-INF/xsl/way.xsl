@@ -7,6 +7,7 @@
    xmlns:sioc="http://rdfs.org/sioc/ns#"
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:geom="http://geovocab.org/geometry#"
+   xmlns:gml="http://www.opengis.net/gml/3.2"
    xmlns:locn="http://www.w3.org/ns/locn#"
    xmlns:spatial="http://geovocab.org/spatial#"
    xmlns:prov="http://www.w3.org/ns/prov#"
@@ -105,27 +106,39 @@
 	  <geo:long><xsl:value-of select="sum($nodes/@lon) div count($nodes)"/></geo:long>
 	</xsl:if>
 
-	<!-- WKT geometry (LineString or Polygon if closed) -->
+	<!-- GML geometry (LineString or Polygon if closed) -->
 	<xsl:variable name="firstRef" select="nd[1]/@ref"/>
 	<xsl:variable name="lastRef"  select="nd[last()]/@ref"/>
 	<xsl:variable name="closed"
 	  select="count($nodes) >= 4 and $firstRef = $lastRef"/>
-	<xsl:variable name="wktCoords">
+	<xsl:variable name="gmlCoords">
 	  <xsl:for-each select="nd">
 	    <xsl:variable name="n" select="key('nodeById', @ref)"/>
 	    <xsl:if test="$n/@lon and $n/@lat">
-	      <xsl:if test="position() > 1">, </xsl:if>
+	      <xsl:if test="position() > 1"><xsl:text> </xsl:text></xsl:if>
 	      <xsl:value-of select="$n/@lon"/>
 	      <xsl:text> </xsl:text>
 	      <xsl:value-of select="$n/@lat"/>
 	    </xsl:if>
 	  </xsl:for-each>
 	</xsl:variable>
-	<xsl:if test="normalize-space($wktCoords) != ''">
-	  <locn:geometry rdf:datatype="http://www.opengis.net/ont/geosparql#wktLiteral">
+	<xsl:if test="normalize-space($gmlCoords) != ''">
+	  <locn:geometry rdf:parseType="Literal">
 	    <xsl:choose>
-	      <xsl:when test="$closed">POLYGON((<xsl:value-of select="$wktCoords"/>))</xsl:when>
-	      <xsl:otherwise>LINESTRING(<xsl:value-of select="$wktCoords"/>)</xsl:otherwise>
+	      <xsl:when test="$closed">
+	        <gml:Polygon srsName="http://www.opengis.net/def/crs/OGC/1.3/CRS84">
+	          <gml:exterior>
+	            <gml:LinearRing>
+	              <gml:posList><xsl:value-of select="$gmlCoords"/></gml:posList>
+	            </gml:LinearRing>
+	          </gml:exterior>
+	        </gml:Polygon>
+	      </xsl:when>
+	      <xsl:otherwise>
+	        <gml:LineString srsName="http://www.opengis.net/def/crs/OGC/1.3/CRS84">
+	          <gml:posList><xsl:value-of select="$gmlCoords"/></gml:posList>
+	        </gml:LineString>
+	      </xsl:otherwise>
 	    </xsl:choose>
 	  </locn:geometry>
 	</xsl:if>

@@ -33,13 +33,6 @@
     <dd>
       <select id="geo-example-select">
 	<option value="">&#x2014; select element &#x2014;</option>
-	<option value="/node/1">node/1 &mdash; Monte Piselli</option>
-	<option value="/node/1675605507">node/1675605507 &mdash; Caf&eacute; Wanderer</option>
-	<option value="/way/100">way/100 &mdash; Roundabout</option>
-	<option value="/way/32113829">way/32113829 &mdash; Palas building</option>
-	<option value="/relation/147">relation/147 &mdash; Tigris River</option>
-	<option value="/relation/71525">relation/71525 &mdash; Paris boundary</option>
-	<option value="/relation/13986332">relation/13986332 &mdash; Sebalder Reichswald</option>
       </select>
       <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Show on map</button>
     </dd>
@@ -65,11 +58,6 @@
     <dd>
       <select id="search-example-select" onchange="if(this.value) document.forms['search-form'].elements['q'].value=this.value;">
 	<option value="">&#x2014; select example &#x2014;</option>
-	<option value="Kaiserburg">Kaiserburg</option>
-	<option value="Germany">Germany</option>
-	<option value="France">France</option>
-	<option value="United Kingdom">United Kingdom</option>
-	<option value="Netherlands">Netherlands</option>
       </select>
     </dd>
     <dd>
@@ -88,9 +76,6 @@
     <dd>
       <select id="map-example-select" onchange="if(this.value) document.forms['map-form'].elements['bbox'].value=this.value;">
 	<option value="">&#x2014; select example &#x2014;</option>
-	<option value="11.075,49.457,11.077,49.459">Kaiserburg, Nuremberg</option>
-	<option value="2.348,48.856,2.350,48.858">Louvre, Paris</option>
-	<option value="-118.498,34.015,-118.496,34.018">Santa Monica, Third Street</option>
       </select>
     </dd>
     <dd>
@@ -109,9 +94,6 @@
     <dd>
       <select id="poi-example-select" onchange="if(this.value) document.forms['poi-form'].elements['bbox'].value=this.value;">
 	<option value="">&#x2014; select example &#x2014;</option>
-	<option value="11.075,49.457,11.077,49.459">Points of interest near Kaiserburg, Nuremberg</option>
-	<option value="2.348,48.856,2.350,48.858">Points of interest near the Louvre, Paris</option>
-	<option value="-118.498,34.015,-118.496,34.018">Santa Monica, Third Street</option>
       </select>
     </dd>
     <dd>
@@ -130,10 +112,6 @@
     <dd>
       <select id="around-example-select" onchange="if(this.value){var p=this.value.split('|'),f=document.forms['around-form']; f.elements['lon'].value=p[0]; f.elements['lat'].value=p[1]; f.elements['radius'].value=p[2];}">
 	<option value="">&#x2014; select example &#x2014;</option>
-	<option value="11.077|49.458|100">Nodes within 100m of Kaiserburg, Nuremberg</option>
-	<option value="2.349|48.857|100">Nodes within 100m of the Louvre, Paris</option>
-	<option value="-0.127|51.501|100">Nodes within 100m of Westminster, London</option>
-	<option value="-118.496|34.017|100">Nodes within 100m of Santa Monica, Third Street</option>
       </select>
     </dd>
     <dd>
@@ -153,5 +131,27 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="map.js"></script>
   <script>initOsmMap('map-main', 50, 10, 4);</script>
+  <script>
+fetch('examples.json').then(r => r.json()).then(ex => {
+  function addOpt(sel, val, text) {
+    var o = document.createElement('option');
+    o.value = val; o.textContent = text; sel.appendChild(o);
+  }
+  var geo = document.getElementById('geo-example-select');
+  ex.features.forEach(f => addOpt(geo, '/'+f.type+'/'+f.id, f.type+'/'+f.id+' \u2014 '+f.label));
+
+  var srch = document.getElementById('search-example-select');
+  ex.search.forEach(s => addOpt(srch, s.q, s.q));
+
+  var map = document.getElementById('map-example-select');
+  ex.map.forEach(m => addOpt(map, m.bbox, m.label));
+
+  var poi = document.getElementById('poi-example-select');
+  ex.map.forEach(m => addOpt(poi, m.bbox, 'POI: '+m.label));
+
+  var aro = document.getElementById('around-example-select');
+  ex.around.forEach(a => addOpt(aro, a.lon+'|'+a.lat+'|'+a.radius, 'Within '+a.radius+'m of '+a.label));
+});
+  </script>
 </body>
 </html>

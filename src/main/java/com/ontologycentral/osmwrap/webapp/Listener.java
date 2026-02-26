@@ -42,7 +42,10 @@ public class Listener implements ServletContextListener {
 	
 	public static String NODE = "/node/";
 	public static String RELATION = "/relation/";
-	public static String WAY = "/way/";	
+	public static String WAY = "/way/";
+	public static String NODE_GML = "/node/.gml";
+	public static String WAY_GML = "/way/.gml";
+	public static String RELATION_GML = "/relation/.gml";
 	public static String SEARCH = "search";
 	public static String MAP = "map";
 	public static String POI = "poi";
@@ -91,6 +94,33 @@ public class Listener implements ServletContextListener {
 		try {
 			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/way.xsl")));
 			ctx.setAttribute(WAY, tmpl);
+		} catch (TransformerConfigurationException e) {
+			_log.severe(e.getMessage());
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/node-gml.xsl")));
+			ctx.setAttribute(NODE_GML, tmpl);
+		} catch (TransformerConfigurationException e) {
+			_log.severe(e.getMessage());
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/way-gml.xsl")));
+			ctx.setAttribute(WAY_GML, tmpl);
+		} catch (TransformerConfigurationException e) {
+			_log.severe(e.getMessage());
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+
+		try {
+			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/relation-gml.xsl")));
+			ctx.setAttribute(RELATION_GML, tmpl);
 		} catch (TransformerConfigurationException e) {
 			_log.severe(e.getMessage());
 			e.printStackTrace();

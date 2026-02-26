@@ -8,7 +8,7 @@
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:spatial="http://geovocab.org/spatial#"
    xmlns:geom="http://geovocab.org/geometry#"
-   xmlns:geosparql="http://www.opengis.net/ont/geosparql#"
+   xmlns:gml="http://www.opengis.net/gml/3.2"
    xmlns:locn="http://www.w3.org/ns/locn#"
    xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
@@ -100,8 +100,11 @@
 	<xsl:attribute name="rdf:about">/node/<xsl:value-of select="@id"/>#geo</xsl:attribute>
 	<geo:lat><xsl:value-of select="@lat"/></geo:lat>
 	<geo:long><xsl:value-of select="@lon"/></geo:long>
-	<locn:geometry rdf:datatype="http://www.opengis.net/ont/geosparql#wktLiteral"
-	    >POINT(<xsl:value-of select="@lon"/><xsl:text> </xsl:text><xsl:value-of select="@lat"/>)</locn:geometry>
+	<locn:geometry rdf:parseType="Literal">
+	  <gml:Point srsName="http://www.opengis.net/def/crs/OGC/1.3/CRS84">
+	    <gml:pos><xsl:value-of select="@lon"/><xsl:text> </xsl:text><xsl:value-of select="@lat"/></gml:pos>
+	  </gml:Point>
+	</locn:geometry>
       </geom:Geometry>
 
       <!-- Changeset as Activity -->
