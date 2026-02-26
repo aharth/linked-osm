@@ -137,14 +137,16 @@ public class FeatureServlet extends HttpServlet {
 				// RDF format - use existing XSLT transformation
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl);
 				Transformer t = tmpl.newTransformer();
+				response.headers().firstValueAsLong("content-length")
+						.ifPresent(n -> t.setParameter("upstream-bytes", n));
+				if (ctrl.equals("/relation/")) {
+					t.setParameter("element-id", id);
+				}
 				resp.setContentType("application/rdf+xml");
-
-				StreamSource ssource = new StreamSource(is);
-				StreamResult sresult = new StreamResult(os);
 
 				_log.info("applying xslt");
 
-				t.transform(ssource, sresult);
+				t.transform(new StreamSource(is), new StreamResult(os));
 			}
 
     		resp.setHeader("Cache-Control", "public");

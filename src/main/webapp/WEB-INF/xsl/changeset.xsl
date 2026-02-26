@@ -6,6 +6,7 @@
    xmlns:dc="http://purl.org/dc/elements/1.1/"
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:prov="http://www.w3.org/ns/prov#"
+   xmlns:dcat="http://www.w3.org/ns/dcat#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    xmlns="http://osm.geovocab.org/vocab#"
    version="2.0">
@@ -13,6 +14,8 @@
   <xsl:output method="xml"/>
 
   <xsl:strip-space elements="*"/>
+
+  <xsl:param name="upstream-bytes" select="-1"/>
 
   <xsl:template match="osm">
     <rdf:RDF>
@@ -33,7 +36,12 @@
       <prov:Activity rdf:about="#transformation">
         <rdfs:label>OSM XML to RDF Changeset Transformation</rdfs:label>
         <prov:used>
-          <xsl:attribute name="rdf:resource">https://api.openstreetmap.org/api/0.6/changeset/<xsl:value-of select="changeset/@id"/></xsl:attribute>
+          <prov:Entity>
+            <xsl:attribute name="rdf:about">https://api.openstreetmap.org/api/0.6/changeset/<xsl:value-of select="changeset/@id"/></xsl:attribute>
+            <xsl:if test="$upstream-bytes >= 0">
+              <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
+            </xsl:if>
+          </prov:Entity>
         </prov:used>
         <prov:wasAssociatedWith rdf:resource="/#osmwrap"/>
         <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>

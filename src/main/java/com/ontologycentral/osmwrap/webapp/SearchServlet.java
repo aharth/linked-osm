@@ -63,17 +63,12 @@ public class SearchServlet extends HttpServlet {
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else {
 				Templates tmpl = (Templates) ctx.getAttribute(Listener.SEARCH);
-			Transformer t = tmpl.newTransformer();
-
+				Transformer t = tmpl.newTransformer();
+				response.headers().firstValueAsLong("content-length")
+						.ifPresent(n -> t.setParameter("upstream-bytes", n));
 				resp.setContentType("application/rdf+xml");
-
-				StreamSource ssource = new StreamSource(is);
-				StreamResult sresult = new StreamResult(os);
-
 				_log.info("applying xslt");
-
-				t.transform(ssource, sresult);
-
+				t.transform(new StreamSource(is), new StreamResult(os));
 				is.close();
 			}
 		} catch (TransformerException e) {

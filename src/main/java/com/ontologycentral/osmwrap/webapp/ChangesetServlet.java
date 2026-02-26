@@ -73,6 +73,8 @@ public class ChangesetServlet extends HttpServlet {
 
 			Templates tmpl = (Templates) ctx.getAttribute(Listener.CHANGESET);
 			Transformer t = tmpl.newTransformer();
+			response.headers().firstValueAsLong("content-length")
+					.ifPresent(n -> t.setParameter("upstream-bytes", n));
 			resp.setContentType("application/rdf+xml");
 			t.transform(new StreamSource(is), new StreamResult(os));
 

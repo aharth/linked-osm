@@ -1,4 +1,4 @@
-var FETCH_TIMEOUT = 30000;
+var FETCH_TIMEOUT = 130000; // slightly above the server's 120s upstream timeout
 
 window.osmMaps = {};
 
@@ -175,7 +175,7 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
         .catch(function(err) {
             clearTimeout(timer);
             if (state.fetchEpoch !== epoch) return;
-            var msg = err.name === 'AbortError' ? 'Request timed out' : err.message;
+            var msg = err.name === 'AbortError' ? 'Client timeout (' + (FETCH_TIMEOUT / 1000) + 's)' : err.message;
             if (statusEl) statusEl.textContent = 'Error: ' + msg;
             if (linkEl) { linkEl.innerHTML = '<a href="' + escHtml(url) + '">' + escHtml(url) + '</a>'; }
         });
