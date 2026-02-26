@@ -3,11 +3,19 @@ package com.ontologycentral.osmwrap.webapp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Calendar;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
 import com.ontologycentral.osmwrap.ApiConstants;
@@ -27,7 +35,29 @@ import javax.xml.transform.stream.StreamSource;
 @SuppressWarnings("serial")
 public class FeatureServlet extends HttpServlet {
 	Logger _log = Logger.getLogger(this.getClass().getName());
-	
+
+	/**
+	 * XML cache keyed by upstream URL. Weight is the char count of the XML string
+	 * (≈ UTF-8 byte count for ASCII-heavy OSM XML). Capped at 64 MB to bound heap use.
+	 */
+	private final Cache<String, Object[]> xmlCache = Caffeine.newBuilder()
+			.maximumWeight(2L * 1024 * 1024 * 1024)
+			.weigher((String k, Object[] v) -> ((String) v[0]).length())
+			.expireAfterWrite(Duration.ofHours(24))
+			.build();
+
+	/** Tracks upstream fetches that are currently in progress, keyed by upstream URL. */
+	private final ConcurrentHashMap<String, CompletableFuture<Object[]>> inFlight = new ConcurrentHashMap<>();
+
+	/** Signals that an upstream fetch returned a non-200 status. */
+	private static final class FetchException extends Exception {
+		final int status;
+		FetchException(int status, String msg) {
+			super(msg);
+			this.status = status;
+		}
+	}
+
 	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		OutputStream os = resp.getOutputStream();
 
@@ -109,44 +139,96 @@ public class FeatureServlet extends HttpServlet {
 		System.out.println("retrieving " + archive);
 
 		try {
-			HttpResponse<InputStream> response = HttpClientUtil.get(archive);
+			// --- Fetch XML with cache and in-flight deduplication ---
+			//
+			// Three cases in priority order:
+			//   1. Cache hit   — use stored XML immediately, no upstream call.
+			//   2. In-flight   — another thread is already fetching this URL; join its
+			//                    CompletableFuture and use the result when it arrives.
+			//   3. Cold miss   — register a new CompletableFuture so other threads can
+			//                    join it, then perform the upstream fetch.
+			//
+			// This ensures at most one upstream request is in flight per URL at any time.
 
-			int responseCode = response.statusCode();
-			if (responseCode != 200) {
-				resp.setStatus(responseCode);
-				response.headers().firstValue("Content-Type").ifPresent(resp::setContentType);
-				HttpClientUtil.copyStream(response.body(), resp.getOutputStream());
-				return;
+			String xml = null;
+			long byteCount = -1L;
+
+			Object[] cached = xmlCache.getIfPresent(archive);
+			if (cached != null) {
+				xml = (String) cached[0];
+				byteCount = (long) cached[1];
+				_log.info("cache hit: " + archive);
+			} else {
+				CompletableFuture<Object[]> fresh = new CompletableFuture<>();
+				CompletableFuture<Object[]> existing = inFlight.putIfAbsent(archive, fresh);
+
+				if (existing != null) {
+					// Case 2: join the in-flight fetch
+					_log.info("joining in-flight fetch: " + archive);
+					try {
+						Object[] result = existing.join();
+						xml = (String) result[0];
+						byteCount = (long) result[1];
+					} catch (CompletionException ce) {
+						Throwable cause = ce.getCause();
+						int errStatus = (cause instanceof FetchException) ? ((FetchException) cause).status : 502;
+						resp.sendError(errStatus, cause.getMessage());
+						return;
+					}
+				} else {
+					// Case 3: cold miss — this thread is the designated fetcher
+					try {
+						HttpResponse<InputStream> response = HttpClientUtil.get(archive);
+						int responseCode = response.statusCode();
+						if (responseCode != 200) {
+							// Signal waiting threads then proxy the error body to this response.
+							fresh.completeExceptionally(new FetchException(responseCode, "upstream " + responseCode));
+							resp.setStatus(responseCode);
+							response.headers().firstValue("Content-Type").ifPresent(resp::setContentType);
+							HttpClientUtil.copyStream(response.body(), resp.getOutputStream());
+							return;
+						}
+						byteCount = response.headers().firstValueAsLong("content-length").orElse(-1L);
+						xml = HttpClientUtil.readToString(response.body());
+						response.body().close();
+						Object[] result = new Object[]{xml, byteCount};
+						xmlCache.put(archive, result);
+						fresh.complete(result);
+					} catch (IOException | RuntimeException e) {
+						fresh.completeExceptionally(e);
+						throw e;
+					} finally {
+						inFlight.remove(archive, fresh);
+					}
+				}
 			}
 
-			InputStream is = response.body();
+			// --- Format dispatch ---
 
 			if (format.equals("json")) {
 				resp.setContentType("application/geo+json");
 				String elementType = ctrl.substring(1, ctrl.length() - 1);
-				String osmXml = HttpClientUtil.readToString(is);
-				GeoJsonConverter.GeometryResult geomResult = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
-				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(osmXml, elementType, id, geomResult.geometryJson, geomResult.centroid);
+				GeoJsonConverter.GeometryResult geomResult = GeoJsonConverter.extractGeometryJson(xml, elementType, id);
+				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(xml, elementType, id, geomResult.geometryJson, geomResult.centroid);
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else if (format.equals("gml")) {
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl + ".gml");
 				Transformer t = tmpl.newTransformer();
 				resp.setContentType("application/gml+xml");
-				t.transform(new StreamSource(is), new StreamResult(os));
+				t.transform(new StreamSource(new StringReader(xml)), new StreamResult(os));
 			} else {
 				// RDF format - use existing XSLT transformation
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl);
 				Transformer t = tmpl.newTransformer();
-				response.headers().firstValueAsLong("content-length")
-						.ifPresent(n -> t.setParameter("upstream-bytes", n));
+				if (byteCount >= 0) {
+					t.setParameter("upstream-bytes", byteCount);
+				}
 				if (ctrl.equals("/relation/")) {
 					t.setParameter("element-id", id);
 				}
 				resp.setContentType("application/rdf+xml");
-
 				_log.info("applying xslt");
-
-				t.transform(new StreamSource(is), new StreamResult(os));
+				t.transform(new StreamSource(new StringReader(xml)), new StreamResult(os));
 			}
 
     		resp.setHeader("Cache-Control", "public");
@@ -154,9 +236,8 @@ public class FeatureServlet extends HttpServlet {
     		c.add(Calendar.DATE, 1);
     		resp.setHeader("Expires", Listener.RFC822.format(c.getTime()));
 
-			is.close();
 		} catch (TransformerException e) {
-			e.printStackTrace(); 
+			e.printStackTrace();
 			resp.sendError(500, e.getMessage());
 			return;
 		} catch (IOException e) {
@@ -166,7 +247,7 @@ public class FeatureServlet extends HttpServlet {
 		} catch (RuntimeException e) {
 			resp.sendError(500, archive + ": " + e.getMessage());
 			e.printStackTrace();
-			return;			
+			return;
 		}
 
 		os.close();

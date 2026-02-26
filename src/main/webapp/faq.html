@@ -200,6 +200,33 @@
     is emitted.
   </p>
 
+  <a name="caching"></a>
+  <h2>Are responses cached?</h2>
+
+  <p>
+    The server caches the raw OSM XML it fetches from upstream (OSM API, Overpass API)
+    for feature endpoints (<code>/node/*</code>, <code>/way/*</code>,
+    <code>/relation/*</code>).  A single in-memory cache is shared across all response
+    formats, so a request for <code>/relation/51477.json</code> immediately followed by
+    <code>/relation/51477.rdf</code> results in only one upstream network request &mdash;
+    the second request is served from the cached XML.
+  </p>
+  <p>
+    Cache behaviour:
+  </p>
+  <ul>
+    <li><strong>Capacity:</strong> up to 2&nbsp;GB of raw XML (entries are evicted by
+      least-recently-used / low-frequency policy once the limit is approached).</li>
+    <li><strong>Expiry:</strong> entries expire 24&nbsp;hours after they were written,
+      consistent with the <code>Cache-Control: public, Expires: +1&nbsp;day</code> headers
+      sent to clients.</li>
+    <li><strong>Concurrency:</strong> if the same URL is requested by multiple clients
+      simultaneously, only one upstream fetch is performed; the other requests wait and
+      share the result.</li>
+    <li><strong>Scope:</strong> the cache is in-process and resets on webapp restart.
+      Other endpoints (search, map, POI, around) are not cached server-side.</li>
+  </ul>
+
   <a name="content-negotiation"></a>
   <h2>How does content negotiation work?</h2>
 
