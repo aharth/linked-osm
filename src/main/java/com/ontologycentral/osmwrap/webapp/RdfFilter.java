@@ -51,6 +51,17 @@ public class RdfFilter implements Filter {
 		boolean serveTurtle = !AcceptHeader.prefers(accepted,
 				"application", "rdf+xml", "text", "turtle");
 
+		httpResponse.setHeader("Vary", "Accept");
+
+		String requestPath = httpRequest.getRequestURI()
+				.substring(httpRequest.getContextPath().length());
+		// Strip query string segment — only the path portion matters for extension detection
+		int qpos = requestPath.indexOf('?');
+		if (qpos >= 0) requestPath = requestPath.substring(0, qpos);
+		// Last path segment (after final '/') used for extension detection
+		String lastSegment = requestPath.substring(requestPath.lastIndexOf('/') + 1);
+		boolean hasExtension = lastSegment.contains(".");
+
 		if (serveTurtle && contentType != null && contentType.contains("application/rdf+xml")) {
 			byte[] original = capture.toByteArray();
 
@@ -62,8 +73,6 @@ public class RdfFilter implements Filter {
 				String host = httpRequest.getHeader("X-Forwarded-Host");
 				if (host == null) host = httpRequest.getHeader("Host");
 				if (host == null) host = httpRequest.getServerName();
-				String requestPath = httpRequest.getRequestURI()
-						.substring(httpRequest.getContextPath().length());
 				String queryString = httpRequest.getQueryString();
 				String base = proto + "://" + host + requestPath
 						+ (queryString != null ? "?" + queryString : "");
@@ -85,6 +94,9 @@ public class RdfFilter implements Filter {
 				String turtle = out.toString("UTF-8");
 				byte[] result = turtle.getBytes("UTF-8");
 
+				if (!hasExtension) {
+					httpResponse.setHeader("Content-Location", requestPath + ".ttl");
+				}
 				httpResponse.setContentType("text/turtle");
 				httpResponse.setContentLength(result.length);
 				httpResponse.getOutputStream().write(result);
@@ -95,6 +107,16 @@ public class RdfFilter implements Filter {
 			}
 		} else {
 			byte[] data = capture.toByteArray();
+			if (!hasExtension && contentType != null) {
+				String ext = null;
+				if (contentType.contains("application/rdf+xml"))             ext = ".rdf";
+				else if (contentType.contains("application/geo+json")
+						|| contentType.contains("application/json"))         ext = ".json";
+				else if (contentType.contains("application/gml+xml"))        ext = ".gml";
+				if (ext != null) {
+					httpResponse.setHeader("Content-Location", requestPath + ext);
+				}
+			}
 			if (contentType != null) {
 				httpResponse.setContentType(contentType);
 			}

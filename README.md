@@ -86,6 +86,44 @@ Accept: application/vnd.google-earth.kml+xml          # KML
 ```
 
 
+## Testing
+
+`test_endpoints.sh` runs HTTP smoke-tests against a deployed instance.
+It reads example data from `src/main/webapp/examples.json` (single source of truth).
+
+### Prerequisites
+
+```
+curl  jq  xmllint (libxml2-utils)  rapper (raptor2-utils)  python3
+```
+
+### Light mode (default)
+
+Checks one node, one way, one relation, one search, one map bbox, and the view page.
+No Overpass calls, no inter-request delay — completes in a few seconds.
+
+```bash
+./test_endpoints.sh                                    # against osmwrap.ontologycentral.com
+./test_endpoints.sh http://localhost:8080/linked-osm   # against a local instance
+```
+
+### Heavy mode
+
+Full loop over all entries in `examples.json` × all formats (GeoJSON, RDF/XML, Turtle, GML),
+plus Overpass `/around` endpoints and named edge-case relations.
+Defaults to a 10-second delay between requests to stay within Overpass rate limits.
+
+```bash
+./test_endpoints.sh --heavy
+./test_endpoints.sh --heavy http://localhost:8080/linked-osm
+DELAY=5 ./test_endpoints.sh --heavy                   # override delay
+```
+
+### Exit code
+
+`0` when all tests pass, `1` if any fail.
+Each test prints `PASS` or `FAIL`; failures include the error output from the tool.
+
 ## Background
 
 Linked OpenStreetmap provides OpenStreetMap data as Linked Data using XSLT transformations to convert OSM XML into RDF/XML format.
