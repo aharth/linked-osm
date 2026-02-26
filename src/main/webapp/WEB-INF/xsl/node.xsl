@@ -102,8 +102,6 @@
 	<geo:long><xsl:value-of select="@lon"/></geo:long>
 	<locn:geometry rdf:datatype="http://www.opengis.net/ont/geosparql#wktLiteral"
 	    >POINT(<xsl:value-of select="@lon"/><xsl:text> </xsl:text><xsl:value-of select="@lat"/>)</locn:geometry>
-	<foaf:page rdf:resource="/geo/osm/node/{@id}"/>
-	<foaf:page rdf:resource="/geo/overpass/node/{@id}"/>
       </geom:Geometry>
 
       <!-- Changeset as Activity -->

@@ -89,22 +89,24 @@
 
 	<xsl:apply-templates/>
 
-	<geom:geometry rdf:resource="/relation/{@id}#geo"/>
+	<xsl:if test="count(//node[normalize-space(@lat)]) > 0">
+	  <geom:geometry rdf:resource="/relation/{@id}#geo"/>
+	</xsl:if>
       </spatial:Feature>
 
-      <!-- Geometry resource -->
-      <geom:Geometry>
-	<xsl:attribute name="rdf:about">/relation/<xsl:value-of select="@id"/>#geo</xsl:attribute>
-	<foaf:page rdf:resource="/geo/osm/relation/{@id}"/>
-	<foaf:page rdf:resource="/geo/overpass/relation/{@id}"/>
+      <!-- Geometry resource (only emitted when relation has node coordinates) -->
+      <xsl:if test="count(//node[normalize-space(@lat)]) > 0">
+        <geom:Geometry>
+	  <xsl:attribute name="rdf:about">/relation/<xsl:value-of select="@id"/>#geo</xsl:attribute>
+	  <foaf:page rdf:resource="/geo/osm/relation/{@id}"/>
+	  <foaf:page rdf:resource="/geo/overpass/relation/{@id}"/>
 
-	<!-- Centroid: mean of all node coordinates from /full response -->
-	<xsl:variable name="allNodes" select="//node[normalize-space(@lat)]"/>
-	<xsl:if test="count($allNodes) > 0">
+	  <!-- Centroid: mean of all node coordinates from /full response -->
+	  <xsl:variable name="allNodes" select="//node[normalize-space(@lat)]"/>
 	  <geo:lat><xsl:value-of select="sum($allNodes/@lat) div count($allNodes)"/></geo:lat>
 	  <geo:long><xsl:value-of select="sum($allNodes/@lon) div count($allNodes)"/></geo:long>
-	</xsl:if>
-      </geom:Geometry>
+        </geom:Geometry>
+      </xsl:if>
 
       <!-- Changeset as Activity -->
       <xsl:if test="@changeset and @timestamp and @user">

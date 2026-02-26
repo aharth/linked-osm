@@ -138,6 +138,31 @@
     </dd>
   </dl>
 
+  <a name="relation-wkt"></a>
+  <h2>Why do relations lack a WKT geometry in the RDF output?</h2>
+
+  <p>
+    For nodes and ways, the XSLT stylesheet can produce a WKT literal directly from the
+    coordinates in the OSM XML response.  For a <code>type=multipolygon</code> relation
+    the geometry is more complex: the member ways are unordered fragments that must be
+    stitched together into closed outer and inner rings before a
+    <code>MULTIPOLYGON(...)</code> literal can be formed.  This ring-assembly algorithm
+    is not expressible in XSLT 2.0, so the <code>#geo</code> block in
+    <code>/relation/{id}.rdf</code> carries only a centroid, not a WKT shape.
+  </p>
+  <p>
+    The <strong>GeoJSON geometry endpoints</strong> do not have this limitation &mdash;
+    <code>/geo/osm/relation/{id}.json</code> and
+    <code>/geo/overpass/relation/{id}.json</code> both run the ring-assembly in Java and
+    return a correct <code>MultiPolygon</code>.
+  </p>
+  <p>
+    Thematic or organisational relations that group other features without defining a
+    drawable shape (e.g. a route network or a list of countries) have no node coordinates
+    at all; for these, neither <code>geom:geometry</code> nor a <code>#geo</code> resource
+    is emitted.
+  </p>
+
   <a name="content-negotiation"></a>
   <h2>How does content negotiation work?</h2>
 
