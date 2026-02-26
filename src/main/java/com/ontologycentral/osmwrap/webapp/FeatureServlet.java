@@ -158,7 +158,7 @@ public class FeatureServlet extends HttpServlet {
 			resp.sendError(500, e.getMessage());
 			return;
 		} catch (IOException e) {
-			resp.sendError(500, archive + ": " + e.getMessage());
+			resp.sendError(HttpClientUtil.errorStatus(e), archive + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		} catch (RuntimeException e) {

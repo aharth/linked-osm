@@ -123,7 +123,7 @@ public class GeometryOSMServlet extends HttpServlet {
 			resp.setHeader("Expires", Listener.RFC822.format(c.getTime()));
 
 		} catch (IOException e) {
-			resp.sendError(500, osmApiUrl + ": " + e.getMessage());
+			resp.sendError(HttpClientUtil.errorStatus(e), osmApiUrl + ": " + e.getMessage());
 			e.printStackTrace();
 			return;
 		} catch (RuntimeException e) {

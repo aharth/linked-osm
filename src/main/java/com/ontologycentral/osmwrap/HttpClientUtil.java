@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,11 +27,12 @@ public final class HttpClientUtil {
 
     private static final HttpClient CLIENT =
             HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(10))
+                    .connectTimeout(Duration.ofSeconds(15))
                     .followRedirects(HttpClient.Redirect.NORMAL)
                     .build();
 
-    private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(60);
+    /** Timeout for responses that may carry large payloads (e.g. relation /full). */
+    private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(120);
 
     /**
      * Perform an HTTP GET request.
@@ -231,6 +233,18 @@ public final class HttpClientUtil {
         }
 
         return wayNodes;
+    }
+
+    /**
+     * Maps an upstream I/O failure to the appropriate HTTP status code.
+     * A client-side timeout ({@link HttpTimeoutException}) returns 504;
+     * all other I/O failures return 500.
+     *
+     * @param e the exception from a failed upstream call
+     * @return 504 for timeouts, 500 otherwise
+     */
+    public static int errorStatus(final IOException e) {
+        return (e instanceof HttpTimeoutException) ? 504 : 500;
     }
 
     private HttpClientUtil() {

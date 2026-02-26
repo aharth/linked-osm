@@ -80,6 +80,10 @@ public class ChangesetServlet extends HttpServlet {
 			System.err.println(te);
 			te.printStackTrace();
 			resp.sendError(500, "Transformation error: " + te.getMessage());
+		} catch (IOException ex) {
+			System.err.println(ex);
+			ex.printStackTrace();
+			resp.sendError(HttpClientUtil.errorStatus(ex), "Server error: " + ex.getMessage());
 		} catch (Exception ex) {
 			System.err.println(ex);
 			ex.printStackTrace();

@@ -5,7 +5,8 @@
     {"type": "way",      "id": "100",        "label": "Roundabout"},
     {"type": "way",      "id": "32113829",   "label": "Palas building"},
     {"type": "relation", "id": "147",        "label": "Tigris River"},
-    {"type": "relation", "id": "51477",      "label": "Baden-Württemberg"}
+    {"type": "relation", "id": "51477",      "label": "Baden-Württemberg"},
+    {"type": "relation", "id": "71525",      "label": "Paris boundary"}
   ],
   "search": [
     {"q": "Kaiserburg"},
