@@ -194,20 +194,6 @@ public class MultipolygonHandler {
     }
 
     /**
-     * Extract node references from way XML
-     */
-    private static List<String> extractNodeReferences(String wayXml) {
-        List<String> refs = new ArrayList<>();
-        Matcher m = ND_PATTERN.matcher(wayXml);
-
-        while (m.find()) {
-            refs.add(m.group(1));
-        }
-
-        return refs;
-    }
-
-    /**
      * Parse way→nodeRef lists from XML that already contains inline &lt;way&gt; elements
      * (e.g. from an OSM /full response). Returns an empty map if none are present.
      */
@@ -303,30 +289,4 @@ public class MultipolygonHandler {
         return geometry.toGeoJSON();
     }
 
-    /**
-     * Convert multipolygon to WKT format
-     */
-    public static String toWKT(MultipolygonGeometry geometry) {
-        if (geometry == null || !geometry.isValid()) {
-            return "GEOMETRYCOLLECTION()";
-        }
-        return geometry.toWKT();
-    }
-
-    /**
-     * Convert multipolygon to KML format (wrapped in Placemark)
-     */
-    public static String toKML(MultipolygonGeometry geometry, String relationId) {
-        if (geometry == null || !geometry.isValid()) {
-            return "";
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("<Placemark>");
-        sb.append("<name>relation ").append(relationId).append("</name>");
-        sb.append(geometry.toKML());
-        sb.append("</Placemark>");
-
-        return sb.toString();
-    }
 }

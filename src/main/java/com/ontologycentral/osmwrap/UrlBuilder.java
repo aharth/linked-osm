@@ -1,7 +1,7 @@
 package com.ontologycentral.osmwrap;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Utility class for building URLs for OpenStreetMap and related APIs.
@@ -44,10 +44,9 @@ public final class UrlBuilder {
      *
      * @param query the search query
      * @return complete search URL
-     * @throws UnsupportedEncodingException if URL encoding fails
      */
-    public static String buildSearchUrl(String query, String limit) throws UnsupportedEncodingException {
-        String url = ApiConstants.NOMINATIM_API_BASE + "/search?q=" + URLEncoder.encode(query, "UTF-8") + "&format=xml";
+    public static String buildSearchUrl(String query, String limit) {
+        String url = ApiConstants.NOMINATIM_API_BASE + "/search?q=" + URLEncoder.encode(query, StandardCharsets.UTF_8) + "&format=xml";
         if (limit != null) {
             url += "&limit=" + limit;
         }

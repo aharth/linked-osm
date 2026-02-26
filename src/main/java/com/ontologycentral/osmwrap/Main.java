@@ -322,8 +322,7 @@ public class Main {
     }
 
     private static void fetchTagInfo(String tagKey) throws IOException {
-        String tagUrl = "https://taginfo.openstreetmap.org/api/4/key/overview?key=" + java.net.URLEncoder.encode(tagKey, "UTF-8");
-        logger.info("Fetching tag info for '" + tagKey + "' from " + tagUrl);
+        logger.info("Fetching tag info for '" + tagKey + "'");
 
         TaginfoConverter converter = new TaginfoConverter();
 

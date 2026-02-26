@@ -6,12 +6,13 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.ZonedDateTime;
 import java.time.Duration;
-import java.util.Calendar;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -34,7 +35,7 @@ import javax.xml.transform.stream.StreamSource;
 
 @SuppressWarnings("serial")
 public class FeatureServlet extends HttpServlet {
-	Logger _log = Logger.getLogger(this.getClass().getName());
+	private static final Logger _log = Logger.getLogger(FeatureServlet.class.getName());
 
 	/**
 	 * XML cache keyed by upstream URL. Weight is the char count of the XML string
@@ -136,7 +137,6 @@ public class FeatureServlet extends HttpServlet {
 		}
 
 		_log.info("retrieving " + archive);
-		System.out.println("retrieving " + archive);
 
 		try {
 			// --- Fetch XML with cache and in-flight deduplication ---
@@ -209,7 +209,7 @@ public class FeatureServlet extends HttpServlet {
 				resp.setContentType("application/geo+json");
 				String elementType = ctrl.substring(1, ctrl.length() - 1);
 				GeoJsonConverter.GeometryResult geomResult = GeoJsonConverter.extractGeometryJson(xml, elementType, id);
-				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(xml, elementType, id, geomResult.geometryJson, geomResult.centroid);
+				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(xml, elementType, id, geomResult.geometryJson);
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else if (format.equals("gml")) {
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl + ".gml");
@@ -232,21 +232,19 @@ public class FeatureServlet extends HttpServlet {
 			}
 
     		resp.setHeader("Cache-Control", "public");
-    		Calendar c = Calendar.getInstance();
-    		c.add(Calendar.DATE, 1);
-    		resp.setHeader("Expires", Listener.RFC822.format(c.getTime()));
+    		resp.setHeader("Expires", ZonedDateTime.now().plusDays(1).format(Listener.RFC822));
 
 		} catch (TransformerException e) {
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			resp.sendError(500, e.getMessage());
 			return;
 		} catch (IOException e) {
 			resp.sendError(HttpClientUtil.errorStatus(e), archive + ": " + e.getMessage());
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			return;
 		} catch (RuntimeException e) {
 			resp.sendError(500, archive + ": " + e.getMessage());
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			return;
 		}
 

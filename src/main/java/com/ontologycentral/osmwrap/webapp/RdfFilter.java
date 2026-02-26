@@ -4,7 +4,6 @@ import com.ontologycentral.osmwrap.AcceptHeader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -22,10 +21,9 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RDFWriter;
-import org.apache.jena.riot.RIOT;
 
 public class RdfFilter implements Filter {
-	Logger _log = Logger.getLogger(this.getClass().getName());
+	private static final Logger _log = Logger.getLogger(RdfFilter.class.getName());
 
 	@Override
 	public void doFilter(

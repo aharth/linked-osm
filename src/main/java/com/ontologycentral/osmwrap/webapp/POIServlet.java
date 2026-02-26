@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
@@ -26,7 +27,7 @@ import javax.xml.transform.stream.StreamSource;
 
 @SuppressWarnings("serial")
 public class POIServlet extends HttpServlet {
-	Logger _log = Logger.getLogger(this.getClass().getName());
+	private static final Logger _log = Logger.getLogger(POIServlet.class.getName());
 
 	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		OutputStream os = resp.getOutputStream();
@@ -49,10 +50,9 @@ public class POIServlet extends HttpServlet {
 		String archive = ApiConstants.OVERPASS_API_BASE;
 
 		_log.info("retrieving " + archive);
-		System.out.println("retrieving " + archive);
 
 		try {
-			String postData = "data=" + URLEncoder.encode(overpassQuery, "UTF-8");
+			String postData = "data=" + URLEncoder.encode(overpassQuery, StandardCharsets.UTF_8);
 			HttpResponse<InputStream> response = HttpClientUtil.post(archive, postData);
 
 			int responseCode = response.statusCode();
@@ -82,16 +82,16 @@ public class POIServlet extends HttpServlet {
 				is.close();
 			}
 		} catch (TransformerException e) {
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			resp.sendError(500, e.getMessage());
 			return;
 		} catch (IOException e) {
 			resp.sendError(HttpClientUtil.errorStatus(e), archive + ": " + e.getMessage());
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			return;
 		} catch (RuntimeException e) {
 			resp.sendError(500, archive + ": " + e.getMessage());
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			return;
 		}
 

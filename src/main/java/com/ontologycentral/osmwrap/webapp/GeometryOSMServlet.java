@@ -5,8 +5,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.Calendar;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -22,7 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @SuppressWarnings("serial")
 public class GeometryOSMServlet extends HttpServlet {
-	Logger _log = Logger.getLogger(this.getClass().getName());
+	private static final Logger _log = Logger.getLogger(GeometryOSMServlet.class.getName());
 
 	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		OutputStream os = resp.getOutputStream();
@@ -80,7 +81,6 @@ public class GeometryOSMServlet extends HttpServlet {
 		String osmApiUrl = ApiConstants.OSM_API_BASE + "/" + elementType + "/" + id;
 
 		_log.info("retrieving OSM element " + osmApiUrl);
-		System.out.println("retrieving OSM element " + osmApiUrl);
 
 		try {
 			HttpResponse<InputStream> response = HttpClientUtil.get(osmApiUrl);
@@ -118,17 +118,15 @@ public class GeometryOSMServlet extends HttpServlet {
 			}
 
 			resp.setHeader("Cache-Control", "public");
-			Calendar c = Calendar.getInstance();
-			c.add(Calendar.DATE, 1);
-			resp.setHeader("Expires", Listener.RFC822.format(c.getTime()));
+			resp.setHeader("Expires", ZonedDateTime.now().plusDays(1).format(Listener.RFC822));
 
 		} catch (IOException e) {
 			resp.sendError(HttpClientUtil.errorStatus(e), osmApiUrl + ": " + e.getMessage());
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			return;
 		} catch (RuntimeException e) {
 			resp.sendError(500, osmApiUrl + ": " + e.getMessage());
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			return;
 		}
 

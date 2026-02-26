@@ -1,9 +1,6 @@
 package com.ontologycentral.osmwrap;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
@@ -13,14 +10,14 @@ import java.util.logging.Logger;
  */
 public class TaginfoConverter {
 	static final String TAGINFO_API_BASE = "https://taginfo.openstreetmap.org/api/4";
-	Logger _log = Logger.getLogger(this.getClass().getName());
+	private static final Logger _log = Logger.getLogger(TaginfoConverter.class.getName());
 
 	/**
 	 * Fetch key overview from Taginfo API
 	 */
 	public String fetchKeyInfo(String key) throws IOException {
 		String url = TAGINFO_API_BASE + "/key/overview?key=" + URLEncoder.encode(key, StandardCharsets.UTF_8);
-		return fetchUrl(url);
+		return HttpClientUtil.fetchUrl(url);
 	}
 
 	/**
@@ -28,7 +25,7 @@ public class TaginfoConverter {
 	 */
 	public String fetchKeyValues(String key) throws IOException {
 		String url = TAGINFO_API_BASE + "/key/values?key=" + URLEncoder.encode(key, StandardCharsets.UTF_8) + "&page=1&rp=50";
-		return fetchUrl(url);
+		return HttpClientUtil.fetchUrl(url);
 	}
 
 	/**
@@ -36,7 +33,7 @@ public class TaginfoConverter {
 	 */
 	public String fetchKeyWiki(String key) throws IOException {
 		String url = TAGINFO_API_BASE + "/key/" + URLEncoder.encode(key, StandardCharsets.UTF_8) + "/wiki_pages";
-		return fetchUrl(url);
+		return HttpClientUtil.fetchUrl(url);
 	}
 
 	/**
@@ -44,39 +41,7 @@ public class TaginfoConverter {
 	 */
 	public String fetchAllKeys() throws IOException {
 		String url = TAGINFO_API_BASE + "/keys/all?limit=200&rp=200";
-		return fetchUrl(url);
-	}
-
-	private String fetchUrl(String urlString) throws IOException {
-		URL url = new URL(urlString);
-		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-		conn.setConnectTimeout(10000);
-		conn.setReadTimeout(30000); // Longer timeout for bulk key requests
-		conn.setRequestProperty("User-Agent", "linked-osm/1.0 (+https://github.com/aharth/linked-osm)");
-
-		try {
-			int responseCode = conn.getResponseCode();
-			if (responseCode != 200) {
-				throw new IOException("Taginfo API returned " + responseCode);
-			}
-
-			InputStream is = conn.getInputStream();
-			String result = readInputStream(is);
-			is.close();
-			return result;
-		} finally {
-			conn.disconnect();
-		}
-	}
-
-	private String readInputStream(InputStream is) throws IOException {
-		byte[] buffer = new byte[8192];
-		StringBuilder sb = new StringBuilder();
-		int bytesRead;
-		while ((bytesRead = is.read(buffer)) != -1) {
-			sb.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
-		}
-		return sb.toString();
+		return HttpClientUtil.fetchUrl(url);
 	}
 
 	/**
@@ -662,10 +627,7 @@ public class TaginfoConverter {
 	 */
 	private long extractCountFromKeyObject(String json, int keyIndex) {
 		try {
-			// Find the next closing brace to find the scope of this object
-			int braceCount = 0;
 			int searchStart = keyIndex;
-			boolean inObject = false;
 
 			// Find opening brace for this key object
 			for (int i = keyIndex - 1; i >= 0; i--) {

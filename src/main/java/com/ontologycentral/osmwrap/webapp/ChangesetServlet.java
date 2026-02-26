@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.http.HttpResponse;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.HttpClientUtil;
@@ -21,7 +22,7 @@ import javax.xml.transform.stream.StreamSource;
 
 @SuppressWarnings("serial")
 public class ChangesetServlet extends HttpServlet {
-	Logger _log = Logger.getLogger(this.getClass().getName());
+	private static final Logger _log = Logger.getLogger(ChangesetServlet.class.getName());
 
 	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		OutputStream os = resp.getOutputStream();
@@ -56,7 +57,6 @@ public class ChangesetServlet extends HttpServlet {
 		String archive = UrlBuilder.buildChangesetUrl(changesetId);
 
 		_log.info("retrieving " + archive);
-		System.out.println("retrieving " + archive);
 
 		try {
 			HttpResponse<InputStream> response = HttpClientUtil.get(archive);
@@ -79,16 +79,13 @@ public class ChangesetServlet extends HttpServlet {
 			t.transform(new StreamSource(is), new StreamResult(os));
 
 		} catch (TransformerException te) {
-			System.err.println(te);
-			te.printStackTrace();
+			_log.log(Level.SEVERE, te.getMessage(), te);
 			resp.sendError(500, "Transformation error: " + te.getMessage());
 		} catch (IOException ex) {
-			System.err.println(ex);
-			ex.printStackTrace();
+			_log.log(Level.SEVERE, ex.getMessage(), ex);
 			resp.sendError(HttpClientUtil.errorStatus(ex), "Server error: " + ex.getMessage());
 		} catch (Exception ex) {
-			System.err.println(ex);
-			ex.printStackTrace();
+			_log.log(Level.SEVERE, ex.getMessage(), ex);
 			resp.sendError(500, "Server error: " + ex.getMessage());
 		}
 	}

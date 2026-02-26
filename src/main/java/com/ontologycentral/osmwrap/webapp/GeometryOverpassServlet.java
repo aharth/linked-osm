@@ -6,8 +6,9 @@ import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.Calendar;
+import java.time.ZonedDateTime;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -23,7 +24,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @SuppressWarnings("serial")
 public class GeometryOverpassServlet extends HttpServlet {
-	Logger _log = Logger.getLogger(this.getClass().getName());
+	private static final Logger _log = Logger.getLogger(GeometryOverpassServlet.class.getName());
 
 	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
 		OutputStream os = resp.getOutputStream();
@@ -34,25 +35,14 @@ public class GeometryOverpassServlet extends HttpServlet {
 			return;
 		}
 
-		// Parse /way/123 (overpass default) or /osm/way/456 (osm source)
-		String[] parts = pathInfo.substring(1).split("/", 3);
-		String source = "overpass"; // default source
+		// Parse /way/123 or /type/id
+		String[] parts = pathInfo.substring(1).split("/", 2);
 		String elementType;
 		String id;
 
 		if (parts.length == 2) {
-			// Format: /way/123 (overpass is default)
 			elementType = parts[0];
 			id = parts[1];
-		} else if (parts.length == 3) {
-			// Format: /osm/way/123 (explicitly specify source)
-			source = parts[0].toLowerCase();
-			elementType = parts[1];
-			id = parts[2];
-			if (!"osm".equals(source) && !"overpass".equals(source)) {
-				resp.sendError(404, "Invalid source: " + source);
-				return;
-			}
 		} else {
 			resp.sendError(404, "Invalid path format");
 			return;
@@ -89,10 +79,9 @@ public class GeometryOverpassServlet extends HttpServlet {
 
 		// Build Overpass API query for geometry data
 		String query = UrlBuilder.buildOverpassGeometryQuery(elementType, id);
-		String archive = ApiConstants.OVERPASS_API_BASE + "?data=" + URLEncoder.encode(query, "UTF-8");
+		String archive = ApiConstants.OVERPASS_API_BASE + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
 		_log.info("retrieving " + archive);
-		System.out.println("retrieving " + archive);
 
 		try {
 			HttpResponse<InputStream> response = HttpClientUtil.get(archive);
@@ -133,18 +122,16 @@ public class GeometryOverpassServlet extends HttpServlet {
 			}
 
 			resp.setHeader("Cache-Control", "public");
-			Calendar c = Calendar.getInstance();
-			c.add(Calendar.DATE, 1);
-			resp.setHeader("Expires", Listener.RFC822.format(c.getTime()));
+			resp.setHeader("Expires", ZonedDateTime.now().plusDays(1).format(Listener.RFC822));
 
 			is.close();
 		} catch (IOException e) {
 			resp.sendError(HttpClientUtil.errorStatus(e), archive + ": " + e.getMessage());
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			return;
 		} catch (RuntimeException e) {
 			resp.sendError(500, archive + ": " + e.getMessage());
-			e.printStackTrace();
+			_log.log(Level.SEVERE, e.getMessage(), e);
 			return;
 		}
 

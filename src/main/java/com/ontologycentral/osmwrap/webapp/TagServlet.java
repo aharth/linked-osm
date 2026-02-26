@@ -20,7 +20,7 @@ import jakarta.servlet.http.HttpServletResponse;
  */
 @SuppressWarnings("serial")
 public class TagServlet extends HttpServlet {
-	Logger _log = Logger.getLogger(this.getClass().getName());
+	private static final Logger _log = Logger.getLogger(TagServlet.class.getName());
 	TaginfoConverter converter = new TaginfoConverter();
 
 	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -63,7 +63,7 @@ public class TagServlet extends HttpServlet {
 
 		// Handle index request
 		if (key.equals("index")) {
-			handleIndexRequest(req, resp, format);
+			handleIndexRequest(resp, format);
 			return;
 		}
 
@@ -109,7 +109,7 @@ public class TagServlet extends HttpServlet {
 	/**
 	 * Handle requests for /tag/index.{rdf|json}
 	 */
-	private void handleIndexRequest(HttpServletRequest req, HttpServletResponse resp, String format) throws IOException {
+	private void handleIndexRequest(HttpServletResponse resp, String format) throws IOException {
 		OutputStream os = resp.getOutputStream();
 
 		try {

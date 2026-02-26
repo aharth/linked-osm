@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -23,6 +22,9 @@ import com.ontologycentral.osmwrap.geometry.MultipolygonHandler;
 public final class GeoJsonConverter {
 
 	private static final Logger LOG = Logger.getLogger(GeoJsonConverter.class.getName());
+
+	private static final Pattern TAG_PATTERN =
+		Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
 
 	private GeoJsonConverter() {}
 
@@ -135,8 +137,7 @@ public final class GeoJsonConverter {
 
 			// Extract tags
 			if (body != null) {
-				Pattern tagPattern = Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
-				Matcher tagMatcher = tagPattern.matcher(body);
+				Matcher tagMatcher = TAG_PATTERN.matcher(body);
 				while (tagMatcher.find()) {
 					sb.append(",\"").append(escapeJson(decodeXmlEntities(tagMatcher.group(1)))).append("\":\"");
 					sb.append(escapeJson(decodeXmlEntities(tagMatcher.group(2)))).append("\"");
@@ -165,7 +166,7 @@ public final class GeoJsonConverter {
 		Matcher nodeMatcher = nodePattern.matcher(xml);
 
 		// Also collect nodes that have tags (these are named features worth showing)
-		java.util.List<String[]> taggedNodes = new java.util.ArrayList<>();
+		List<String[]> taggedNodes = new ArrayList<>();
 
 		while (nodeMatcher.find()) {
 			String attrs = nodeMatcher.group(1) != null ? nodeMatcher.group(1) : nodeMatcher.group(2);
@@ -201,8 +202,7 @@ public final class GeoJsonConverter {
 			sb.append("\"osm_type\":\"node\"");
 			sb.append(",\"osm_id\":\"").append(escapeJson(node[0])).append("\"");
 
-			Pattern tagPattern = Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
-			Matcher tagMatcher = tagPattern.matcher(node[3]);
+			Matcher tagMatcher = TAG_PATTERN.matcher(node[3]);
 			while (tagMatcher.find()) {
 				sb.append(",\"").append(escapeJson(tagMatcher.group(1))).append("\":\"");
 				sb.append(escapeJson(tagMatcher.group(2))).append("\"");
@@ -259,8 +259,7 @@ public final class GeoJsonConverter {
 			sb.append(",\"osm_id\":\"").append(escapeJson(wayId)).append("\"");
 
 			// Extract way tags
-			Pattern tagPattern = Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
-			Matcher tagMatcher = tagPattern.matcher(wayBody);
+			Matcher tagMatcher = TAG_PATTERN.matcher(wayBody);
 			while (tagMatcher.find()) {
 				sb.append(",\"").append(escapeJson(tagMatcher.group(1))).append("\":\"");
 				sb.append(escapeJson(tagMatcher.group(2))).append("\"");
@@ -277,60 +276,38 @@ public final class GeoJsonConverter {
 	 * Convert an OSM API XML response for a single feature (node/way/relation)
 	 * to a GeoJSON Feature with inline geometry and all OSM tags as properties.
 	 *
-	 * @param xml         OSM API XML for the element
-	 * @param elementType "node", "way", or "relation"
-	 * @param id          the OSM element ID (used for the GeoJSON "id" field)
+	 * @param xml          OSM API XML for the element
+	 * @param elementType  "node", "way", or "relation"
+	 * @param id           the OSM element ID (used for the GeoJSON "id" field)
 	 * @param geometryJson pre-computed GeoJSON geometry object string, or null
 	 */
 	public static String osmFeatureToGeoJson(String xml, String elementType, String id,
-			String geometryJson, double[] centroid) {
+			String geometryJson) {
 		StringBuilder props = new StringBuilder();
 		props.append("\"osm_type\":\"").append(escapeJson(elementType)).append("\"");
 		props.append(",\"osm_id\":\"").append(escapeJson(id)).append("\"");
 
-		Pattern tagPattern = Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
-		Matcher tagMatcher = tagPattern.matcher(xml);
+		Matcher tagMatcher = TAG_PATTERN.matcher(xml);
 		while (tagMatcher.find()) {
 			props.append(",\"").append(escapeJson(decodeXmlEntities(tagMatcher.group(1)))).append("\":\"");
 			props.append(escapeJson(decodeXmlEntities(tagMatcher.group(2)))).append("\"");
 		}
 
-		StringBuilder feature = new StringBuilder();
-		feature.append("{\"type\":\"Feature\"");
-		feature.append(",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#id\"");
-		feature.append(",\"properties\":{").append(props).append("}");
-		feature.append(",\"geometry\":").append(geometryJson != null ? geometryJson : "null");
-		feature.append("}");
-
-		if (centroid != null) {
-			// Return a FeatureCollection: polygon + centroid point so the widget shows both
-			StringBuilder centroidFeature = new StringBuilder();
-			centroidFeature.append("{\"type\":\"Feature\"");
-			centroidFeature.append(",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#geo\"");
-			centroidFeature.append(",\"properties\":{").append(props).append("}");
-			centroidFeature.append(",\"geometry\":{\"type\":\"Point\",\"coordinates\":[");
-			centroidFeature.append(centroid[0]).append(",").append(centroid[1]);
-			centroidFeature.append("]}");
-			centroidFeature.append("}");
-
-			return "{\"type\":\"FeatureCollection\",\"features\":["
-					+ feature + "," + centroidFeature + "]}";
-		}
-
-		return feature.toString();
+		return "{\"type\":\"Feature\""
+				+ ",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#id\""
+				+ ",\"properties\":{" + props + "}"
+				+ ",\"geometry\":" + (geometryJson != null ? geometryJson : "null")
+				+ "}";
 	}
 
 	/**
 	 * Result of extracting geometry from OSM XML.
-	 * For relation multipolygons, also carries the centroid of the outer ring.
 	 */
 	public static class GeometryResult {
 		public final String geometryJson;
-		public final double[] centroid; // [lon, lat], may be null
 
-		GeometryResult(String geometryJson, double[] centroid) {
+		GeometryResult(String geometryJson) {
 			this.geometryJson = geometryJson;
-			this.centroid = centroid;
 		}
 	}
 
@@ -357,22 +334,21 @@ public final class GeoJsonConverter {
 					String lon = lonMatcher.group(1);
 					String lat = latMatcher.group(1);
 					return new GeometryResult(
-							"{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}",
-							null);
+							"{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}");
 				}
 			} else if ("way".equals(elementType)) {
 				List<String> nodeRefs = extractNodeReferences(osmXml);
 				if (nodeRefs.isEmpty()) {
-					return new GeometryResult("{\"type\":\"LineString\",\"coordinates\":[]}", null);
+					return new GeometryResult("{\"type\":\"LineString\",\"coordinates\":[]}");
 				}
 				List<double[]> coordinates = fetchNodeCoordinates(nodeRefs);
-				return new GeometryResult(buildLineStringGeometry(coordinates), null);
+				return new GeometryResult(buildLineStringGeometry(coordinates));
 			} else if ("relation".equals(elementType)) {
 				if (MultipolygonHandler.isMultipolygon(osmXml)) {
 					try {
 						LOG.info("Processing multipolygon relation " + id);
 						MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(osmXml, id);
-						return new GeometryResult(MultipolygonHandler.toGeoJSON(geom), geom.getCentroid());
+						return new GeometryResult(MultipolygonHandler.toGeoJSON(geom));
 					} catch (Exception e) {
 						LOG.warning("Error processing multipolygon: " + e.getMessage());
 					}
@@ -390,16 +366,16 @@ public final class GeoJsonConverter {
 					}
 				}
 				if (coordinates.isEmpty()) {
-					return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}", null);
+					return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}");
 				}
-				return new GeometryResult(buildLineStringGeometry(coordinates), null);
+				return new GeometryResult(buildLineStringGeometry(coordinates));
 			}
-			return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}", null);
+			return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}");
 		} catch (IOException e) {
 			throw e;
 		} catch (Exception e) {
 			LOG.warning("Error extracting geometry from OSM: " + e.getMessage());
-			return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}", null);
+			return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}");
 		}
 	}
 
@@ -432,9 +408,7 @@ public final class GeoJsonConverter {
 		if (response.statusCode() != 200) {
 			return new ArrayList<>();
 		}
-		Scanner scanner = new Scanner(response.body(), java.nio.charset.StandardCharsets.UTF_8);
-		scanner.useDelimiter("\\A");
-		String osmXml = scanner.hasNext() ? scanner.next() : "";
+		String osmXml = HttpClientUtil.readToString(response.body());
 		response.body().close();
 		return extractNodeReferences(osmXml);
 	}
