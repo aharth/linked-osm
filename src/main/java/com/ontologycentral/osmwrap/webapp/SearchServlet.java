@@ -50,8 +50,9 @@ public class SearchServlet extends HttpServlet {
 
 			int responseCode = response.statusCode();
 			if (responseCode != 200) {
-				resp.sendError(responseCode,
-						new String(response.body().readAllBytes(), StandardCharsets.UTF_8).trim());
+				resp.setStatus(responseCode);
+				response.headers().firstValue("Content-Type").ifPresent(resp::setContentType);
+				HttpClientUtil.copyStream(response.body(), resp.getOutputStream());
 				return;
 			}
 

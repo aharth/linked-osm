@@ -125,6 +125,10 @@
       </xsl:if>
   </xsl:template>
 
+  <!-- Suppress member node/way elements from /full response; their tags
+       must not be emitted at the rdf:RDF root level -->
+  <xsl:template match="node|way"/>
+
   <xsl:template match="member">
     <rdfs:seeAlso><xsl:attribute name="rdf:resource">/<xsl:value-of select="@type"/>/<xsl:value-of select="@ref"/></xsl:attribute></rdfs:seeAlso>
   </xsl:template>

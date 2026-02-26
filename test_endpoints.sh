@@ -3,23 +3,31 @@
 # Usage: ./test_endpoints.sh [BASE_URL]
 # Default BASE_URL: https://osmwrap.ontologycentral.com
 
-set -euo pipefail
+set -uo pipefail
 
 BASE="${1:-https://osmwrap.ontologycentral.com}"
 EXAMPLES="$(dirname "$0")/src/main/webapp/examples.json"
+DELAY="${DELAY:-1}"   # seconds between requests; set DELAY=0 to disable
 
 pass=0
 fail=0
 
 run() {
   local label="$1"; shift
-  if "$@" >/dev/null 2>&1; then
+  local tmp rc
+  tmp=$(mktemp)
+  "$@" >/dev/null 2>"$tmp"
+  rc=$?
+  if [ $rc -eq 0 ]; then
     printf 'PASS %s\n' "$label"
-    ((pass++))
+    pass=$((pass + 1))
   else
     printf 'FAIL %s\n' "$label"
-    ((fail++))
+    [ -s "$tmp" ] && sed 's/^/     /' "$tmp"
+    fail=$((fail + 1))
   fi
+  rm -f "$tmp"
+  [ "$DELAY" -gt 0 ] 2>/dev/null && sleep "$DELAY"
 }
 
 # ---------------------------------------------------------------------------
@@ -35,7 +43,7 @@ while IFS= read -r entry; do
     bash -c "curl -fsSL '$BASE/$type/$id.json' | jq empty"
 
   run "$tag RDF/XML xmllint" \
-    bash -c "curl -fsSL '$BASE/$type/$id.rdf' | xmllint --noout -"
+    bash -c "curl -fsSL -H 'Accept: application/rdf+xml' '$BASE/$type/$id' | xmllint --noout -"
 
   run "$tag RDF/XML rapper" \
     bash -c "curl -fsSL -H 'Accept: application/rdf+xml' '$BASE/$type/$id' \
@@ -58,7 +66,7 @@ while IFS= read -r entry; do
   enc=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$q")
 
   run "search '$q' GeoJSON jq" \
-    bash -c "curl -fsSL '$BASE/search?q=$enc' | jq empty"
+    bash -c "curl -fsSL '$BASE/search.json?q=$enc' | jq empty"
 
   run "search '$q' RDF/XML rapper" \
     bash -c "curl -fsSL -H 'Accept: application/rdf+xml' '$BASE/search?q=$enc' \
@@ -75,7 +83,7 @@ while IFS= read -r entry; do
   enc=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$bbox")
 
   run "map '$label' GeoJSON jq" \
-    bash -c "curl -fsSL '$BASE/map?bbox=$enc' | jq empty"
+    bash -c "curl -fsSL '$BASE/map.json?bbox=$enc' | jq empty"
 
   run "map '$label' RDF/XML rapper" \
     bash -c "curl -fsSL -H 'Accept: application/rdf+xml' '$BASE/map?bbox=$enc' \
@@ -94,7 +102,7 @@ while IFS= read -r entry; do
   qs="lon=${lon}&lat=${lat}&radius=${radius}"
 
   run "around '$label' GeoJSON jq" \
-    bash -c "curl -fsSL '$BASE/around?$qs' | jq empty"
+    bash -c "curl -fsSL '$BASE/around.json?$qs' | jq empty"
 
   run "around '$label' RDF/XML rapper" \
     bash -c "curl -fsSL -H 'Accept: application/rdf+xml' '$BASE/around?$qs' \
@@ -122,7 +130,7 @@ run "relation/71525 Turtle rapper" \
 
 # /around Westminster — GeoJSON + RDF; also the view.html wrapper (HTTP 200 only)
 run "around Westminster GeoJSON jq" \
-  bash -c "curl -fsSL '$BASE/around?lon=-0.127&lat=51.501&radius=30' | jq empty"
+  bash -c "curl -fsSL '$BASE/around.json?lon=-0.127&lat=51.501&radius=30' | jq empty"
 
 run "around Westminster RDF/XML rapper" \
   bash -c "curl -fsSL -H 'Accept: application/rdf+xml' '$BASE/around?lon=-0.127&lat=51.501&radius=30' \

@@ -103,13 +103,37 @@
     <dd>Palas building, Kaiserburg Nuremberg &mdash; <a href="https://www.openstreetmap.org/way/32113829">view on OSM</a></dd>
     <dt><a href="/relation/147.rdf">relation/147.rdf</a> | <a href="/relation/147.json">relation/147.json</a> | <a href="/geo/osm/relation/147.json">geo/osm/relation/147.json</a></dt>
     <dd>Tigris River multipolygon &mdash; Earliest surviving relation! &mdash; <a href="https://www.openstreetmap.org/relation/147">view on OSM</a></dd>
+    <dt><a href="/changeset/137.rdf">changeset/137.rdf</a></dt>
+    <dd>One of the earliest changesets &mdash; <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a></dd>
+  </dl>
+
+  <a name="large-relations"></a>
+  <h2>Why do some large relations return 509 or 529?</h2>
+
+  <p>
+    Fetching a relation in RDF or GML format requires downloading the full
+    <code>/relation/{id}/full</code> response from the OSM API, which includes every
+    member way and every node of every way.  For large administrative or geographic
+    boundaries this can amount to tens of megabytes of XML.  The upstream OSM API
+    (and, for <code>/around</code> queries, the Overpass API) will return
+    <strong>509 Bandwidth Limit Exceeded</strong> or <strong>529 Too Many Requests</strong>
+    when such a request strains their capacity.  The error body from the upstream service
+    is forwarded verbatim.
+  </p>
+  <p>
+    The following relations are known to be too large for reliable on-demand fetching
+    and are therefore not included in the interactive examples on the home page:
+  </p>
+  <dl>
     <dt><a href="/relation/71525.rdf">relation/71525.rdf</a> | <a href="/relation/71525.json">relation/71525.json</a> | <a href="/geo/osm/relation/71525.json">geo/osm/relation/71525.json</a></dt>
     <dd>Paris administrative boundary &mdash; <a href="https://www.openstreetmap.org/relation/71525">view on OSM</a></dd>
     <dt><a href="/relation/13986332.rdf">relation/13986332.rdf</a> | <a href="/relation/13986332.json">relation/13986332.json</a> | <a href="/geo/osm/relation/13986332.json">geo/osm/relation/13986332.json</a></dt>
     <dd>Sebalder Reichswald forest &mdash; <a href="https://www.openstreetmap.org/relation/13986332">view on OSM</a></dd>
-    <dt><a href="/changeset/137.rdf">changeset/137.rdf</a></dt>
-    <dd>One of the earliest changesets &mdash; <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a></dd>
   </dl>
+  <p>
+    GeoJSON (<code>.json</code>) requests for these relations are not affected because
+    they fetch only the lightweight element endpoint rather than the full member graph.
+  </p>
 
   <a name="hash-uris"></a>
   <h2>What do the <code>#id</code> and <code>#geo</code> URI fragments mean?</h2>
