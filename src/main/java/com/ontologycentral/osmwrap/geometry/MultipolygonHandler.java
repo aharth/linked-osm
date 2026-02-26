@@ -2,6 +2,7 @@ package com.ontologycentral.osmwrap.geometry;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +38,7 @@ public class MultipolygonHandler {
         while (m.find()) {
             String key = m.group(1);
             String value = m.group(2);
-            if ("type".equals(key) && "multipolygon".equals(value)) {
+            if ("type".equals(key) && ("multipolygon".equals(value) || "boundary".equals(value))) {
                 return true;
             }
         }
@@ -89,36 +90,39 @@ public class MultipolygonHandler {
                 if (!allWayNodeIds.isEmpty()) {
                     Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(new ArrayList<>(allWayNodeIds));
 
-                    // Now process each way with its coordinates
+                    // Collect per-role way segments then stitch into rings
+                    List<List<double[]>> outerSegments = new ArrayList<>();
+                    List<List<double[]>> innerSegments = new ArrayList<>();
+
                     for (String wayId : wayIds) {
                         try {
                             List<String> nodeRefs = wayNodes.get(wayId);
-                            if (nodeRefs != null && !nodeRefs.isEmpty()) {
-                                List<double[]> coordinates = new ArrayList<>();
-
-                                // Build coordinates in order
-                                for (String nodeRef : nodeRefs) {
-                                    if (nodeCoordinates.containsKey(nodeRef)) {
-                                        coordinates.add(nodeCoordinates.get(nodeRef));
-                                    }
-                                }
-
-                                if (!coordinates.isEmpty()) {
-                                    String role = wayRoles.get(wayId);
-                                    Ring ring = new Ring(coordinates, role);
-                                    if (ring.isClosed()) {
-                                        if ("inner".equals(role)) {
-                                            geom.addInnerRing(ring);
-                                        } else {
-                                            // Default to outer if role is empty or "outer"
-                                            geom.addOuterRing(ring);
-                                        }
-                                    }
+                            if (nodeRefs == null || nodeRefs.isEmpty()) continue;
+                            List<double[]> coords = new ArrayList<>();
+                            for (String nodeRef : nodeRefs) {
+                                if (nodeCoordinates.containsKey(nodeRef)) {
+                                    coords.add(nodeCoordinates.get(nodeRef));
                                 }
                             }
+                            if (coords.size() < 2) continue;
+                            String role = wayRoles.get(wayId);
+                            if ("inner".equals(role)) {
+                                innerSegments.add(coords);
+                            } else {
+                                outerSegments.add(coords);
+                            }
                         } catch (Exception e) {
-                            logger.warning("Failed to process way " + wayId + " in relation " + relationId + ": " + e.getMessage());
+                            logger.warning("Failed to collect way " + wayId + ": " + e.getMessage());
                         }
+                    }
+
+                    for (List<double[]> stitched : stitchWaySegments(outerSegments)) {
+                        Ring ring = new Ring(stitched, "outer");
+                        if (ring.isClosed()) geom.addOuterRing(ring);
+                    }
+                    for (List<double[]> stitched : stitchWaySegments(innerSegments)) {
+                        Ring ring = new Ring(stitched, "inner");
+                        if (ring.isClosed()) geom.addInnerRing(ring);
                     }
                 }
             } catch (Exception e) {
@@ -239,6 +243,53 @@ public class MultipolygonHandler {
         }
 
         return null;
+    }
+
+    /**
+     * Stitch a list of open or closed way coordinate lists into closed rings.
+     * Adjacent segments are joined end-to-end (reversing if needed) until the
+     * accumulated path closes back on itself.
+     */
+    private static List<List<double[]>> stitchWaySegments(List<List<double[]>> segments) {
+        List<List<double[]>> result = new ArrayList<>();
+        List<List<double[]>> remaining = new ArrayList<>(segments);
+
+        while (!remaining.isEmpty()) {
+            List<double[]> ring = new ArrayList<>(remaining.remove(0));
+            boolean progress = true;
+            while (progress && !segmentIsClosed(ring)) {
+                progress = false;
+                for (int i = 0; i < remaining.size(); i++) {
+                    List<double[]> seg = remaining.get(i);
+                    double[] ringEnd = ring.get(ring.size() - 1);
+                    if (coordsEqual(ringEnd, seg.get(0))) {
+                        ring.addAll(seg.subList(1, seg.size()));
+                        remaining.remove(i);
+                        progress = true;
+                        break;
+                    } else if (coordsEqual(ringEnd, seg.get(seg.size() - 1))) {
+                        List<double[]> rev = new ArrayList<>(seg);
+                        Collections.reverse(rev);
+                        ring.addAll(rev.subList(1, rev.size()));
+                        remaining.remove(i);
+                        progress = true;
+                        break;
+                    }
+                }
+            }
+            if (ring.size() >= 3) {
+                result.add(ring);
+            }
+        }
+        return result;
+    }
+
+    private static boolean segmentIsClosed(List<double[]> ring) {
+        return ring.size() >= 4 && coordsEqual(ring.get(0), ring.get(ring.size() - 1));
+    }
+
+    private static boolean coordsEqual(double[] a, double[] b) {
+        return Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
     }
 
     /**
