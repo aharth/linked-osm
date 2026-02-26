@@ -133,8 +133,11 @@
     <dd>Sebalder Reichswald forest &mdash; <a href="https://www.openstreetmap.org/relation/13986332">view on OSM</a></dd>
   </dl>
   <p>
-    GeoJSON (<code>.json</code>) requests for these relations are not affected because
-    they fetch only the lightweight element endpoint rather than the full member graph.
+    All formats (RDF, GML, GeoJSON) fetch the <code>/relation/{id}/full</code> endpoint,
+    so all are equally affected by size limits.
+    For large relations the <code>/geo/overpass/relation/{id}.json</code> geometry endpoint
+    is a better alternative, as it delegates geometry assembly to the Overpass API in a
+    single query rather than fetching the full member graph from the OSM API.
   </p>
 
   <a name="hash-uris"></a>

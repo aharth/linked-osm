@@ -5,12 +5,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Scanner;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
-import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.GeoJsonConverter;
 import com.ontologycentral.osmwrap.HttpClientUtil;
 import com.ontologycentral.osmwrap.UrlBuilder;
@@ -34,7 +31,7 @@ public class MapServlet extends HttpServlet {
 
 		String bbox = req.getParameter("bbox");
 
-		boolean wantJson = isJsonRequested(req);
+		boolean wantJson = AcceptHeader.prefersJson(req.getServletPath(), req.getHeader("Accept"));
 
 		ServletContext ctx = getServletContext();
 
@@ -57,7 +54,7 @@ public class MapServlet extends HttpServlet {
 			InputStream is = response.body();
 
 			if (wantJson) {
-				String xml = readInputStream(is);
+				String xml = HttpClientUtil.readToString(is);
 				is.close();
 				String geoJson = GeoJsonConverter.osmMapToGeoJson(xml);
 				resp.setContentType("application/geo+json");
@@ -94,20 +91,4 @@ public class MapServlet extends HttpServlet {
 		os.close();
 	}
 
-	private boolean isJsonRequested(HttpServletRequest req) {
-		String path = req.getServletPath();
-		if (path != null && path.endsWith(".json")) return true;
-		List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(req.getHeader("Accept"));
-		double qJson = Math.max(AcceptHeader.maxQ(accepted, "application", "geo+json"),
-				AcceptHeader.maxQ(accepted, "application", "json"));
-		double qRdf = Math.max(AcceptHeader.maxQ(accepted, "application", "rdf+xml"),
-				AcceptHeader.maxQ(accepted, "text", "turtle"));
-		return qJson > qRdf;
-	}
-
-	private String readInputStream(InputStream is) throws IOException {
-		Scanner scanner = new Scanner(is, StandardCharsets.UTF_8);
-		scanner.useDelimiter("\\A");
-		return scanner.hasNext() ? scanner.next() : "";
-	}
 }

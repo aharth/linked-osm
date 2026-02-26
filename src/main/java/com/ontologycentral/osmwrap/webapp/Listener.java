@@ -49,7 +49,6 @@ public class Listener implements ServletContextListener {
 	public static String SEARCH = "search";
 	public static String MAP = "map";
 	public static String POI = "poi";
-	public static String GEO = "geo";
 	public static String CHANGESET = "changeset";
 	
 	public void contextInitialized(ServletContextEvent event) {
@@ -121,15 +120,6 @@ public class Listener implements ServletContextListener {
 		try {
 			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/relation-gml.xsl")));
 			ctx.setAttribute(RELATION_GML, tmpl);
-		} catch (TransformerConfigurationException e) {
-			_log.severe(e.getMessage());
-			e.printStackTrace();
-			throw new RuntimeException(e);
-		}
-
-		try {
-			Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/geo.xsl")));
-			ctx.setAttribute(GEO, tmpl);
 		} catch (TransformerConfigurationException e) {
 			_log.severe(e.getMessage());
 			e.printStackTrace();

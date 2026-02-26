@@ -298,18 +298,20 @@ public final class GeoJsonConverter {
 		StringBuilder feature = new StringBuilder();
 		feature.append("{\"type\":\"Feature\"");
 		feature.append(",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#id\"");
+		feature.append(",\"properties\":{").append(props).append("}");
 		feature.append(",\"geometry\":").append(geometryJson != null ? geometryJson : "null");
-		feature.append(",\"properties\":{").append(props).append("}}");
+		feature.append("}");
 
 		if (centroid != null) {
 			// Return a FeatureCollection: polygon + centroid point so the widget shows both
 			StringBuilder centroidFeature = new StringBuilder();
 			centroidFeature.append("{\"type\":\"Feature\"");
 			centroidFeature.append(",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#geo\"");
+			centroidFeature.append(",\"properties\":{").append(props).append("}");
 			centroidFeature.append(",\"geometry\":{\"type\":\"Point\",\"coordinates\":[");
 			centroidFeature.append(centroid[0]).append(",").append(centroid[1]);
 			centroidFeature.append("]}");
-			centroidFeature.append(",\"properties\":{").append(props).append("}}");
+			centroidFeature.append("}");
 
 			return "{\"type\":\"FeatureCollection\",\"features\":["
 					+ feature + "," + centroidFeature + "]}";

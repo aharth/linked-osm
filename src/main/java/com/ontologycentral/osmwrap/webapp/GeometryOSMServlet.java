@@ -6,11 +6,12 @@ import java.io.OutputStream;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
+import java.util.List;
 import java.util.logging.Logger;
-import java.util.Scanner;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
+import com.ontologycentral.osmwrap.AcceptHeader;
 import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.GeoJsonConverter;
 import com.ontologycentral.osmwrap.HttpClientUtil;
@@ -67,13 +68,11 @@ public class GeometryOSMServlet extends HttpServlet {
 
 		// Content negotiation: check Accept header for format preference (if no extension specified)
 		if ("json".equals(format)) {
-			String accept = req.getHeader("Accept");
-			if (accept != null) {
-				if (accept.contains("application/vnd.google-earth.kml+xml")) {
-					format = "kml";
-				} else if (accept.contains("application/wkt")) {
-					format = "wkt";
-				}
+			List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(req.getHeader("Accept"));
+			if (AcceptHeader.maxQ(accepted, "application", "vnd.google-earth.kml+xml") > 0) {
+				format = "kml";
+			} else if (AcceptHeader.maxQ(accepted, "application", "wkt") > 0) {
+				format = "wkt";
 			}
 		}
 
@@ -95,7 +94,7 @@ public class GeometryOSMServlet extends HttpServlet {
 			}
 
 			InputStream is = response.body();
-			String osmXml = readInputStream(is);
+			String osmXml = HttpClientUtil.readToString(is);
 			is.close();
 
 			// Extract geometry from the OSM element
@@ -134,12 +133,6 @@ public class GeometryOSMServlet extends HttpServlet {
 		}
 
 		os.close();
-	}
-
-	private String readInputStream(InputStream is) throws IOException {
-		Scanner scanner = new Scanner(is, StandardCharsets.UTF_8);
-		scanner.useDelimiter("\\A");
-		return scanner.hasNext() ? scanner.next() : "";
 	}
 
 	private String convertToWkt(String geoJson) {

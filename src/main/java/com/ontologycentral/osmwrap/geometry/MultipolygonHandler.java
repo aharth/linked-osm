@@ -12,7 +12,6 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.HttpClientUtil;
 
 /**
@@ -27,8 +26,6 @@ public class MultipolygonHandler {
     private static final Pattern TAG_PATTERN = Pattern.compile("<tag k=['\"]([^'\"]+)['\"] v=['\"]([^'\"]+)['\"]");
     private static final Pattern MEMBER_PATTERN = Pattern.compile("<member type=['\"]([^'\"]+)['\"] ref=['\"]([^'\"]+)['\"] role=['\"]([^'\"]*)['\"]");
     private static final Pattern ND_PATTERN = Pattern.compile("<nd ref=['\"]([^'\"]+)['\"]");
-    private static final Pattern LAT_PATTERN = Pattern.compile("lat=['\"]([^'\"]+)['\"]");
-    private static final Pattern LON_PATTERN = Pattern.compile("lon=['\"]([^'\"]+)['\"]");
 
     /**
      * Check if an OSM relation XML represents a multipolygon
@@ -55,7 +52,7 @@ public class MultipolygonHandler {
         // Extract members with their roles
         List<Map<String, String>> members = extractMembers(relationXml);
 
-        // Separate way and node members for bulk fetching
+        // Separate way and node members
         List<String> wayIds = new ArrayList<>();
         Map<String, String> wayRoles = new HashMap<>();
         List<String> nodeIds = new ArrayList<>();
@@ -75,58 +72,78 @@ public class MultipolygonHandler {
             }
         }
 
-        // Bulk fetch all ways and get their node references
+        // Parse any inline way/node data already present in the XML (e.g. from /full responses).
+        // Only HTTP-fetch what is missing — avoids hundreds of round-trips for large relations.
+        Map<String, List<String>> inlineWayNodes = parseInlineWays(relationXml);
+        Map<String, double[]> inlineNodeCoords = parseInlineNodes(relationXml);
+
         if (!wayIds.isEmpty()) {
             try {
-                Map<String, List<String>> wayNodes = HttpClientUtil.fetchWaysBulk(wayIds);
+                // Fetch only ways not already present in the inline data
+                List<String> wayIdsToFetch = new ArrayList<>();
+                for (String wid : wayIds) {
+                    if (!inlineWayNodes.containsKey(wid)) wayIdsToFetch.add(wid);
+                }
+                Map<String, List<String>> fetchedWayNodes =
+                        wayIdsToFetch.isEmpty() ? new HashMap<>() : HttpClientUtil.fetchWaysBulk(wayIdsToFetch);
 
-                // Collect all unique node IDs from ways
+                Map<String, List<String>> allWayNodes = new HashMap<>(inlineWayNodes);
+                allWayNodes.putAll(fetchedWayNodes);
+
+                // Collect all unique node IDs referenced by member ways
                 Set<String> allWayNodeIds = new HashSet<>();
-                for (List<String> nodes : wayNodes.values()) {
-                    allWayNodeIds.addAll(nodes);
+                for (String wid : wayIds) {
+                    List<String> refs = allWayNodes.get(wid);
+                    if (refs != null) allWayNodeIds.addAll(refs);
                 }
 
-                // Bulk fetch all node coordinates
-                if (!allWayNodeIds.isEmpty()) {
-                    Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(new ArrayList<>(allWayNodeIds));
+                // Fetch only nodes not already present in the inline data
+                List<String> nodeIdsToFetch = new ArrayList<>();
+                for (String nid : allWayNodeIds) {
+                    if (!inlineNodeCoords.containsKey(nid)) nodeIdsToFetch.add(nid);
+                }
+                Map<String, double[]> fetchedNodeCoords =
+                        nodeIdsToFetch.isEmpty() ? new HashMap<>() : HttpClientUtil.fetchNodesBulk(nodeIdsToFetch);
 
-                    // Collect per-role way segments then stitch into rings
-                    List<List<double[]>> outerSegments = new ArrayList<>();
-                    List<List<double[]>> innerSegments = new ArrayList<>();
+                Map<String, double[]> nodeCoordinates = new HashMap<>(inlineNodeCoords);
+                nodeCoordinates.putAll(fetchedNodeCoords);
 
-                    for (String wayId : wayIds) {
-                        try {
-                            List<String> nodeRefs = wayNodes.get(wayId);
-                            if (nodeRefs == null || nodeRefs.isEmpty()) continue;
-                            List<double[]> coords = new ArrayList<>();
-                            for (String nodeRef : nodeRefs) {
-                                if (nodeCoordinates.containsKey(nodeRef)) {
-                                    coords.add(nodeCoordinates.get(nodeRef));
-                                }
+                // Collect per-role way segments then stitch into rings
+                List<List<double[]>> outerSegments = new ArrayList<>();
+                List<List<double[]>> innerSegments = new ArrayList<>();
+
+                for (String wayId : wayIds) {
+                    try {
+                        List<String> nodeRefs = allWayNodes.get(wayId);
+                        if (nodeRefs == null || nodeRefs.isEmpty()) continue;
+                        List<double[]> coords = new ArrayList<>();
+                        for (String nodeRef : nodeRefs) {
+                            if (nodeCoordinates.containsKey(nodeRef)) {
+                                coords.add(nodeCoordinates.get(nodeRef));
                             }
-                            if (coords.size() < 2) continue;
-                            String role = wayRoles.get(wayId);
-                            if ("inner".equals(role)) {
-                                innerSegments.add(coords);
-                            } else {
-                                outerSegments.add(coords);
-                            }
-                        } catch (Exception e) {
-                            logger.warning("Failed to collect way " + wayId + ": " + e.getMessage());
                         }
+                        if (coords.size() < 2) continue;
+                        String role = wayRoles.get(wayId);
+                        if ("inner".equals(role)) {
+                            innerSegments.add(coords);
+                        } else {
+                            outerSegments.add(coords);
+                        }
+                    } catch (Exception e) {
+                        logger.warning("Failed to collect way " + wayId + ": " + e.getMessage());
                     }
+                }
 
-                    for (List<double[]> stitched : stitchWaySegments(outerSegments)) {
-                        Ring ring = new Ring(stitched, "outer");
-                        if (ring.isClosed()) geom.addOuterRing(ring);
-                    }
-                    for (List<double[]> stitched : stitchWaySegments(innerSegments)) {
-                        Ring ring = new Ring(stitched, "inner");
-                        if (ring.isClosed()) geom.addInnerRing(ring);
-                    }
+                for (List<double[]> stitched : stitchWaySegments(outerSegments)) {
+                    Ring ring = new Ring(stitched, "outer");
+                    if (ring.isClosed()) geom.addOuterRing(ring);
+                }
+                for (List<double[]> stitched : stitchWaySegments(innerSegments)) {
+                    Ring ring = new Ring(stitched, "inner");
+                    if (ring.isClosed()) geom.addInnerRing(ring);
                 }
             } catch (Exception e) {
-                logger.warning("Error bulk fetching ways for relation " + relationId + ": " + e.getMessage());
+                logger.warning("Error building multipolygon for relation " + relationId + ": " + e.getMessage());
             }
         }
 
@@ -191,58 +208,42 @@ public class MultipolygonHandler {
     }
 
     /**
-     * Extract coordinates for a way by fetching all referenced nodes in bulk
+     * Parse way→nodeRef lists from XML that already contains inline &lt;way&gt; elements
+     * (e.g. from an OSM /full response). Returns an empty map if none are present.
      */
-    private static List<double[]> extractWayCoordinates(String wayXml) throws IOException {
-        List<double[]> coordinates = new ArrayList<>();
-
-        // Extract node references from the way
-        List<String> nodeRefs = extractNodeReferences(wayXml);
-
-        if (nodeRefs.isEmpty()) {
-            return coordinates;
+    private static Map<String, List<String>> parseInlineWays(String xml) {
+        Map<String, List<String>> result = new HashMap<>();
+        Pattern wayPat = Pattern.compile("<way id=['\"]([^'\"]+)['\"][^>]*>(.*?)</way>", Pattern.DOTALL);
+        Matcher wm = wayPat.matcher(xml);
+        while (wm.find()) {
+            String wayId = wm.group(1);
+            List<String> refs = new ArrayList<>();
+            Matcher nm = ND_PATTERN.matcher(wm.group(2));
+            while (nm.find()) refs.add(nm.group(1));
+            result.put(wayId, refs);
         }
-
-        // Remove duplicates
-        Set<String> uniqueNodeRefs = new HashSet<>(nodeRefs);
-
-        try {
-            // Use bulk fetching to get all nodes in batches (up to 50 per request)
-            Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(new ArrayList<>(uniqueNodeRefs));
-
-            // Maintain original order from nodeRefs list
-            for (String nodeRef : nodeRefs) {
-                if (nodeCoordinates.containsKey(nodeRef)) {
-                    coordinates.add(nodeCoordinates.get(nodeRef));
-                }
-            }
-        } catch (Exception e) {
-            logger.warning("Error fetching node coordinates in bulk: " + e.getMessage());
-            // Return empty list on error
-        }
-
-        return coordinates;
+        return result;
     }
 
     /**
-     * Extract latitude and longitude from a node XML
+     * Parse node coordinates from XML that already contains inline &lt;node&gt; elements
+     * (e.g. from an OSM /full response). Returns an empty map if none are present.
      */
-    private static double[] extractNodeCoordinate(String nodeXml) {
-        Matcher latMatcher = LAT_PATTERN.matcher(nodeXml);
-        Matcher lonMatcher = LON_PATTERN.matcher(nodeXml);
-
-        if (latMatcher.find() && lonMatcher.find()) {
+    private static Map<String, double[]> parseInlineNodes(String xml) {
+        Map<String, double[]> result = new HashMap<>();
+        Pattern nodePat = Pattern.compile(
+                "<node id=['\"]([^'\"]+)['\"][^>]*lat=['\"]([^'\"]+)['\"][^>]*lon=['\"]([^'\"]+)['\"]");
+        Matcher m = nodePat.matcher(xml);
+        while (m.find()) {
             try {
-                double lon = Double.parseDouble(lonMatcher.group(1));
-                double lat = Double.parseDouble(latMatcher.group(1));
-                return new double[]{lon, lat};
+                double lat = Double.parseDouble(m.group(2));
+                double lon = Double.parseDouble(m.group(3));
+                result.put(m.group(1), new double[]{lon, lat});
             } catch (NumberFormatException e) {
-                logger.warning("Failed to parse coordinates: " + e.getMessage());
-                return null;
+                logger.warning("Skipping node with bad coordinates: " + m.group(1));
             }
         }
-
-        return null;
+        return result;
     }
 
     /**
@@ -290,14 +291,6 @@ public class MultipolygonHandler {
 
     private static boolean coordsEqual(double[] a, double[] b) {
         return Math.abs(a[0] - b[0]) < 1e-9 && Math.abs(a[1] - b[1]) < 1e-9;
-    }
-
-    /**
-     * Fetch OSM element (node/way/relation) from OSM API
-     */
-    private static String fetchFromOSMAPI(String type, String id) throws IOException {
-        String url = ApiConstants.OSM_API_BASE + "/" + type + "/" + id;
-        return HttpClientUtil.fetchUrl(url, ApiConstants.DEFAULT_CONNECT_TIMEOUT, ApiConstants.GEOMETRY_READ_TIMEOUT);
     }
 
     /**

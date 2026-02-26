@@ -8,7 +8,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.List;
 import java.util.logging.Logger;
-import java.util.Scanner;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
 import com.ontologycentral.osmwrap.ApiConstants;
@@ -95,9 +94,12 @@ public class FeatureServlet extends HttpServlet {
 
 		ServletContext ctx = getServletContext();
 
-		// RDF and GML paths for way/relation use /full to get node coordinates inline
+		// Relations always use /full (all formats) so geometry can be assembled inline.
+		// Ways use /full for rdf and gml (need node coordinates); json uses simple endpoint.
 		String archive;
-		if ((format.equals("rdf") || format.equals("gml")) && (ctrl.equals("/way/") || ctrl.equals("/relation/"))) {
+		if (ctrl.equals("/relation/")) {
+			archive = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
+		} else if ((format.equals("rdf") || format.equals("gml")) && ctrl.equals("/way/")) {
 			archive = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
 		} else {
 			archive = ApiConstants.OSM_API_BASE + ctrl + id;
@@ -122,7 +124,7 @@ public class FeatureServlet extends HttpServlet {
 			if (format.equals("json")) {
 				resp.setContentType("application/geo+json");
 				String elementType = ctrl.substring(1, ctrl.length() - 1);
-				String osmXml = readInputStream(is);
+				String osmXml = HttpClientUtil.readToString(is);
 				GeoJsonConverter.GeometryResult geomResult = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
 				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(osmXml, elementType, id, geomResult.geometryJson, geomResult.centroid);
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
@@ -168,9 +170,4 @@ public class FeatureServlet extends HttpServlet {
 		os.close();
 	}
 
-	private String readInputStream(InputStream is) throws IOException {
-		Scanner scanner = new Scanner(is, StandardCharsets.UTF_8);
-		scanner.useDelimiter("\\A");
-		return scanner.hasNext() ? scanner.next() : "";
-	}
 }

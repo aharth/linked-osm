@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
-import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.HttpClientUtil;
 import com.ontologycentral.osmwrap.UrlBuilder;
 
@@ -35,21 +33,15 @@ public class ChangesetServlet extends HttpServlet {
 		}
 
 		String changesetId = null;
-		String format = "rdf"; // default format
 
 		if (pathInfo.startsWith("/")) {
-			// Remove leading slash and extract ID
 			String path = pathInfo.substring(1);
-
-			// Check for file extension
 			if (path.endsWith(".json")) {
-				format = "json";
-				changesetId = path.substring(0, path.length() - 5); // remove .json
+				resp.sendError(406, "JSON format not supported for changesets");
+				return;
 			} else if (path.endsWith(".rdf")) {
-				format = "rdf";
-				changesetId = path.substring(0, path.length() - 4); // remove .rdf
+				changesetId = path.substring(0, path.length() - 4);
 			} else {
-				// No extension - default to RDF
 				changesetId = path;
 			}
 		}
@@ -79,21 +71,10 @@ public class ChangesetServlet extends HttpServlet {
 
 			InputStream is = response.body();
 
-			if (format.equals("json")) {
-				// For JSON format, return raw OSM API response
-				resp.setContentType("application/json");
-				// Note: OSM API doesn't provide JSON for changesets, so this might need conversion
-				resp.sendError(406, "JSON format not supported for changesets");
-				return;
-			} else {
-				// Use XSLT for RDF transformation
-				Templates tmpl = (Templates) ctx.getAttribute(Listener.CHANGESET);
+			Templates tmpl = (Templates) ctx.getAttribute(Listener.CHANGESET);
 			Transformer t = tmpl.newTransformer();
-
-				resp.setContentType("application/rdf+xml");
-
-				t.transform(new StreamSource(is), new StreamResult(os));
-			}
+			resp.setContentType("application/rdf+xml");
+			t.transform(new StreamSource(is), new StreamResult(os));
 
 		} catch (TransformerException te) {
 			System.err.println(te);

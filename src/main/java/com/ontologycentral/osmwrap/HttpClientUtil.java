@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -78,15 +79,24 @@ public final class HttpClientUtil {
     }
 
     /**
+     * Read an InputStream completely and return its content as a UTF-8 String.
+     *
+     * @param is the InputStream to read
+     * @return the content as a String
+     * @throws IOException if I/O error occurs
+     */
+    public static String readToString(final InputStream is) throws IOException {
+        return new String(is.readAllBytes(), StandardCharsets.UTF_8);
+    }
+
+    /**
      * Fetch content from a URL and return as String.
      *
      * @param url the URL to fetch from
-     * @param connectTimeout unused (kept for API compatibility)
-     * @param readTimeout unused (kept for API compatibility)
      * @return the response body as a String
      * @throws IOException if fetch fails or response code is not 200
      */
-    public static String fetchUrl(String url, int connectTimeout, int readTimeout)
+    public static String fetchUrl(String url)
             throws IOException {
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -146,7 +156,7 @@ public final class HttpClientUtil {
             String url = ApiConstants.OSM_API_BASE + "/nodes?nodes=" + nodeIds_str;
 
             try {
-                String xmlResponse = fetchUrl(url, 0, 0);
+                String xmlResponse = fetchUrl(url);
 
                 Pattern nodePattern = Pattern.compile(
                         "<node id=['\"]([^'\"]+)['\"][^>]*lat=['\"]([^'\"]+)['\"][^>]*lon=['\"]([^'\"]+)['\"]");
@@ -189,7 +199,7 @@ public final class HttpClientUtil {
             String url = ApiConstants.OSM_API_BASE + "/ways?ways=" + wayIds_str;
 
             try {
-                String xmlResponse = fetchUrl(url, 0, 0);
+                String xmlResponse = fetchUrl(url);
 
                 Pattern wayPattern = Pattern.compile("<way id=['\"]([^'\"]+)['\"]");
                 Pattern ndPattern = Pattern.compile("<nd ref=['\"]([^'\"]+)['\"]");

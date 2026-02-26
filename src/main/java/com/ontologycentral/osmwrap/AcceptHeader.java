@@ -48,4 +48,18 @@ public class AcceptHeader {
                                   String type2, String sub2) {
         return maxQ(list, type1, sub1) > maxQ(list, type2, sub2);
     }
+
+    /**
+     * Returns true if the request prefers GeoJSON over RDF.
+     * Checks servlet path suffix (.json) first, then Accept header q-values.
+     */
+    public static boolean prefersJson(String servletPath, String acceptHeader) {
+        if (servletPath != null && servletPath.endsWith(".json")) return true;
+        List<AcceptType> accepted = parse(acceptHeader);
+        double qJson = Math.max(maxQ(accepted, "application", "geo+json"),
+                maxQ(accepted, "application", "json"));
+        double qRdf = Math.max(maxQ(accepted, "application", "rdf+xml"),
+                maxQ(accepted, "text", "turtle"));
+        return qJson > qRdf;
+    }
 }
