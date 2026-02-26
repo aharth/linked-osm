@@ -99,7 +99,8 @@ public class GeometryOSMServlet extends HttpServlet {
 			is.close();
 
 			// Extract geometry from the OSM element
-			String geometry = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
+			GeoJsonConverter.GeometryResult geomResult = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
+			String geometry = geomResult.geometryJson;
 
 			if ("json".equals(format)) {
 				resp.setContentType("application/geo+json");

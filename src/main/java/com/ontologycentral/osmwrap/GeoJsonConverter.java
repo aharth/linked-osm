@@ -282,24 +282,54 @@ public final class GeoJsonConverter {
 	 * @param id          the OSM element ID (used for the GeoJSON "id" field)
 	 * @param geometryJson pre-computed GeoJSON geometry object string, or null
 	 */
-	public static String osmFeatureToGeoJson(String xml, String elementType, String id, String geometryJson) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("{\"type\":\"Feature\"");
-		sb.append(",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#id\"");
-		sb.append(",\"geometry\":").append(geometryJson != null ? geometryJson : "null");
-		sb.append(",\"properties\":{");
-		sb.append("\"osm_type\":\"").append(escapeJson(elementType)).append("\"");
-		sb.append(",\"osm_id\":\"").append(escapeJson(id)).append("\"");
+	public static String osmFeatureToGeoJson(String xml, String elementType, String id,
+			String geometryJson, double[] centroid) {
+		StringBuilder props = new StringBuilder();
+		props.append("\"osm_type\":\"").append(escapeJson(elementType)).append("\"");
+		props.append(",\"osm_id\":\"").append(escapeJson(id)).append("\"");
 
 		Pattern tagPattern = Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
 		Matcher tagMatcher = tagPattern.matcher(xml);
 		while (tagMatcher.find()) {
-			sb.append(",\"").append(escapeJson(decodeXmlEntities(tagMatcher.group(1)))).append("\":\"");
-			sb.append(escapeJson(decodeXmlEntities(tagMatcher.group(2)))).append("\"");
+			props.append(",\"").append(escapeJson(decodeXmlEntities(tagMatcher.group(1)))).append("\":\"");
+			props.append(escapeJson(decodeXmlEntities(tagMatcher.group(2)))).append("\"");
 		}
 
-		sb.append("}}");
-		return sb.toString();
+		StringBuilder feature = new StringBuilder();
+		feature.append("{\"type\":\"Feature\"");
+		feature.append(",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#id\"");
+		feature.append(",\"geometry\":").append(geometryJson != null ? geometryJson : "null");
+		feature.append(",\"properties\":{").append(props).append("}}");
+
+		if (centroid != null) {
+			// Return a FeatureCollection: polygon + centroid point so the widget shows both
+			StringBuilder centroidFeature = new StringBuilder();
+			centroidFeature.append("{\"type\":\"Feature\"");
+			centroidFeature.append(",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#geo\"");
+			centroidFeature.append(",\"geometry\":{\"type\":\"Point\",\"coordinates\":[");
+			centroidFeature.append(centroid[0]).append(",").append(centroid[1]);
+			centroidFeature.append("]}");
+			centroidFeature.append(",\"properties\":{").append(props).append("}}");
+
+			return "{\"type\":\"FeatureCollection\",\"features\":["
+					+ feature + "," + centroidFeature + "]}";
+		}
+
+		return feature.toString();
+	}
+
+	/**
+	 * Result of extracting geometry from OSM XML.
+	 * For relation multipolygons, also carries the centroid of the outer ring.
+	 */
+	public static class GeometryResult {
+		public final String geometryJson;
+		public final double[] centroid; // [lon, lat], may be null
+
+		GeometryResult(String geometryJson, double[] centroid) {
+			this.geometryJson = geometryJson;
+			this.centroid = centroid;
+		}
 	}
 
 	/**
@@ -310,10 +340,10 @@ public final class GeoJsonConverter {
 	 * @param osmXml      OSM API XML response body
 	 * @param elementType "node", "way", or "relation"
 	 * @param id          the OSM element ID (used for logging)
-	 * @return GeoJSON geometry object string (e.g. {@code {"type":"Point",...}})
+	 * @return GeometryResult with GeoJSON geometry string and optional centroid
 	 * @throws IOException if an upstream HTTP call fails
 	 */
-	public static String extractGeometryJson(String osmXml, String elementType, String id)
+	public static GeometryResult extractGeometryJson(String osmXml, String elementType, String id)
 			throws IOException {
 		try {
 			if ("node".equals(elementType)) {
@@ -324,21 +354,23 @@ public final class GeoJsonConverter {
 				if (latMatcher.find() && lonMatcher.find()) {
 					String lon = lonMatcher.group(1);
 					String lat = latMatcher.group(1);
-					return "{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}";
+					return new GeometryResult(
+							"{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}",
+							null);
 				}
 			} else if ("way".equals(elementType)) {
 				List<String> nodeRefs = extractNodeReferences(osmXml);
 				if (nodeRefs.isEmpty()) {
-					return "{\"type\":\"LineString\",\"coordinates\":[]}";
+					return new GeometryResult("{\"type\":\"LineString\",\"coordinates\":[]}", null);
 				}
 				List<double[]> coordinates = fetchNodeCoordinates(nodeRefs);
-				return buildLineStringGeometry(coordinates);
+				return new GeometryResult(buildLineStringGeometry(coordinates), null);
 			} else if ("relation".equals(elementType)) {
 				if (MultipolygonHandler.isMultipolygon(osmXml)) {
 					try {
 						LOG.info("Processing multipolygon relation " + id);
 						MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(osmXml, id);
-						return MultipolygonHandler.toGeoJSON(geom);
+						return new GeometryResult(MultipolygonHandler.toGeoJSON(geom), geom.getCentroid());
 					} catch (Exception e) {
 						LOG.warning("Error processing multipolygon: " + e.getMessage());
 					}
@@ -356,16 +388,16 @@ public final class GeoJsonConverter {
 					}
 				}
 				if (coordinates.isEmpty()) {
-					return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
+					return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}", null);
 				}
-				return buildLineStringGeometry(coordinates);
+				return new GeometryResult(buildLineStringGeometry(coordinates), null);
 			}
-			return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
+			return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}", null);
 		} catch (IOException e) {
 			throw e;
 		} catch (Exception e) {
 			LOG.warning("Error extracting geometry from OSM: " + e.getMessage());
-			return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
+			return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}", null);
 		}
 	}
 

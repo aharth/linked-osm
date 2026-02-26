@@ -123,8 +123,8 @@ public class FeatureServlet extends HttpServlet {
 				resp.setContentType("application/geo+json");
 				String elementType = ctrl.substring(1, ctrl.length() - 1);
 				String osmXml = readInputStream(is);
-				String geometryJson = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
-				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(osmXml, elementType, id, geometryJson);
+				GeoJsonConverter.GeometryResult geomResult = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
+				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(osmXml, elementType, id, geomResult.geometryJson, geomResult.centroid);
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else if (format.equals("gml")) {
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl + ".gml");

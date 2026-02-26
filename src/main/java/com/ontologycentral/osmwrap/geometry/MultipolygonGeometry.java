@@ -258,6 +258,24 @@ public class MultipolygonGeometry {
         return sb.toString();
     }
 
+    /**
+     * Compute the centroid of the first outer ring as the mean of its vertices.
+     * Returns [lon, lat], or null if there are no valid outer rings.
+     */
+    public double[] getCentroid() {
+        for (Ring outer : outerRings) {
+            List<double[]> coords = outer.getCoordinates();
+            if (coords.isEmpty()) continue;
+            double sumLon = 0, sumLat = 0;
+            for (double[] c : coords) {
+                sumLon += c[0];
+                sumLat += c[1];
+            }
+            return new double[]{sumLon / coords.size(), sumLat / coords.size()};
+        }
+        return null;
+    }
+
     // Getters
 
     public List<Ring> getOuterRings() {
