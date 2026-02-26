@@ -35,15 +35,6 @@ function _propsToHtml(props) {
     return html;
 }
 
-function _sourceAttribution(url) {
-    if (url.indexOf('/search') !== -1) {
-        return 'Data: \u00a9 OpenStreetMap contributors via Nominatim (ODbL)';
-    }
-    if (url.indexOf('/poi') !== -1 || url.indexOf('/around') !== -1 || url.indexOf('/geo/overpass/') !== -1) {
-        return 'Data: \u00a9 OpenStreetMap contributors via Overpass API (ODbL)';
-    }
-    return 'Data: \u00a9 OpenStreetMap contributors (ODbL)';
-}
 
 function initOsmMap(id, lat, lon, zoom) {
     var m = L.map(id).setView([lat, lon], zoom);
@@ -152,8 +143,6 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
         linkEl.innerHTML = '<span class="spinner"></span><a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
         linkEl.style.display = '';
     }
-    var srcEl  = document.getElementById('source-' + suffix);
-    if (srcEl)  { srcEl.style.display  = 'none'; srcEl.textContent  = ''; }
 
     var controller = new AbortController();
     var timer = setTimeout(function() { controller.abort(); }, FETCH_TIMEOUT);
@@ -181,10 +170,7 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
                 linkEl.innerHTML = '<a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
                 linkEl.style.display = '';
             }
-            if (srcEl) {
-                srcEl.textContent = _sourceAttribution(url);
-                srcEl.style.display = '';
-            }
+
         })
         .catch(function(err) {
             clearTimeout(timer);

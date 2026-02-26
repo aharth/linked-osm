@@ -108,8 +108,11 @@ public class POIServlet extends HttpServlet {
 		String path = req.getServletPath();
 		if (path != null && path.endsWith(".json")) return true;
 		List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(req.getHeader("Accept"));
-		return AcceptHeader.accepts(accepted, "application", "geo+json")
-				|| AcceptHeader.accepts(accepted, "application", "json");
+		double qJson = Math.max(AcceptHeader.maxQ(accepted, "application", "geo+json"),
+				AcceptHeader.maxQ(accepted, "application", "json"));
+		double qRdf = Math.max(AcceptHeader.maxQ(accepted, "application", "rdf+xml"),
+				AcceptHeader.maxQ(accepted, "text", "turtle"));
+		return qJson > qRdf;
 	}
 
 	private String readInputStream(InputStream is) throws IOException {

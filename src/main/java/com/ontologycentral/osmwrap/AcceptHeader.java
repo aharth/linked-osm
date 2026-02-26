@@ -34,18 +34,18 @@ public class AcceptHeader {
             && (a.subtype().equals("*") || a.subtype().equals(subtype)));
     }
 
+    /** Effective q-value for type/subtype (wildcard entries count). Returns 0.0 if absent. */
+    public static double maxQ(List<AcceptType> list, String type, String subtype) {
+        return list.stream()
+            .filter(a -> (a.type().equals("*") || a.type().equals(type))
+                      && (a.subtype().equals("*") || a.subtype().equals(subtype)))
+            .mapToDouble(AcceptType::q).max().orElse(0.0);
+    }
+
     /** Among two offered types, return true if `type1/sub1` scores higher than `type2/sub2`. */
     public static boolean prefers(List<AcceptType> list,
                                   String type1, String sub1,
                                   String type2, String sub2) {
-        double q1 = list.stream()
-            .filter(a -> (a.type().equals("*") || a.type().equals(type1))
-                      && (a.subtype().equals("*") || a.subtype().equals(sub1)))
-            .mapToDouble(AcceptType::q).max().orElse(0.0);
-        double q2 = list.stream()
-            .filter(a -> (a.type().equals("*") || a.type().equals(type2))
-                      && (a.subtype().equals("*") || a.subtype().equals(sub2)))
-            .mapToDouble(AcceptType::q).max().orElse(0.0);
-        return q1 > q2;
+        return maxQ(list, type1, sub1) > maxQ(list, type2, sub2);
     }
 }

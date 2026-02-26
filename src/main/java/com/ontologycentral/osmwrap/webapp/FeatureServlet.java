@@ -57,8 +57,11 @@ public class FeatureServlet extends HttpServlet {
 				// No extension - content-negotiate on Accept header
 				id = path;
 				List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(req.getHeader("Accept"));
-				if (AcceptHeader.accepts(accepted, "application", "geo+json")
-						|| AcceptHeader.accepts(accepted, "application", "json")) {
+				double qJson = Math.max(AcceptHeader.maxQ(accepted, "application", "geo+json"),
+						AcceptHeader.maxQ(accepted, "application", "json"));
+				double qRdf = Math.max(AcceptHeader.maxQ(accepted, "application", "rdf+xml"),
+						AcceptHeader.maxQ(accepted, "text", "turtle"));
+				if (qJson > qRdf) {
 					format = "json";
 				}
 			}

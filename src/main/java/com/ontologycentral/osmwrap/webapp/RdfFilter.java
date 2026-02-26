@@ -64,7 +64,9 @@ public class RdfFilter implements Filter {
 				if (host == null) host = httpRequest.getServerName();
 				String requestPath = httpRequest.getRequestURI()
 						.substring(httpRequest.getContextPath().length());
-				String base = proto + "://" + host + requestPath;
+				String queryString = httpRequest.getQueryString();
+				String base = proto + "://" + host + requestPath
+						+ (queryString != null ? "?" + queryString : "");
 
 				RDFParser.create()
 						.source(new java.io.ByteArrayInputStream(original))
