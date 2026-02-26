@@ -6,9 +6,11 @@ import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Scanner;
 import java.util.logging.Logger;
 
+import com.ontologycentral.osmwrap.AcceptHeader;
 import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.GeoJsonConverter;
 import com.ontologycentral.osmwrap.HttpClientUtil;
@@ -96,9 +98,9 @@ public class SearchServlet extends HttpServlet {
 	private boolean isJsonRequested(HttpServletRequest req) {
 		String path = req.getServletPath();
 		if (path != null && path.endsWith(".json")) return true;
-		String accept = req.getHeader("Accept");
-		if (accept != null && (accept.contains("application/geo+json") || accept.contains("application/json"))) return true;
-		return false;
+		List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(req.getHeader("Accept"));
+		return AcceptHeader.accepts(accepted, "application", "geo+json")
+				|| AcceptHeader.accepts(accepted, "application", "json");
 	}
 
 	private String readInputStream(InputStream is) throws IOException {

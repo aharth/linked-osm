@@ -1,9 +1,11 @@
 package com.ontologycentral.osmwrap.webapp;
 
+import com.ontologycentral.osmwrap.AcceptHeader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.List;
 import java.util.logging.Logger;
 
 import jakarta.servlet.Filter;
@@ -44,7 +46,12 @@ public class RdfFilter implements Filter {
 
 		String contentType = wrapper.getContentType();
 
-		if (contentType != null && contentType.contains("application/rdf+xml")) {
+		String acceptHeader = httpRequest.getHeader("Accept");
+		List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(acceptHeader);
+		boolean serveTurtle = !AcceptHeader.prefers(accepted,
+				"application", "rdf+xml", "text", "turtle");
+
+		if (serveTurtle && contentType != null && contentType.contains("application/rdf+xml")) {
 			byte[] original = capture.toByteArray();
 
 			try {

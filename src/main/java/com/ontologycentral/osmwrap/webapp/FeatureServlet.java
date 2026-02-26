@@ -6,9 +6,11 @@ import java.io.OutputStream;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
+import java.util.List;
 import java.util.logging.Logger;
 import java.util.Scanner;
 
+import com.ontologycentral.osmwrap.AcceptHeader;
 import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.GeoJsonConverter;
 import com.ontologycentral.osmwrap.HttpClientUtil;
@@ -52,8 +54,13 @@ public class FeatureServlet extends HttpServlet {
 				format = "rdf";
 				id = path.substring(0, path.length() - 4); // remove .rdf
 			} else {
-				// No extension - default to RDF
+				// No extension - content-negotiate on Accept header
 				id = path;
+				List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(req.getHeader("Accept"));
+				if (AcceptHeader.accepts(accepted, "application", "geo+json")
+						|| AcceptHeader.accepts(accepted, "application", "json")) {
+					format = "json";
+				}
 			}
 
 			// Strip any remaining extensions (e.g., from malformed URLs like 123.json.json)

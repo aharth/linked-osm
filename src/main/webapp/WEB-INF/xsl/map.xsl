@@ -53,12 +53,12 @@
       <prov:Activity rdf:about="#transformation">
         <rdfs:label>OSM XML to RDF Map Transformation</rdfs:label>
         <prov:used rdf:resource="https://api.openstreetmap.org/api/0.6/map"/>
-        <prov:wasAssociatedWith rdf:resource="#osmwrap"/>
+        <prov:wasAssociatedWith rdf:resource="/#osmwrap"/>
         <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
       </prov:Activity>
 
       <!-- PROV: Agent (osmwrap service) -->
-      <prov:SoftwareAgent rdf:about="#osmwrap">
+      <prov:SoftwareAgent rdf:about="/#osmwrap">
         <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
         <foaf:homepage rdf:resource="http://osmwrap.ontologycentral.com/"/>
         <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>

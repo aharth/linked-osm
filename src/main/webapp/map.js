@@ -36,10 +36,10 @@ function _propsToHtml(props) {
 }
 
 function _sourceAttribution(url) {
-    if (url.indexOf('/search.json') !== -1) {
+    if (url.indexOf('/search') !== -1) {
         return 'Data: \u00a9 OpenStreetMap contributors via Nominatim (ODbL)';
     }
-    if (url.indexOf('/poi.json') !== -1 || url.indexOf('/around.json') !== -1 || url.indexOf('/geo/overpass/') !== -1) {
+    if (url.indexOf('/poi') !== -1 || url.indexOf('/around') !== -1 || url.indexOf('/geo/overpass/') !== -1) {
         return 'Data: \u00a9 OpenStreetMap contributors via Overpass API (ODbL)';
     }
     return 'Data: \u00a9 OpenStreetMap contributors (ODbL)';
@@ -47,12 +47,10 @@ function _sourceAttribution(url) {
 
 function initOsmMap(id, lat, lon, zoom) {
     var m = L.map(id).setView([lat, lon], zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(m);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(m);
     var fg = L.featureGroup().addTo(m);
     var suffix = id.replace('map-', '');
-    window.osmMaps[id] = { map: m, featureLayer: fg, fetchEpoch: 0 };
+    window.osmMaps[id] = { map: m, featureLayer: fg, fetchEpoch: 0, bboxLayer: null };
 
     // Register popupclose ONCE to restore original styles (avoids listener accumulation)
     m.on('popupclose', function() {
@@ -72,6 +70,7 @@ function initOsmMap(id, lat, lon, zoom) {
     }
     m.on('moveend', updateBbox);
     m.on('zoomend', updateBbox);
+    updateBbox();
 }
 
 function getBboxString(mapId) {
@@ -80,6 +79,17 @@ function getBboxString(mapId) {
     var b = state.map.getBounds();
     return b.getWest().toFixed(6) + ',' + b.getSouth().toFixed(6) + ','
          + b.getEast().toFixed(6) + ',' + b.getNorth().toFixed(6);
+}
+
+
+function _parseBbox(url) {
+    var m = url.match(/[?&]bbox=([^&]+)/);
+    if (!m) return null;
+    var parts = decodeURIComponent(m[1]).split(',');
+    if (parts.length !== 4) return null;
+    var n = parts.map(Number);
+    if (n.some(isNaN)) return null;
+    return n; // [W, S, E, N]
 }
 
 function _wrapGeometry(obj) {
@@ -127,18 +137,28 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
     var epoch = state.fetchEpoch;
 
     state.featureLayer.clearLayers();
+    if (state.bboxLayer) { state.map.removeLayer(state.bboxLayer); state.bboxLayer = null; }
+    var bbox = _parseBbox(url);
+    if (bbox) {
+        state.bboxLayer = L.rectangle([[bbox[1], bbox[0]], [bbox[3], bbox[2]]], {
+            color: '#888', weight: 3, fillOpacity: 0, dashArray: '6 4', interactive: false
+        }).addTo(state.map);
+    }
     if (statusEl) statusEl.textContent = 'Loading\u2026';
 
     var suffix = mapId.replace('map-', '');
     var linkEl = document.getElementById('geojson-link-' + suffix);
-    if (linkEl) { linkEl.style.display = 'none'; linkEl.innerHTML = ''; }
+    if (linkEl) {
+        linkEl.innerHTML = '<span class="spinner"></span><a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
+        linkEl.style.display = '';
+    }
     var srcEl  = document.getElementById('source-' + suffix);
     if (srcEl)  { srcEl.style.display  = 'none'; srcEl.textContent  = ''; }
 
     var controller = new AbortController();
     var timer = setTimeout(function() { controller.abort(); }, FETCH_TIMEOUT);
 
-    fetch(url, { signal: controller.signal })
+    fetch(url, { signal: controller.signal, headers: { 'Accept': 'application/geo+json' } })
         .then(function(r) {
             clearTimeout(timer);
             if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -147,15 +167,6 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
         .then(function(data) {
             if (state.fetchEpoch !== epoch) return;
             var geojson = _wrapGeometry(data);
-
-            // /geo/osm/{type}/{id} returns bare geometry with no properties.
-            // Inject osm_type + osm_id so the popup can link to the feature endpoints.
-            if (geojson.type === 'Feature' && Object.keys(geojson.properties).length === 0) {
-                var osmGeoMatch = url.match(/\/geo\/osm\/(node|way|relation)\/(\d+)/);
-                if (osmGeoMatch) {
-                    geojson.properties = { osm_type: osmGeoMatch[1], osm_id: osmGeoMatch[2] };
-                }
-            }
 
             if (geojson.type !== 'FeatureCollection') {
                 geojson = { type: 'FeatureCollection', features: [geojson] };
@@ -167,13 +178,7 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
                 try { state.map.fitBounds(state.featureLayer.getBounds(), { maxZoom: 16 }); } catch (e) {}
             }
             if (linkEl) {
-                var geoMatch = url.match(/\/geo\/(osm|overpass)\/(node|way|relation)\/(\d+)/);
-                if (geoMatch) {
-                    var featureUrl = '/' + geoMatch[2] + '/' + geoMatch[3];
-                    linkEl.innerHTML = '<a href="' + escHtml(featureUrl) + '">' + escHtml(featureUrl) + '</a>';
-                } else {
-                    linkEl.innerHTML = '<a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
-                }
+                linkEl.innerHTML = '<a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
                 linkEl.style.display = '';
             }
             if (srcEl) {
@@ -186,5 +191,6 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
             if (state.fetchEpoch !== epoch) return;
             var msg = err.name === 'AbortError' ? 'Request timed out' : err.message;
             if (statusEl) statusEl.textContent = 'Error: ' + msg;
+            if (linkEl) { linkEl.innerHTML = '<a href="' + escHtml(url) + '">' + escHtml(url) + '</a>'; }
         });
 }

@@ -12,7 +12,6 @@
 
   <p>
     Welcome to the EXPERIMENTAL <a href="http://openstreetmap.org/">OpenStreetMap</a> wrapper to <a href="http://en.wikipedia.org/wiki/Linked_Data">Linked Data</a>.
-    OpenStreetMap data is licensed under the <a href="https://www.openstreetmap.org/copyright">Open Database License (ODbL)</a>.
   </p>
 
   <p>
@@ -20,10 +19,10 @@
   </p>
 
   <div id="map-main" class="map"></div>
-  <p id="bbox-main" class="map-controls" style="font-family:monospace;font-size:0.8em;color:#555">&mdash;</p>
-  <p class="map-controls"><span id="status-main" style="font-size:0.85em"></span></p>
-  <p id="geojson-link-main" class="map-controls" style="display:none;font-size:0.85em"></p>
-  <p id="source-main"       class="map-controls" style="display:none;font-size:0.8em;color:#555"></p>
+  <p id="bbox-main" class="map-controls"></p>
+  <p class="map-controls"><span id="status-main"></span></p>
+  <p id="geojson-link-main" class="map-controls"></p>
+  <p id="source-main" class="map-controls" style="display:none"></p>
 
   <dl>
     <dt>Nodes, ways and relations</dt>
@@ -35,15 +34,25 @@
     <dd>
       <select id="geo-example-select">
 	<option value="">&#x2014; select element &#x2014;</option>
-	<option value="/geo/osm/node/1.json">node/1 &mdash; Monte Piselli</option>
-	<option value="/geo/osm/node/1675605507.json">node/1675605507 &mdash; Caf&eacute; Wanderer</option>
-	<option value="/geo/osm/way/100.json">way/100 &mdash; Roundabout</option>
-	<option value="/geo/osm/way/32113829.json">way/32113829 &mdash; Palas building</option>
-	<option value="/geo/osm/relation/147.json">relation/147 &mdash; Tigris River</option>
-	<option value="/geo/osm/relation/71525.json">relation/71525 &mdash; Paris boundary</option>
-	<option value="/geo/osm/relation/13986332.json">relation/13986332 &mdash; Sebalder Reichswald</option>
+	<option value="/node/1">node/1 &mdash; Monte Piselli</option>
+	<option value="/node/1675605507">node/1675605507 &mdash; Caf&eacute; Wanderer</option>
+	<option value="/way/100">way/100 &mdash; Roundabout</option>
+	<option value="/way/32113829">way/32113829 &mdash; Palas building</option>
+	<option value="/relation/147">relation/147 &mdash; Tigris River</option>
+	<option value="/relation/71525">relation/71525 &mdash; Paris boundary</option>
+	<option value="/relation/13986332">relation/13986332 &mdash; Sebalder Reichswald</option>
       </select>
       <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Show on map</button>
+    </dd>
+    <dd>
+      <form name="geo-form" onsubmit="return false;">
+	<label>node: <input type="text" name="node" size="10"></label>
+	<button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v),document.getElementById('status-main'));">Show on map</button>
+	<label>way: <input type="text" name="way" size="10"></label>
+	<button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v),document.getElementById('status-main'));">Show on map</button>
+	<label>relation: <input type="text" name="relation" size="10"></label>
+	<button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v),document.getElementById('status-main'));">Show on map</button>
+      </form>
     </dd>
   </dl>
   
@@ -67,8 +76,7 @@
     <dd>
       <form name="search-form" action="search">
 	<input type="text" name="q">
-	<label>limit: <input type="text" name="limit" size="4"></label>
-	<button onclick="loadGeoJsonUrl('map-main', '/search.json?q=' + encodeURIComponent(this.form.elements['q'].value), document.getElementById('status-main')); return false;">Show on map</button>
+	<button onclick="loadGeoJsonUrl('map-main', '/search?q=' + encodeURIComponent(this.form.elements['q'].value), document.getElementById('status-main')); return false;">Show on map</button>
       </form>
     </dd>
 
@@ -83,12 +91,13 @@
 	<option value="">&#x2014; select example &#x2014;</option>
 	<option value="11.075,49.457,11.077,49.459">Kaiserburg, Nuremberg</option>
 	<option value="2.348,48.856,2.350,48.858">Louvre, Paris</option>
+	<option value="-118.498,34.015,-118.496,34.018">Santa Monica, Third Street</option>
       </select>
     </dd>
     <dd>
       <form name="map-form" action="map">
-	<input type="text" name="bbox" value="-118.241,34.050,-118.240,34.051">
-	<button onclick="loadGeoJsonUrl('map-main', '/map.json?bbox=' + encodeURIComponent(this.form.elements['bbox'].value), document.getElementById('status-main')); return false;">Show on map</button>
+	<input type="text" name="bbox">
+	<button onclick="loadGeoJsonUrl('map-main', '/map?bbox=' + encodeURIComponent(this.form.elements['bbox'].value), document.getElementById('status-main')); return false;">Show on map</button>
       </form>
     </dd>
 
@@ -103,13 +112,13 @@
 	<option value="">&#x2014; select example &#x2014;</option>
 	<option value="11.075,49.457,11.077,49.459">Points of interest near Kaiserburg, Nuremberg</option>
 	<option value="2.348,48.856,2.350,48.858">Points of interest near the Louvre, Paris</option>
+	<option value="-118.498,34.015,-118.496,34.018">Santa Monica, Third Street</option>
       </select>
     </dd>
     <dd>
       <form name="poi-form" action="poi">
-	<input type="text" name="bbox" value="11.075,49.457,11.077,49.459">
-	<label>limit: <input type="text" name="limit" size="4"></label>
-	<button onclick="var f=this.form; var u='/poi.json?bbox='+encodeURIComponent(f.elements['bbox'].value); if(f.elements['limit'].value) u+='&amp;limit='+encodeURIComponent(f.elements['limit'].value); loadGeoJsonUrl('map-main', u, document.getElementById('status-main')); return false;">Show on map</button>
+	<input type="text" name="bbox">
+	<button onclick="loadGeoJsonUrl('map-main', '/poi?bbox='+encodeURIComponent(this.form.elements['bbox'].value), document.getElementById('status-main')); return false;">Show on map</button>
       </form>
     </dd>
 
@@ -125,15 +134,15 @@
 	<option value="11.077|49.458|100">Nodes within 100m of Kaiserburg, Nuremberg</option>
 	<option value="2.349|48.857|100">Nodes within 100m of the Louvre, Paris</option>
 	<option value="-0.127|51.501|100">Nodes within 100m of Westminster, London</option>
+	<option value="-118.496|34.017|100">Nodes within 100m of Santa Monica, Third Street</option>
       </select>
     </dd>
     <dd>
       <form name="around-form" action="around">
-	<label>lon: <input type="text" name="lon" value="11.08"></label>
-	<label>lat: <input type="text" name="lat" value="49.45"></label>
-	<label>radius (m): <input type="text" name="radius" value="100"></label>
-	<label>limit: <input type="text" name="limit" size="4"></label>
-	<button onclick="var f=this.form; var u='/around.json?lon='+encodeURIComponent(f.elements['lon'].value)+'&amp;lat='+encodeURIComponent(f.elements['lat'].value)+'&amp;radius='+encodeURIComponent(f.elements['radius'].value); if(f.elements['limit'].value) u+='&amp;limit='+encodeURIComponent(f.elements['limit'].value); loadGeoJsonUrl('map-main', u, document.getElementById('status-main')); return false;">Show on map</button>
+	<label>lon: <input type="text" name="lon"></label>
+	<label>lat: <input type="text" name="lat"></label>
+	<label>radius (m): <input type="text" name="radius"></label>
+	<button onclick="var f=this.form; loadGeoJsonUrl('map-main', '/around?lon='+encodeURIComponent(f.elements['lon'].value)+'&amp;lat='+encodeURIComponent(f.elements['lat'].value)+'&amp;radius='+encodeURIComponent(f.elements['radius'].value), document.getElementById('status-main')); return false;">Show on map</button>
       </form>
     </dd>
   </dl>
