@@ -9,13 +9,13 @@ The linked-osm wrapper provides OpenStreetMap data as Linked Data (http://en.wik
 To build the project, do:
 
 ```bash
-$ mvn clean package war:war -Dcheckstyle.skip=true -DskipTests
+$ mvn clean package -Dcheckstyle.skip=true -DskipTests
 ```
 
 To build with code formatting and style checks:
 
 ```bash
-$ mvn clean package war:war
+$ mvn clean package
 ```
 
 ## Web Application
@@ -30,60 +30,59 @@ Requires **Tomcat 10 or higher** for Jakarta EE support.
 
 ## API Endpoints
 
-### Data Access
+### Feature data — nodes, ways, relations, changesets
 
-Access to OpenStreetMap nodes, ways, and relations in multiple formats:
+Rich semantic descriptions using NeoGeo vocabulary and PROV-O provenance:
 
-- **RDF/XML format**: `/node/{id}.rdf`, `/way/{id}.rdf`, `/relation/{id}.rdf` - Linked Data representation using NeoGeo vocabulary
-- **GeoJSON format**: `/node/{id}.json`, `/way/{id}.json`, `/relation/{id}.json` - Geometry data optimized for web mapping (Leaflet, etc.)
-- **Legacy format**: `/node/{id}`, `/way/{id}`, `/relation/{id}` - Defaults to RDF/XML
+| Extension | Format | Content-Type |
+|-----------|--------|-------------|
+| `.rdf` | RDF/XML | `application/rdf+xml` |
+| (none, `Accept: text/turtle`) | Turtle | `text/turtle` |
+| `.json` | GeoJSON Feature | `application/geo+json` |
+| `.gml` | WFS 2.0 GML | `application/gml+xml` |
 
+Examples: `/node/{id}.rdf`, `/way/{id}.json`, `/relation/{id}.gml`, `/changeset/{id}.rdf`
+
+The no-extension canonical URI (e.g. `/node/1`) serves the format matching the `Accept` header and includes a `Content-Location` header pointing to the extension URL for the representation returned.
+
+### Geometry data
+
+Bare coordinate geometry for map rendering, with no semantic enrichment:
+
+- `/geo/osm/{type}/{id}.{format}` — from OSM API 0.6
+- `/geo/overpass/{type}/{id}.{format}` — from Overpass API (preferred for complex multipolygon relations)
+
+Supported formats: `json` (GeoJSON), `wkt` (Well-Known Text), `kml` (KML)
 
 ### Search
 
-Search for geographic features via Nominatim:
+Nominatim place search; returns RDF/XML or GeoJSON:
 
-- **Endpoint**: `/search?q={query}`
+- `/search?q={query}`, `/search.json?q={query}`
 
-### Map Data
+### Map data
 
-Get features within a bounding box:
+OSM API map data for a bounding box; returns RDF/XML or GeoJSON:
 
-- **Endpoint**: `/map?bbox={west},{south},{east},{north}`
+- `/map?bbox={W,S,E,N}`, `/map.json?bbox={W,S,E,N}`
 
-### Points of Interest
+### Points of interest
 
-Get amenity nodes within a bounding box:
+Overpass amenity nodes in a bounding box; returns RDF/XML or GeoJSON:
 
-- **Endpoint**: `/poi?bbox={west},{south},{east},{north}`
+- `/poi?bbox={W,S,E,N}`, `/poi.json?bbox={W,S,E,N}`
 
-### Geometry Data
+### Around
 
-Get geometry data for OSM features in multiple formats from linked geometry sources:
+Overpass nodes within a radius of a point; returns RDF/XML or GeoJSON:
 
-- **Endpoint**: `/geo/osm/{type}/{id}.{format}` - Geometry from OpenStreetMap API
-- **Endpoint**: `/geo/overpass/{type}/{id}.{format}` - Geometry from Overpass API (useful for complex geometries)
+- `/around?lon={lon}&lat={lat}&radius={m}`, `/around.json?lon={lon}&lat={lat}&radius={m}`
 
-**Supported formats:**
-- `json` (default, GeoJSON) - `application/geo+json`
-- `wkt` (Well-Known Text) - `application/wkt`
-- `kml` (Keyhole Markup Language) - `application/vnd.google-earth.kml+xml`
+### Tag
 
-**Content Negotiation:**
+Tag statistics from [taginfo.openstreetmap.org](https://taginfo.openstreetmap.org/); returns RDF/XML or JSON-LD:
 
-Specify format using file extension:
-```
-/geo/osm/node/1.json    # GeoJSON
-/geo/osm/node/1.wkt     # WKT format
-/geo/osm/node/1.kml     # KML format
-```
-
-Or via HTTP Accept header:
-```
-Accept: application/geo+json                          # GeoJSON
-Accept: application/wkt                               # WKT
-Accept: application/vnd.google-earth.kml+xml          # KML
-```
+- `/tag/{key}`
 
 
 ## Testing
@@ -123,22 +122,6 @@ DELAY=5 ./test_endpoints.sh --heavy                   # override delay
 
 `0` when all tests pass, `1` if any fail.
 Each test prints `PASS` or `FAIL`; failures include the error output from the tool.
-
-## Background
-
-Linked OpenStreetmap provides OpenStreetMap data as Linked Data using XSLT transformations to convert OSM XML into RDF/XML format.
-
-## Related Work
-
-Geometry data is now provided directly via GeoJSON format endpoints (`.json` format) using the Overpass API, which provides complete geometry information for nodes, ways, and relations.
-
-## Future Enhancements
-
-Potential extensions based on the project's original vision:
-
-- **KML Export**: Add KML output format alongside RDF/XML (e.g., `/node/123.kml`, `/way/456.kml`)
-- **Administrative Boundaries**: Enhanced support for administrative boundary extraction and serving
-- **Extended Vocabularies**: Support for additional Linked Data vocabularies beyond NeoGeo
 
 ## License
 
