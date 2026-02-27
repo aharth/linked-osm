@@ -10,7 +10,15 @@
   <p><a href="/">Overview</a> &gt; View Geometry</p>
 
   <div id="map-view" class="map"></div>
-  <p id="bbox-view" class="map-controls" style="font-family:monospace;font-size:0.8em;color:#555">&mdash;</p>
+  <div class="map-controls" style="display:flex;align-items:center;gap:0.4em">
+    <input type="text" id="bbox-input-view"
+           style="font-family:monospace;width:26em"
+           placeholder="W,S,E,N"
+           onkeydown="if(event.key==='Enter') setOsmMapLocation('map-view',this.value)">
+    <button type="button"
+            onclick="setOsmMapLocation('map-view',document.getElementById('bbox-input-view').value)">Go</button>
+    <span id="bbox-zoom-view"></span>
+  </div>
   <p id="links-view" class="map-controls"></p>
   <p id="status-view" class="map-controls"></p>
 

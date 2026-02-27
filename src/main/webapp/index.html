@@ -19,7 +19,15 @@
   </p>
 
   <div id="map-main" class="map"></div>
-  <p id="bbox-main" class="map-controls"></p>
+  <div class="map-controls" style="display:flex;align-items:center;gap:0.4em">
+    <input type="text" id="bbox-input-main"
+           style="font-family:monospace;width:26em"
+           placeholder="W,S,E,N"
+           onkeydown="if(event.key==='Enter') setOsmMapLocation('map-main',this.value)">
+    <button type="button"
+            onclick="setOsmMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
+    <span id="bbox-zoom-main"></span>
+  </div>
   <p class="map-controls"><span id="status-main"></span></p>
   <p id="geojson-link-main" class="map-controls"></p>
 

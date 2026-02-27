@@ -52,12 +52,11 @@ function initOsmMap(id, lat, lon, zoom) {
 
     function updateBbox() {
         var b = m.getBounds();
-        var el = document.getElementById('bbox-' + suffix);
-        if (el) {
-            el.textContent = 'bbox: '
-                + b.getWest().toFixed(6) + ',' + b.getSouth().toFixed(6) + ','
-                + b.getEast().toFixed(6) + ',' + b.getNorth().toFixed(6);
-        }
+        var inputEl = document.getElementById('bbox-input-' + suffix);
+        if (inputEl) inputEl.value = b.getWest().toFixed(6) + ',' + b.getSouth().toFixed(6) + ','
+                                   + b.getEast().toFixed(6) + ',' + b.getNorth().toFixed(6);
+        var zoomEl = document.getElementById('bbox-zoom-' + suffix);
+        if (zoomEl) zoomEl.textContent = 'zoom: ' + m.getZoom();
     }
     m.on('moveend', updateBbox);
     m.on('zoomend', updateBbox);
@@ -72,6 +71,14 @@ function getBboxString(mapId) {
          + b.getEast().toFixed(6) + ',' + b.getNorth().toFixed(6);
 }
 
+
+function setOsmMapLocation(mapId, bboxStr) {
+    var parts = bboxStr.split(',').map(Number);
+    if (parts.length !== 4 || parts.some(isNaN)) return;
+    var state = window.osmMaps[mapId];
+    if (!state) return;
+    state.map.fitBounds([[parts[1], parts[0]], [parts[3], parts[2]]]);
+}
 
 function _parseBbox(url) {
     var m = url.match(/[?&]bbox=([^&]+)/);

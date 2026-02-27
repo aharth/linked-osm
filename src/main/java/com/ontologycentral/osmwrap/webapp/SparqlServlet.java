@@ -183,9 +183,9 @@ public class SparqlServlet extends HttpServlet {
         out.println("  <title>SPARQL — Linked OSM</title>");
         out.println("</head>");
         out.println("<body>");
-        out.println("  <p><a href=\"/\">Linked OSM</a></p>");
+        out.println("  <p><a href=\"/\">Home</a></p>");
         out.println("  <h1>SPARQL</h1>");
-        out.println("  <p>Execute SPARQL queries over OSM Linked Data loaded via <code>FROM</code> clauses.</p>");
+        out.println("  <p>Execute SPARQL queries over OSM Linked Data loaded via <code>FROM</code> and <code>FROM NAMED</code> clauses.</p>");
         out.println("  <form method=\"GET\" action=\"sparql\">");
         out.println("    <div>");
         out.println("    <textarea cols=\"100\" rows=\"20\" name=\"query\">PREFIX geo: &lt;http://www.w3.org/2003/01/geo/wgs84_pos#&gt;");
