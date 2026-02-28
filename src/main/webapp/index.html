@@ -18,119 +18,90 @@
     We maintain a document with <a href="faq.html">Frequently Asked Questions</a> and a <a href="bot.html">bot page</a>.
   </p>
 
-  <div id="map-main" class="map"></div>
-  <div class="map-controls" style="display:flex;align-items:center;gap:0.4em">
-    <input type="text" id="bbox-input-main"
-           style="font-family:monospace;width:26em"
-           placeholder="W,S,E,N"
-           onkeydown="if(event.key==='Enter') setOsmMapLocation('map-main',this.value)">
-    <button type="button"
-            onclick="setOsmMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
-    <span id="bbox-zoom-main"></span>
+  <div class="osm-map-cols" id="pre-map-row">
+    <div>
+      <dl>
+        <dt>Search</dt>
+        <dd>
+          <input type="text" id="search-input-main" placeholder="place name"
+                 onkeydown="if(event.key==='Enter') loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(this.value),document.getElementById('status-main'))">
+          <button type="button"
+                  onclick="loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(document.getElementById('search-input-main').value),document.getElementById('status-main'))">Search</button>
+        </dd>
+      </dl>
+      <dl>
+        <dt>Location</dt>
+        <dd>
+          <select id="loc-main">
+            <option value="">&#x2014; select &#x2014;</option>
+          </select>
+          <button type="button"
+                  onclick="var v=document.getElementById('loc-main').value; if(v) setOsmMapLocation('map-main',v)">Go</button>
+        </dd>
+        <dd>
+          <input type="text" id="bbox-input-main"
+                 style="font-family:monospace;width:22em"
+                 placeholder="W,S,E,N"
+                 onkeydown="if(event.key==='Enter') setOsmMapLocation('map-main',this.value)">
+          <button type="button"
+                  onclick="setOsmMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
+          <span id="bbox-zoom-main"></span>
+        </dd>
+      </dl>
+    </div>
+    <dl>
+      <dt>Nodes, ways and relations (via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>)</dt>
+      <dd>
+        <select id="geo-example-select">
+          <option value="">&#x2014; select element &#x2014;</option>
+        </select>
+        <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Load</button>
+      </dd>
+      <dd>
+        <form name="geo-form" onsubmit="return false;">
+          <label>node: <input type="text" name="node" size="10"></label>
+          <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+          <label>way: <input type="text" name="way" size="10"></label>
+          <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+          <label>relation: <input type="text" name="relation" size="10"></label>
+          <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+        </form>
+      </dd>
+    </dl>
   </div>
-  <p class="map-controls"><span id="status-main"></span></p>
-  <p id="geojson-link-main" class="map-controls"></p>
 
-  <dl>
-    <dt>Nodes, ways and relations</dt>
+  <div class="osm-map-cols" id="map-row">
+    <div><div id="map-main" class="map"></div></div>
+    <div id="feature-panel-main" class="feature-panel"></div>
 
-    <dd>
-      Core element data (nodes, ways, relations) and changeset metadata via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
-    </dd>
-
-    <dd>
-      <select id="geo-example-select">
-	<option value="">&#x2014; select element &#x2014;</option>
-      </select>
-      <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Load</button>
-    </dd>
-    <dd>
-      <form name="geo-form" onsubmit="return false;">
-	<label>node: <input type="text" name="node" size="10"></label>
-	<button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
-	<label>way: <input type="text" name="way" size="10"></label>
-	<button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
-	<label>relation: <input type="text" name="relation" size="10"></label>
-	<button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
-      </form>
-    </dd>
-  </dl>
-  
-  <dl>
-    <dt>Search by place name</dt>
-
-    <dd>
-      Search for countries, cities or other places via <a href="https://nominatim.openstreetmap.org">Nominatim</a>
-      (<a href="https://operations.osmfoundation.org/policies/nominatim/">usage policy</a>).
-    </dd>
-    <dd>
-      <select id="search-example-select" onchange="if(this.value) document.forms['search-form'].elements['q'].value=this.value;">
-	<option value="">&#x2014; select example &#x2014;</option>
-      </select>
-    </dd>
-    <dd>
-      <form name="search-form" action="search">
-	<input type="text" name="q">
-	<button onclick="loadGeoJsonUrl('map-main', '/search?q=' + encodeURIComponent(this.form.elements['q'].value), document.getElementById('status-main')); return false;">Load</button>
-      </form>
-    </dd>
-
-    <dt>Map data by bounding box</dt>
-
-    <dd>
-      Get nodes, relations and ways inside a bounding box via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>.
-    </dd>
-
-    <dd>
-      <select id="map-example-select" onchange="if(this.value) document.forms['map-form'].elements['bbox'].value=this.value;">
-	<option value="">&#x2014; select example &#x2014;</option>
-      </select>
-    </dd>
-    <dd>
-      <form name="map-form" action="map">
-	<input type="text" name="bbox">
-	<button onclick="loadGeoJsonUrl('map-main', '/map?bbox=' + encodeURIComponent(this.form.elements['bbox'].value), document.getElementById('status-main')); return false;">Load</button>
-      </form>
-    </dd>
-
-    <dt>Points of Interest by bounding box</dt>
-
-    <dd>
-      Get points of interest (amenity nodes) inside a bounding box via <a href="https://overpass-api.de/">Overpass API</a>.
-    </dd>
-
-    <dd>
-      <select id="poi-example-select" onchange="if(this.value) document.forms['poi-form'].elements['bbox'].value=this.value;">
-	<option value="">&#x2014; select example &#x2014;</option>
-      </select>
-    </dd>
-    <dd>
-      <form name="poi-form" action="poi">
-	<input type="text" name="bbox">
-	<button onclick="loadGeoJsonUrl('map-main', '/poi?bbox='+encodeURIComponent(this.form.elements['bbox'].value), document.getElementById('status-main')); return false;">Load</button>
-      </form>
-    </dd>
-
-    <dt>Nodes around a point</dt>
-
-    <dd>
-      Get nodes within a radius around a point via <a href="https://overpass-api.de/">Overpass API</a>.
-    </dd>
-
-    <dd>
-      <select id="around-example-select" onchange="if(this.value){var p=this.value.split('|'),f=document.forms['around-form']; f.elements['lon'].value=p[0]; f.elements['lat'].value=p[1]; f.elements['radius'].value=p[2];}">
-	<option value="">&#x2014; select example &#x2014;</option>
-      </select>
-    </dd>
-    <dd>
-      <form name="around-form" action="around">
-	<label>lon: <input type="text" name="lon"></label>
-	<label>lat: <input type="text" name="lat"></label>
-	<label>radius (m): <input type="text" name="radius"></label>
-	<button onclick="var f=this.form; loadGeoJsonUrl('map-main', '/around?lon='+encodeURIComponent(f.elements['lon'].value)+'&amp;lat='+encodeURIComponent(f.elements['lat'].value)+'&amp;radius='+encodeURIComponent(f.elements['radius'].value), document.getElementById('status-main')); return false;">Load</button>
-      </form>
-    </dd>
-  </dl>
+    <div>
+      <p id="status-main" class="map-controls"></p>
+      <p id="source-main" class="map-controls wms-source" style="display:none"></p>
+      <p id="geojson-link-main" class="map-controls"></p>
+    </div>
+    <div>
+      <dl>
+        <dt>Map data by bounding box</dt>
+        <dd>
+          <button type="button"
+                  onclick="loadGeoJsonUrl('map-main','/map?bbox='+encodeURIComponent(getBboxString('map-main')),document.getElementById('status-main'))">Load</button>
+        </dd>
+        <dt>Points of Interest by bounding box</dt>
+        <dd>
+          <button type="button"
+                  onclick="loadGeoJsonUrl('map-main','/poi?bbox='+encodeURIComponent(getBboxString('map-main')),document.getElementById('status-main'))">Load</button>
+        </dd>
+        <dt>Nodes around a point</dt>
+        <dd>
+          radius (m): <input type="text" id="around-radius-main" value="100" size="6">
+          <button type="button"
+                  onclick="var st=window.osmMaps['map-main'],c=st.map.getCenter();
+                           loadGeoJsonUrl('map-main','/around?lon='+c.lng.toFixed(6)+'&lat='+c.lat.toFixed(6)+'&radius='+encodeURIComponent(document.getElementById('around-radius-main').value),
+                           document.getElementById('status-main'))">Load</button>
+        </dd>
+      </dl>
+    </div>
+  </div>
 
 
   <hr>
@@ -145,20 +116,11 @@ fetch('examples.json').then(r => r.json()).then(ex => {
     var o = document.createElement('option');
     o.value = val; o.textContent = text; sel.appendChild(o);
   }
+  var loc = document.getElementById('loc-main');
+  ex.map.forEach(m => addOpt(loc, m.bbox, m.label));
+
   var geo = document.getElementById('geo-example-select');
   ex.features.forEach(f => addOpt(geo, '/'+f.type+'/'+f.id, f.type+'/'+f.id+' \u2014 '+f.label));
-
-  var srch = document.getElementById('search-example-select');
-  ex.search.forEach(s => addOpt(srch, s.q, s.q));
-
-  var map = document.getElementById('map-example-select');
-  ex.map.forEach(m => addOpt(map, m.bbox, m.label));
-
-  var poi = document.getElementById('poi-example-select');
-  ex.map.forEach(m => addOpt(poi, m.bbox, 'POI: '+m.label));
-
-  var aro = document.getElementById('around-example-select');
-  ex.around.forEach(a => addOpt(aro, a.lon+'|'+a.lat+'|'+a.radius, 'Within '+a.radius+'m of '+a.label));
 });
   </script>
 </body>

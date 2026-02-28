@@ -83,6 +83,8 @@ public class AroundServlet extends HttpServlet {
 				return;
 			}
 
+			resp.setHeader("X-Upstream-Source", archive + "?" + postData);
+
 			InputStream is = response.body();
 
 			if (wantJson) {

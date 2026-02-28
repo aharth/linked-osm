@@ -83,6 +83,9 @@ public class FeatureServlet extends HttpServlet {
 			} else if (path.endsWith(".rdf")) {
 				format = "rdf";
 				id = path.substring(0, path.length() - 4); // remove .rdf
+			} else if (path.endsWith(".ttl")) {
+				format = "rdf";                              // produce RDF/XML; RdfFilter converts to Turtle
+				id = path.substring(0, path.length() - 4); // strip .ttl
 			} else if (path.endsWith(".gml")) {
 				format = "gml";
 				id = path.substring(0, path.length() - 4); // remove .gml

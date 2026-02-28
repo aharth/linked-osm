@@ -87,12 +87,28 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<url-pattern>/search.json</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
+		<servlet-name>search</servlet-name>
+		<url-pattern>/search.rdf</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>search</servlet-name>
+		<url-pattern>/search.ttl</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
 		<servlet-name>map</servlet-name>
 		<url-pattern>/map</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>map</servlet-name>
+		<url-pattern>/map.rdf</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>map</servlet-name>
 		<url-pattern>/map.json</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>map</servlet-name>
+		<url-pattern>/map.ttl</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>poi</servlet-name>
@@ -103,12 +119,28 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<url-pattern>/poi.json</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
+		<servlet-name>poi</servlet-name>
+		<url-pattern>/poi.rdf</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>poi</servlet-name>
+		<url-pattern>/poi.ttl</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
 		<servlet-name>around</servlet-name>
 		<url-pattern>/around</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>around</servlet-name>
 		<url-pattern>/around.json</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>around</servlet-name>
+		<url-pattern>/around.rdf</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>around</servlet-name>
+		<url-pattern>/around.ttl</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>changeset</servlet-name>

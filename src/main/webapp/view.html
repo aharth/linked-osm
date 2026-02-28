@@ -9,15 +9,28 @@
 <body>
   <p><a href="/">Overview</a> &gt; View Geometry</p>
 
-  <div id="map-view" class="map"></div>
-  <div class="map-controls" style="display:flex;align-items:center;gap:0.4em">
-    <input type="text" id="bbox-input-view"
-           style="font-family:monospace;width:26em"
-           placeholder="W,S,E,N"
-           onkeydown="if(event.key==='Enter') setOsmMapLocation('map-view',this.value)">
-    <button type="button"
-            onclick="setOsmMapLocation('map-view',document.getElementById('bbox-input-view').value)">Go</button>
-    <span id="bbox-zoom-view"></span>
+  <dl>
+    <dt>Location</dt>
+    <dd>
+      <select id="loc-view">
+        <option value="">&#x2014; select &#x2014;</option>
+      </select>
+      <button type="button"
+              onclick="var v=document.getElementById('loc-view').value; if(v) setOsmMapLocation('map-view',v)">Go</button>
+    </dd>
+    <dd>
+      <input type="text" id="bbox-input-view"
+             style="font-family:monospace;width:22em"
+             placeholder="W,S,E,N"
+             onkeydown="if(event.key==='Enter') setOsmMapLocation('map-view',this.value)">
+      <button type="button"
+              onclick="setOsmMapLocation('map-view',document.getElementById('bbox-input-view').value)">Go</button>
+      <span id="bbox-zoom-view"></span>
+    </dd>
+  </dl>
+  <div class="osm-map-cols">
+    <div><div id="map-view" class="map"></div></div>
+    <div id="feature-panel-view" class="feature-panel"></div>
   </div>
   <p id="links-view" class="map-controls"></p>
   <p id="status-view" class="map-controls"></p>
@@ -37,6 +50,14 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="map.js"></script>
   <script>
+    fetch('examples.json').then(r => r.json()).then(ex => {
+      var loc = document.getElementById('loc-view');
+      ex.map.forEach(function(m) {
+        var o = document.createElement('option');
+        o.value = m.bbox; o.textContent = m.label; loc.appendChild(o);
+      });
+    });
+
     initOsmMap('map-view', 0, 0, 2);
 
     var params = new URLSearchParams(window.location.search);

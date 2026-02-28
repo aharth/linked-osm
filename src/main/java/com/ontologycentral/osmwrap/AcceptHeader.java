@@ -55,6 +55,8 @@ public class AcceptHeader {
      */
     public static boolean prefersJson(String servletPath, String acceptHeader) {
         if (servletPath != null && servletPath.endsWith(".json")) return true;
+        if (servletPath != null && servletPath.endsWith(".rdf")) return false;
+        if (servletPath != null && servletPath.endsWith(".ttl")) return false;
         List<AcceptType> accepted = parse(acceptHeader);
         double qJson = Math.max(maxQ(accepted, "application", "geo+json"),
                 maxQ(accepted, "application", "json"));

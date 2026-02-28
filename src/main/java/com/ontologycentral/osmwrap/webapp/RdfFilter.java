@@ -46,34 +46,34 @@ public class RdfFilter implements Filter {
 
 		String acceptHeader = httpRequest.getHeader("Accept");
 		List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(acceptHeader);
-		boolean serveTurtle = !AcceptHeader.prefers(accepted,
+
+		String requestPath = httpRequest.getRequestURI()
+				.substring(httpRequest.getContextPath().length());
+		int qpos = requestPath.indexOf('?');
+		if (qpos >= 0) requestPath = requestPath.substring(0, qpos);
+		String lastSegment = requestPath.substring(requestPath.lastIndexOf('/') + 1);
+
+		boolean forceTurtle = lastSegment.endsWith(".ttl");
+		boolean hasExtension = lastSegment.contains(".");
+		boolean serveTurtle = forceTurtle || !AcceptHeader.prefers(accepted,
 				"application", "rdf+xml", "text", "turtle");
 
 		httpResponse.setHeader("Vary", "Accept");
 
-		String requestPath = httpRequest.getRequestURI()
-				.substring(httpRequest.getContextPath().length());
-		// Strip query string segment — only the path portion matters for extension detection
-		int qpos = requestPath.indexOf('?');
-		if (qpos >= 0) requestPath = requestPath.substring(0, qpos);
-		// Last path segment (after final '/') used for extension detection
-		String lastSegment = requestPath.substring(requestPath.lastIndexOf('/') + 1);
-		boolean hasExtension = lastSegment.contains(".");
+		String proto = httpRequest.getHeader("X-Forwarded-Proto");
+		if (proto == null) proto = httpRequest.getScheme();
+		String host = httpRequest.getHeader("X-Forwarded-Host");
+		if (host == null) host = httpRequest.getHeader("Host");
+		if (host == null) host = httpRequest.getServerName();
+		String queryString = httpRequest.getQueryString();
+		String base = proto + "://" + host + requestPath
+				+ (queryString != null ? "?" + queryString : "");
 
 		if (serveTurtle && contentType != null && contentType.contains("application/rdf+xml")) {
 			byte[] original = capture.toByteArray();
 
 			try {
 				Model model = ModelFactory.createDefaultModel();
-
-				String proto = httpRequest.getHeader("X-Forwarded-Proto");
-				if (proto == null) proto = httpRequest.getScheme();
-				String host = httpRequest.getHeader("X-Forwarded-Host");
-				if (host == null) host = httpRequest.getHeader("Host");
-				if (host == null) host = httpRequest.getServerName();
-				String queryString = httpRequest.getQueryString();
-				String base = proto + "://" + host + requestPath
-						+ (queryString != null ? "?" + queryString : "");
 
 				RDFParser.create()
 						.source(new java.io.ByteArrayInputStream(original))
@@ -115,11 +115,36 @@ public class RdfFilter implements Filter {
 					httpResponse.setHeader("Content-Location", requestPath + ext);
 				}
 			}
-			if (contentType != null) {
-				httpResponse.setContentType(contentType);
+			if (contentType != null && contentType.contains("application/rdf+xml")) {
+				try {
+					Model model = ModelFactory.createDefaultModel();
+					RDFParser.create()
+							.source(new java.io.ByteArrayInputStream(data))
+							.lang(Lang.RDFXML)
+							.base(base)
+							.parse(model);
+					ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
+					RDFWriter.create()
+							.lang(Lang.RDFXML)
+							.source(model)
+							.output(rdfOut);
+					byte[] result = rdfOut.toByteArray();
+					httpResponse.setContentType("application/rdf+xml");
+					httpResponse.setContentLength(result.length);
+					httpResponse.getOutputStream().write(result);
+				} catch (Exception e) {
+					_log.warning("RDF/XML re-serialisation failed: " + e.getMessage());
+					httpResponse.setContentType(contentType);
+					httpResponse.setContentLength(data.length);
+					httpResponse.getOutputStream().write(data);
+				}
+			} else {
+				if (contentType != null) {
+					httpResponse.setContentType(contentType);
+				}
+				httpResponse.setContentLength(data.length);
+				httpResponse.getOutputStream().write(data);
 			}
-			httpResponse.setContentLength(data.length);
-			httpResponse.getOutputStream().write(data);
 		}
 	}
 

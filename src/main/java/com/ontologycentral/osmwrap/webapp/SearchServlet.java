@@ -52,6 +52,8 @@ public class SearchServlet extends HttpServlet {
 				return;
 			}
 
+			resp.setHeader("X-Upstream-Source", archive);
+
 			InputStream is = response.body();
 
 			if (wantJson) {

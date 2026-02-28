@@ -2,7 +2,11 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
-## [2026-02-26] 
+## [2026-02-28]
+- Suffix + content-negotiation fix for all servlets: `/search.rdf`, `/search.ttl`, `/map.ttl`, `/poi.rdf`, `/poi.ttl`, `/around.rdf`, `/around.ttl` URL patterns added to `web.xml`; `AcceptHeader.prefersJson()` and `RdfFilter` honour `.ttl` suffix (force Turtle regardless of Accept header); `FeatureServlet` handles `.ttl` extension for `/node/*`, `/way/*`, `/relation/*`; `SearchServlet`, `POIServlet`, `AroundServlet` emit `X-Upstream-Source` response header; `map.js` reads the header to show a clickable `Source XML` / `OSM XML` upstream link, and Turtle links now point to `.ttl` URLs directly
+- `index.html`: restructured to linked-inspire UI pattern — unified Location section (preset select, place-name search, bbox input) above the map; nodes/ways/relations lookup moved into right column below feature panel; per-service bbox/lon/lat inputs replaced by single Load buttons that read the current map bbox/center
+
+## [2026-02-26]
 - Local SPARQL processor.
 - `FeatureServlet`: in-memory Caffeine cache of upstream OSM XML keyed by URL (2 GB weight limit, 24 h expiry); at most one upstream fetch per URL at a time — concurrent requests for the same URL join the in-flight `CompletableFuture` and share the result
 - `relation.xsl`: fixed XSLT 2.0 multi-valued sequence bug where `relation/@id` on a `/full` response returned all relation IDs space-separated, producing an invalid URI in `prov:used`; ID now passed as `element-id` XSLT parameter from `FeatureServlet`
