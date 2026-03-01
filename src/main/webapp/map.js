@@ -1,5 +1,20 @@
 var FETCH_TIMEOUT = 130000; // slightly above the server's 120s upstream timeout
 
+var OSM_TILE_LAYERS = {
+    'Standard':      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                       attribution: '\u00a9 OpenStreetMap contributors' },
+    'CyclOSM':       { url: 'https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+                       attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CyclOSM' },
+    'Humanitarian':  { url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+                       attribution: '\u00a9 OpenStreetMap contributors, Humanitarian OpenStreetMap Team' },
+    'OpenTopoMap':   { url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                       attribution: '\u00a9 OpenStreetMap contributors, \u00a9 OpenTopoMap' },
+    'CARTO Positron':   { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+                          attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO' },
+    'CARTO Dark Matter': { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                           attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO' }
+};
+
 window.osmMaps = {};
 
 function escHtml(s) {
@@ -21,15 +36,44 @@ function _propsToHtml(props) {
 }
 
 
+function _updateTileStatus(mapId) {
+    var state = window.osmMaps[mapId];
+    if (!state) return;
+    var suffix = mapId.replace('map-', '');
+    var layer = OSM_TILE_LAYERS[state.activeLayerName] || OSM_TILE_LAYERS['Standard'];
+    var statusEl = document.getElementById('tile-status-' + suffix);
+    if (statusEl) statusEl.textContent = state.activeLayerName;
+    var sourceEl = document.getElementById('tile-source-' + suffix);
+    if (sourceEl) sourceEl.textContent = 'Source: ' + layer.attribution;
+    var tileEl = document.getElementById('tile-link-' + suffix);
+    if (tileEl) {
+        var c = state.map.getCenter();
+        var z = state.map.getZoom();
+        var pngUrl = _centerTileUrl(layer.url, c.lat, c.lng, z);
+        tileEl.innerHTML = '<a href="' + escHtml(pngUrl) + '" target="_blank">PNG</a>';
+    }
+}
+
+function switchOsmTileLayer(mapId, layerName) {
+    var state = window.osmMaps[mapId];
+    if (!state) return;
+    if (state.tileLayer) state.map.removeLayer(state.tileLayer);
+    var layer = OSM_TILE_LAYERS[layerName] || OSM_TILE_LAYERS['Standard'];
+    state.tileLayer = L.tileLayer(layer.url, { attribution: '' }).addTo(state.map);
+    state.activeLayerName = layerName;
+    _updateTileStatus(mapId);
+}
+
 function initOsmMap(id, lat, lon, zoom) {
     var m = L.map(id).setView([lat, lon], zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(m);
+    var tl = L.tileLayer(OSM_TILE_LAYERS['Standard'].url, { attribution: '' }).addTo(m);
     var fg = L.featureGroup().addTo(m);
     var suffix = id.replace('map-', '');
     var panelEl = document.getElementById('feature-panel-' + suffix);
-    window.osmMaps[id] = { map: m, featureLayer: fg, fetchEpoch: 0, bboxLayer: null,
+    window.osmMaps[id] = { map: m, tileLayer: tl, featureLayer: fg, fetchEpoch: 0, bboxLayer: null,
                            featurePanel: panelEl, highlightedLayer: null,
-                           mapId: id, loadedFeatures: [], loadedUrl: null, currentIdx: -1 };
+                           mapId: id, loadedFeatures: [], loadedUrl: null, currentIdx: -1,
+                           activeLayerName: 'Standard' };
 
     m.on('click', function() {
         var st = window.osmMaps[id];
@@ -49,10 +93,20 @@ function initOsmMap(id, lat, lon, zoom) {
                                    + b.getEast().toFixed(6) + ',' + b.getNorth().toFixed(6);
         var zoomEl = document.getElementById('bbox-zoom-' + suffix);
         if (zoomEl) zoomEl.textContent = 'zoom: ' + m.getZoom();
+        var tileEl = document.getElementById('tile-link-' + suffix);
+        if (tileEl) {
+            var c = m.getCenter();
+            var z = m.getZoom();
+            var layerName = (window.osmMaps[id] || {}).activeLayerName || 'Standard';
+            var layerUrl = (OSM_TILE_LAYERS[layerName] || OSM_TILE_LAYERS['Standard']).url;
+            var pngUrl = _centerTileUrl(layerUrl, c.lat, c.lng, z);
+            tileEl.innerHTML = '<a href="' + escHtml(pngUrl) + '" target="_blank">PNG</a>';
+        }
     }
     m.on('moveend', updateBbox);
     m.on('zoomend', updateBbox);
     updateBbox();
+    _updateTileStatus(id);
 }
 
 function getBboxString(mapId) {
@@ -76,6 +130,13 @@ function setOsmMapZoom(mapId, zoom) {
     var state = window.osmMaps[mapId];
     if (!state) return;
     state.map.setZoom(zoom);
+}
+
+function _centerTileUrl(layerUrl, lat, lon, z) {
+    var tx = Math.floor((lon + 180) / 360 * Math.pow(2, z));
+    var ty = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180)
+           + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
+    return layerUrl.replace('{s}', 'a').replace('{z}', z).replace('{x}', tx).replace('{y}', ty);
 }
 
 function _parseBbox(url) {
@@ -102,12 +163,7 @@ function _updateSource(mapId, attribution) {
     var suffix = mapId.replace('map-', '');
     var el = document.getElementById('source-' + suffix);
     if (!el) return;
-    if (attribution) {
-        el.textContent = 'Source: ' + attribution;
-        el.style.display = '';
-    } else {
-        el.style.display = 'none';
-    }
+    el.textContent = attribution ? 'Source: ' + attribution : '';
 }
 
 function _rdfUrl(url) {
@@ -124,18 +180,16 @@ function _ttlUrl(url) {
 
 function _formatLinksHtml(url, sourceUrl) {
     var rdf = _rdfUrl(url);
-    var html = '';
+    var html = '<a href="' + escHtml(url) + '">JSON</a>';
     if (/^\/(map|node\/|way\/|relation\/)/.test(url)) {
-        html += '<a href="https://api.openstreetmap.org/api/0.6' + escHtml(url)
-              + '" target="_blank">OSM XML</a> \u00b7 ';
+        html += ' \u00b7 <a href="https://api.openstreetmap.org/api/0.6' + escHtml(url)
+              + '" target="_blank">OSM XML</a>';
     } else if (sourceUrl) {
         var label = /nominatim/.test(sourceUrl) ? 'Source XML' : 'OSM XML';
-        html += '<a href="' + escHtml(sourceUrl) + '" target="_blank">'
-              + label + '</a> \u00b7 ';
+        html += ' \u00b7 <a href="' + escHtml(sourceUrl) + '" target="_blank">' + label + '</a>';
     }
-    html += '<a href="' + escHtml(rdf) + '">RDF/XML</a>'
+    html += ' \u00b7 <a href="' + escHtml(rdf) + '">RDF/XML</a>'
           + ' \u00b7 <a href="' + escHtml(_ttlUrl(url)) + '">Turtle</a>'
-          + ' \u00b7 <a href="' + escHtml(url) + '">JSON</a>'
           + ' \u00b7 <a href="/sparql#from=' + encodeURIComponent(rdf) + '">SPARQL</a>';
     return html;
 }
@@ -176,11 +230,11 @@ function _renderFeaturePanel(state, idx) {
         var base = '/' + t + '/' + i;
         html += '<p><a href="' + base + '">' + base + '</a></p>';
         formatBar = '<p>'
-              + '<a href="https://api.openstreetmap.org/api/0.6/' + t + '/' + i
+              + '<a href="' + base + '.json">JSON</a>'
+              + ' \u00b7 <a href="https://api.openstreetmap.org/api/0.6/' + t + '/' + i
               + '" target="_blank">OSM XML</a>'
               + ' \u00b7 <a href="' + base + '.rdf">RDF/XML</a>'
               + ' \u00b7 <a href="' + base + '.ttl">Turtle</a>'
-              + ' \u00b7 <a href="' + base + '.json">JSON</a>'
               + ' \u00b7 <a href="/sparql#from=' + base + '.rdf">SPARQL</a>'
               + '</p>';
     }
@@ -279,7 +333,7 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
     var suffix = mapId.replace('map-', '');
     var linkEl = document.getElementById('geojson-link-' + suffix);
     if (linkEl) {
-        linkEl.innerHTML = '<span class="spinner"></span><a href="' + escHtml(url) + '">' + escHtml(url) + '</a>';
+        linkEl.innerHTML = '<span class="spinner"></span>' + _formatLinksHtml(url, null);
         linkEl.style.display = '';
     }
 

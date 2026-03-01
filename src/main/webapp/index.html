@@ -18,68 +18,91 @@
     We maintain a document with <a href="faq.html">Frequently Asked Questions</a> and a <a href="bot.html">bot page</a>.
   </p>
 
-  <div class="osm-map-cols" id="pre-map-row">
-    <div>
-      <dl>
-        <dt>Search</dt>
-        <dd>
-          <input type="text" id="search-input-main" placeholder="place name"
-                 onkeydown="if(event.key==='Enter') loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(this.value),document.getElementById('status-main'))">
-          <button type="button"
-                  onclick="loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(document.getElementById('search-input-main').value),document.getElementById('status-main'))">Search</button>
-        </dd>
-      </dl>
-      <dl>
-        <dt>Location</dt>
-        <dd>
-          <select id="loc-main">
-            <option value="">&#x2014; select &#x2014;</option>
-          </select>
-          <button type="button"
-                  onclick="var v=document.getElementById('loc-main').value; if(v) setOsmMapLocation('map-main',v)">Go</button>
-        </dd>
-        <dd>
-          <input type="text" id="bbox-input-main"
-                 style="font-family:monospace;width:22em"
-                 placeholder="W,S,E,N"
-                 onkeydown="if(event.key==='Enter') setOsmMapLocation('map-main',this.value)">
-          <button type="button"
-                  onclick="setOsmMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
-          <span id="bbox-zoom-main"></span>
-        </dd>
-      </dl>
-    </div>
+  <div class="region-cols">
+  <div class="region-left">
     <dl>
-      <dt>Nodes, ways and relations (via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>)</dt>
+      <dt>Search</dt>
       <dd>
-        <select id="geo-example-select">
-          <option value="">&#x2014; select element &#x2014;</option>
+        <input type="text" id="search-input-main" placeholder="place name"
+               onkeydown="if(event.key==='Enter') loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(this.value),document.getElementById('status-main'))">
+        <button type="button"
+                onclick="loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(document.getElementById('search-input-main').value),document.getElementById('status-main'))">Search</button>
+      </dd>
+    </dl>
+    <dl>
+      <dt>Location</dt>
+      <dd>
+        <select id="loc-main">
+          <option value="">&#x2014; select &#x2014;</option>
         </select>
-        <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Load</button>
+        <button type="button"
+                onclick="var v=document.getElementById('loc-main').value; if(v) setOsmMapLocation('map-main',v)">Go</button>
       </dd>
       <dd>
-        <form name="geo-form" onsubmit="return false;">
-          <label>node: <input type="text" name="node" size="10"></label>
-          <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
-          <label>way: <input type="text" name="way" size="10"></label>
-          <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
-          <label>relation: <input type="text" name="relation" size="10"></label>
-          <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
-        </form>
+        <input type="text" id="bbox-input-main"
+               style="font-family:monospace;width:22em"
+               placeholder="W,S,E,N"
+               onkeydown="if(event.key==='Enter') setOsmMapLocation('map-main',this.value)">
+        <button type="button"
+                onclick="setOsmMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
+        <span id="bbox-zoom-main"></span>
       </dd>
     </dl>
   </div>
+  </div>
 
-  <div class="osm-map-cols" id="map-row">
-    <div><div id="map-main" class="map"></div></div>
-    <div id="feature-panel-main" class="feature-panel"></div>
-
-    <div>
-      <p id="status-main" class="map-controls"></p>
-      <p id="source-main" class="map-controls wms-source" style="display:none"></p>
-      <p id="geojson-link-main" class="map-controls"></p>
+  <div class="region-cols" id="map-row">
+    <div id="map-main" class="map"></div>
+    <div class="region-right">
+      <div id="feature-panel-main" class="feature-panel"></div>
     </div>
-    <div>
+
+    <div class="region-left">
+      <p id="tile-status-main" class="map-controls"></p>
+      <p id="tile-link-main" class="map-controls"></p>
+      <p id="tile-source-main" class="map-controls wms-source"></p>
+    </div>
+    <div class="region-right">
+      <p id="status-main" class="map-controls"></p>
+      <p id="geojson-link-main" class="map-controls"></p>
+      <p id="source-main" class="map-controls wms-source"></p>
+    </div>
+
+    <dl class="region-left" id="tile-layer-controls-main">
+      <dt>Map Layer</dt>
+      <dd>
+        <select id="tile-select-main">
+          <option value="Standard">Standard</option>
+          <option value="CyclOSM">CyclOSM</option>
+          <option value="Humanitarian">Humanitarian</option>
+          <option value="OpenTopoMap">OpenTopoMap</option>
+          <option value="CARTO Positron">CARTO Positron</option>
+          <option value="CARTO Dark Matter">CARTO Dark Matter</option>
+        </select>
+        <button type="button"
+                onclick="switchOsmTileLayer('map-main', document.getElementById('tile-select-main').value)">Load</button>
+      </dd>
+    </dl>
+    <div class="region-right" id="feature-select-main">
+      <dl id="osm-element-controls">
+        <dt>Nodes, ways and relations (via <a href="https://wiki.openstreetmap.org/wiki/API_v0.6">OSM API 0.6</a>)</dt>
+        <dd>
+          <select id="geo-example-select">
+            <option value="">&#x2014; select element &#x2014;</option>
+          </select>
+          <button onclick="var s=document.getElementById('geo-example-select'); if(s.value) loadGeoJsonUrl('map-main',s.value,document.getElementById('status-main'));">Load</button>
+        </dd>
+        <dd>
+          <form name="geo-form" onsubmit="return false;">
+            <label>node: <input type="text" name="node" size="10"></label>
+            <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+            <label>way: <input type="text" name="way" size="10"></label>
+            <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+            <label>relation: <input type="text" name="relation" size="10"></label>
+            <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+          </form>
+        </dd>
+      </dl>
       <dl>
         <dt>Map data by bounding box</dt>
         <dd>
