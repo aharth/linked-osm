@@ -1,5 +1,3 @@
-var FETCH_TIMEOUT = 130000; // slightly above the server's 120s upstream timeout
-
 var OSM_TILE_LAYERS = {
     'Standard':      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                        attribution: '\u00a9 OpenStreetMap contributors' },
@@ -15,29 +13,8 @@ var OSM_TILE_LAYERS = {
                            attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO' }
 };
 
-window.osmMaps = {};
-
-function escHtml(s) {
-    return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-function _propsToHtml(props) {
-    var html = '<dl>';
-    for (var k in props) {
-        if ((k === 'osm_id' || k === 'osm_type') && props.osm_id && props.osm_type) continue;
-        html += '<dt>' + escHtml(k) + '</dt><dd>' + escHtml(String(props[k])) + '</dd>';
-    }
-    html += '</dl>';
-    return html;
-}
-
-
 function _updateTileStatus(mapId) {
-    var state = window.osmMaps[mapId];
+    var state = window.maps[mapId];
     if (!state) return;
     var suffix = mapId.replace('map-', '');
     var layer = OSM_TILE_LAYERS[state.activeLayerName] || OSM_TILE_LAYERS['Standard'];
@@ -55,7 +32,7 @@ function _updateTileStatus(mapId) {
 }
 
 function switchOsmTileLayer(mapId, layerName) {
-    var state = window.osmMaps[mapId];
+    var state = window.maps[mapId];
     if (!state) return;
     if (state.tileLayer) state.map.removeLayer(state.tileLayer);
     var layer = OSM_TILE_LAYERS[layerName] || OSM_TILE_LAYERS['Standard'];
@@ -70,13 +47,13 @@ function initOsmMap(id, lat, lon, zoom) {
     var fg = L.featureGroup().addTo(m);
     var suffix = id.replace('map-', '');
     var panelEl = document.getElementById('feature-panel-' + suffix);
-    window.osmMaps[id] = { map: m, tileLayer: tl, featureLayer: fg, fetchEpoch: 0, bboxLayer: null,
+    window.maps[id] = { map: m, tileLayer: tl, featureLayer: fg, fetchEpoch: 0, bboxLayer: null,
                            featurePanel: panelEl, highlightedLayer: null,
                            mapId: id, loadedFeatures: [], loadedUrl: null, currentIdx: -1,
                            activeLayerName: 'Standard' };
 
     m.on('click', function() {
-        var st = window.osmMaps[id];
+        var st = window.maps[id];
         if (st.highlightedLayer) {
             if (st.highlightedLayer._origStyle && st.highlightedLayer.setStyle)
                 st.highlightedLayer.setStyle(st.highlightedLayer._origStyle);
@@ -97,7 +74,7 @@ function initOsmMap(id, lat, lon, zoom) {
         if (tileEl) {
             var c = m.getCenter();
             var z = m.getZoom();
-            var layerName = (window.osmMaps[id] || {}).activeLayerName || 'Standard';
+            var layerName = (window.maps[id] || {}).activeLayerName || 'Standard';
             var layerUrl = (OSM_TILE_LAYERS[layerName] || OSM_TILE_LAYERS['Standard']).url;
             var pngUrl = _centerTileUrl(layerUrl, c.lat, c.lng, z);
             tileEl.innerHTML = '<a href="' + escHtml(pngUrl) + '" target="_blank">PNG</a>';
@@ -110,7 +87,7 @@ function initOsmMap(id, lat, lon, zoom) {
 }
 
 function getBboxString(mapId) {
-    var state = window.osmMaps[mapId];
+    var state = window.maps[mapId];
     if (!state) return '';
     var b = state.map.getBounds();
     return b.getWest().toFixed(6) + ',' + b.getSouth().toFixed(6) + ','
@@ -118,16 +95,16 @@ function getBboxString(mapId) {
 }
 
 
-function setOsmMapLocation(mapId, bboxStr) {
+function setMapLocation(mapId, bboxStr) {
     var parts = bboxStr.split(',').map(Number);
     if (parts.length !== 4 || parts.some(isNaN)) return;
-    var state = window.osmMaps[mapId];
+    var state = window.maps[mapId];
     if (!state) return;
     state.map.fitBounds([[parts[1], parts[0]], [parts[3], parts[2]]]);
 }
 
 function setOsmMapZoom(mapId, zoom) {
-    var state = window.osmMaps[mapId];
+    var state = window.maps[mapId];
     if (!state) return;
     state.map.setZoom(zoom);
 }
@@ -147,11 +124,6 @@ function _parseBbox(url) {
     var n = parts.map(Number);
     if (n.some(isNaN)) return null;
     return n; // [W, S, E, N]
-}
-
-function setStatus(el, text, spinning) {
-    el.textContent = text;
-    el.classList.toggle('spinner', !!spinning);
 }
 
 function _attributionFor(url) {
@@ -216,10 +188,10 @@ function _renderFeaturePanel(state, idx) {
         var mapId = escHtml(state.mapId);
         html += '<p>'
               + '<button type="button"' + (idx <= 0 ? ' disabled' : '')
-              + ' onclick="_osmNavFeature(\'' + mapId + '\',' + (idx - 1) + ')">\u2039</button>'
+              + ' onclick="_navFeature(\'' + mapId + '\',' + (idx - 1) + ')">\u2039</button>'
               + ' ' + (idx + 1) + ' of ' + n + ' '
               + '<button type="button"' + (idx >= n - 1 ? ' disabled' : '')
-              + ' onclick="_osmNavFeature(\'' + mapId + '\',' + (idx + 1) + ')">\u203a</button>'
+              + ' onclick="_navFeature(\'' + mapId + '\',' + (idx + 1) + ')">\u203a</button>'
               + '</p>';
     }
     var props = feature.properties || {};
@@ -238,7 +210,7 @@ function _renderFeaturePanel(state, idx) {
               + ' \u00b7 <a href="/sparql#from=' + base + '.rdf">SPARQL</a>'
               + '</p>';
     }
-    html += Object.keys(props).length > 0 ? _propsToHtml(props) : '<em>no properties</em>';
+    html += Object.keys(props).length > 0 ? propsToHtml(props) : '<em>no properties</em>';
     html += formatBar;
     state.featurePanel.innerHTML = html;
     state.currentIdx = idx;
@@ -252,8 +224,8 @@ function _renderDefaultPanel(state) {
     else { _renderSummaryPanel(state); }
 }
 
-function _osmNavFeature(mapId, idx) {
-    var state = window.osmMaps[mapId];
+function _navFeature(mapId, idx) {
+    var state = window.maps[mapId];
     if (!state || idx < 0 || idx >= state.loadedFeatures.length) return;
     if (state.highlightedLayer) {
         if (state.highlightedLayer._origStyle && state.highlightedLayer.setStyle)
@@ -308,7 +280,7 @@ function _renderFeatures(state, geojson) {
 }
 
 function loadGeoJsonUrl(mapId, url, statusEl) {
-    var state = window.osmMaps[mapId];
+    var state = window.maps[mapId];
     if (!state) return;
 
     state.fetchEpoch += 1;
@@ -359,7 +331,7 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
             state.loadedUrl = url;
             state.currentIdx = -1;
             _renderFeatures(state, geojson);
-            if (geojson.features.length > 0) { _osmNavFeature(mapId, 0); }
+            if (geojson.features.length > 0) { _navFeature(mapId, 0); }
             else { _renderDefaultPanel(state); }
             var count = state.featureLayer.getLayers().length;
             if (statusEl) setStatus(statusEl, count + (count === 1 ? ' feature' : ' features'));

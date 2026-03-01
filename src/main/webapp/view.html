@@ -16,15 +16,15 @@
         <option value="">&#x2014; select &#x2014;</option>
       </select>
       <button type="button"
-              onclick="var v=document.getElementById('loc-view').value; if(v) setOsmMapLocation('map-view',v)">Go</button>
+              onclick="var v=document.getElementById('loc-view').value; if(v) setMapLocation('map-view',v)">Go</button>
     </dd>
     <dd>
       <input type="text" id="bbox-input-view"
              style="font-family:monospace;width:22em"
              placeholder="W,S,E,N"
-             onkeydown="if(event.key==='Enter') setOsmMapLocation('map-view',this.value)">
+             onkeydown="if(event.key==='Enter') setMapLocation('map-view',this.value)">
       <button type="button"
-              onclick="setOsmMapLocation('map-view',document.getElementById('bbox-input-view').value)">Go</button>
+              onclick="setMapLocation('map-view',document.getElementById('bbox-input-view').value)">Go</button>
       <span id="bbox-zoom-view"></span>
     </dd>
   </dl>
@@ -48,6 +48,7 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="map-common.js"></script>
   <script src="map.js"></script>
   <script>
     fetch('examples.json').then(r => r.json()).then(ex => {
@@ -91,7 +92,7 @@
             if (parts.length === 4) {
                 var west = parseFloat(parts[0]), south = parseFloat(parts[1]);
                 var east = parseFloat(parts[2]), north = parseFloat(parts[3]);
-                var state = window.osmMaps['map-view'];
+                var state = window.maps['map-view'];
                 L.rectangle([[south, west], [north, east]], {
                     color: '#666', weight: 2, dashArray: '6 4',
                     fill: false, interactive: false

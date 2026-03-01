@@ -1,3 +1,5 @@
+/* rem not em: Leaflet sets font-size:12px on .leaflet-container, so em
+   would resolve to 12px there instead of the body 16px. */
 .map { width: 32rem; height: 18rem; }
 
 .feature-panel {
@@ -30,3 +32,4 @@ input[type=text] { font-family: monospace; }
 .map-controls label { margin-right: 0.4em; }
 .map-controls select { font-family: monospace; }
 .wms-source { overflow-wrap: break-word; word-break: break-word; }
+.region-right { min-width: 15em; }

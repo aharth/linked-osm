@@ -36,15 +36,15 @@
           <option value="">&#x2014; select &#x2014;</option>
         </select>
         <button type="button"
-                onclick="var v=document.getElementById('loc-main').value; if(v) setOsmMapLocation('map-main',v)">Go</button>
+                onclick="var v=document.getElementById('loc-main').value; if(v) setMapLocation('map-main',v)">Go</button>
       </dd>
       <dd>
         <input type="text" id="bbox-input-main"
                style="font-family:monospace;width:22em"
                placeholder="W,S,E,N"
-               onkeydown="if(event.key==='Enter') setOsmMapLocation('map-main',this.value)">
+               onkeydown="if(event.key==='Enter') setMapLocation('map-main',this.value)">
         <button type="button"
-                onclick="setOsmMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
+                onclick="setMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
         <span id="bbox-zoom-main"></span>
       </dd>
     </dl>
@@ -118,7 +118,7 @@
         <dd>
           radius (m): <input type="text" id="around-radius-main" value="100" size="6">
           <button type="button"
-                  onclick="var st=window.osmMaps['map-main'],c=st.map.getCenter();
+                  onclick="var st=window.maps['map-main'],c=st.map.getCenter();
                            loadGeoJsonUrl('map-main','/around?lon='+c.lng.toFixed(6)+'&lat='+c.lat.toFixed(6)+'&radius='+encodeURIComponent(document.getElementById('around-radius-main').value),
                            document.getElementById('status-main'))">Load</button>
         </dd>
@@ -131,6 +131,7 @@
   <a href="http://ontologycentral.com/">OntologyCentral</a>, 2009-2026.
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="map-common.js"></script>
   <script src="map.js"></script>
   <script>initOsmMap('map-main', 50, 10, 4);</script>
   <script>
