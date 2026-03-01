@@ -359,7 +359,8 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
             state.loadedUrl = url;
             state.currentIdx = -1;
             _renderFeatures(state, geojson);
-            _renderDefaultPanel(state);
+            if (geojson.features.length > 0) { _osmNavFeature(mapId, 0); }
+            else { _renderDefaultPanel(state); }
             var count = state.featureLayer.getLayers().length;
             if (statusEl) setStatus(statusEl, count + (count === 1 ? ' feature' : ' features'));
             _updateSource(mapId, _attributionFor(url));
