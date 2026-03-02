@@ -86,6 +86,34 @@ function initOsmMap(id, lat, lon, zoom) {
     m.on('zoomend', updateBbox);
     updateBbox();
     _updateTileStatus(id);
+
+    // Wire location preset select → bbox input
+    var locSel  = document.getElementById('loc-' + suffix);
+    var bboxInp = document.getElementById('bbox-input-' + suffix);
+    if (locSel && bboxInp) {
+        locSel.addEventListener('change', function() {
+            if (this.value) bboxInp.value = this.value;
+        });
+        bboxInp.addEventListener('input', function() { locSel.value = ''; });
+    }
+
+    // Wire example dropdown ↔ node/way/relation inputs (bidirectional)
+    var geoExSel = document.getElementById('geo-example-select');
+    var geoForm  = document.forms['geo-form'];
+    if (geoExSel && geoForm) {
+        geoExSel.addEventListener('change', function() {
+            var match = this.value && this.value.match(/^\/(node|way|relation)\/(\d+)$/);
+            if (!match) return;
+            ['node', 'way', 'relation'].forEach(function(t) {
+                var el = geoForm.elements[t];
+                if (el) el.value = (t === match[1]) ? match[2] : '';
+            });
+        });
+        ['node', 'way', 'relation'].forEach(function(t) {
+            var el = geoForm.elements[t];
+            if (el) el.addEventListener('input', function() { geoExSel.value = ''; });
+        });
+    }
 }
 
 function getBboxString(mapId) {
@@ -303,6 +331,25 @@ function _renderFeatures(state, geojson) {
     pointLayers.forEach(function(l) { state.featureLayer.addLayer(l); });
 }
 
+// All status-bar and link-bar DOM updates for the fetch lifecycle live here.
+// States: 'loading' | 'loaded' | 'idle'
+// opts: { url, statusEl, count?, errorMsg?, sourceUrl? }
+function _setFetchState(mapId, newState, opts) {
+    var suffix = mapId.replace('map-', '');
+    var linkEl = document.getElementById('geojson-link-' + suffix);
+    if (newState === 'loading') {
+        if (opts.statusEl) setStatus(opts.statusEl, 'Loading\u2026');
+        if (linkEl) { linkEl.innerHTML = '<span class="spinner"></span>' + _formatLinksHtml(opts.url, null); linkEl.style.display = ''; }
+    } else if (newState === 'loaded') {
+        var c = opts.count;
+        if (opts.statusEl) setStatus(opts.statusEl, c + (c === 1 ? ' feature' : ' features'));
+        if (linkEl) { linkEl.innerHTML = _formatLinksHtml(opts.url, opts.sourceUrl); linkEl.style.display = ''; }
+    } else if (newState === 'idle') {
+        if (opts.statusEl) setStatus(opts.statusEl, opts.errorMsg ? 'Error: ' + opts.errorMsg : '');
+        if (linkEl) { linkEl.innerHTML = opts.url ? _formatLinksHtml(opts.url, opts.sourceUrl) : ''; }
+    }
+}
+
 function loadGeoJsonUrl(mapId, url, statusEl) {
     var state = window.maps[mapId];
     if (!state) return;
@@ -324,14 +371,7 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
             color: '#888', weight: 3, fillOpacity: 0, dashArray: '6 4', interactive: false
         }).addTo(state.map);
     }
-    if (statusEl) setStatus(statusEl, 'Loading\u2026');
-
-    var suffix = mapId.replace('map-', '');
-    var linkEl = document.getElementById('geojson-link-' + suffix);
-    if (linkEl) {
-        linkEl.innerHTML = '<span class="spinner"></span>' + _formatLinksHtml(url, null);
-        linkEl.style.display = '';
-    }
+    _setFetchState(mapId, 'loading', { url: url, statusEl: statusEl });
 
     var controller = new AbortController();
     var timer = setTimeout(function() { controller.abort(); }, FETCH_TIMEOUT);
@@ -347,7 +387,6 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
         .then(function(data) {
             if (state.fetchEpoch !== epoch) return;
             var geojson = _wrapGeometry(data);
-
             if (geojson.type !== 'FeatureCollection') {
                 geojson = { type: 'FeatureCollection', features: [geojson] };
             }
@@ -358,22 +397,16 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
             if (geojson.features.length > 0) { _navFeature(mapId, 0); }
             else { _renderDefaultPanel(state); }
             var count = state.featureLayer.getLayers().length;
-            if (statusEl) setStatus(statusEl, count + (count === 1 ? ' feature' : ' features'));
+            _setFetchState(mapId, 'loaded', { url: url, statusEl: statusEl, count: count, sourceUrl: sourceUrl });
             _updateSource(mapId, _attributionFor(url));
             if (count > 0) {
                 try { state.map.fitBounds(state.featureLayer.getBounds(), { maxZoom: 16 }); } catch (e) {}
             }
-            if (linkEl) {
-                linkEl.innerHTML = _formatLinksHtml(url, sourceUrl);
-                linkEl.style.display = '';
-            }
-
         })
         .catch(function(err) {
             clearTimeout(timer);
             if (state.fetchEpoch !== epoch) return;
             var msg = err.name === 'AbortError' ? 'Client timeout (' + (FETCH_TIMEOUT / 1000) + 's)' : err.message;
-            if (statusEl) setStatus(statusEl, 'Error: ' + msg);
-            if (linkEl) { linkEl.innerHTML = _formatLinksHtml(url, sourceUrl); }
+            _setFetchState(mapId, 'idle', { url: url, statusEl: statusEl, errorMsg: msg, sourceUrl: sourceUrl });
         });
 }
