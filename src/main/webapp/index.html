@@ -32,11 +32,10 @@
     <dl>
       <dt>Location</dt>
       <dd>
-        <select id="loc-main">
+        <select id="loc-main"
+                onchange="var v=this.value; if(v) document.getElementById('bbox-input-main').value=v;">
           <option value="">&#x2014; select &#x2014;</option>
         </select>
-        <button type="button"
-                onclick="var v=document.getElementById('loc-main').value; if(v) setMapLocation('map-main',v)">Go</button>
       </dd>
       <dd>
         <input type="text" id="bbox-input-main"
@@ -65,11 +64,14 @@
     </dd>
     <dd>
       <form name="geo-form" onsubmit="return false;">
-        <label>node: <input type="text" name="node" size="10"></label>
+        <label>node: <input type="text" name="node" size="10"
+               oninput="var s=document.getElementById('geo-example-select'); if(s) s.value='';"></label>
         <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
-        <label>way: <input type="text" name="way" size="10"></label>
+        <label>way: <input type="text" name="way" size="10"
+               oninput="var s=document.getElementById('geo-example-select'); if(s) s.value='';"></label>
         <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
-        <label>relation: <input type="text" name="relation" size="10"></label>
+        <label>relation: <input type="text" name="relation" size="10"
+               oninput="var s=document.getElementById('geo-example-select'); if(s) s.value='';"></label>
         <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
       </form>
     </dd>
@@ -96,14 +98,7 @@
     <dl class="region-left" id="tile-layer-controls-main">
       <dt>Map Layer</dt>
       <dd>
-        <select id="tile-select-main">
-          <option value="Standard">Standard</option>
-          <option value="CyclOSM">CyclOSM</option>
-          <option value="Humanitarian">Humanitarian</option>
-          <option value="OpenTopoMap">OpenTopoMap</option>
-          <option value="CARTO Positron">CARTO Positron</option>
-          <option value="CARTO Dark Matter">CARTO Dark Matter</option>
-        </select>
+        <select id="tile-select-main"></select>
         <button type="button"
                 onclick="switchOsmTileLayer('map-main', document.getElementById('tile-select-main').value)">Load</button>
       </dd>
@@ -141,6 +136,12 @@
   <script src="map.js"></script>
   <script>initOsmMap('map-main', 50, 10, 4);</script>
   <script>
+(function() {
+  var ts = document.getElementById('tile-select-main');
+  Object.keys(OSM_TILE_LAYERS).forEach(function(name) {
+    var o = document.createElement('option'); o.value = o.textContent = name; ts.appendChild(o);
+  });
+})();
 fetch('examples.json').then(r => r.json()).then(ex => {
   function addOpt(sel, val, text) {
     var o = document.createElement('option');

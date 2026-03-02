@@ -10,7 +10,9 @@ var OSM_TILE_LAYERS = {
     'CARTO Positron':   { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
                           attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO' },
     'CARTO Dark Matter': { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                           attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO' }
+                           attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO' },
+    'Transport (\u00d6PNVKarte)': { url: 'https://tile.memomaps.de/tilegen/{z}/{x}/{y}.png',
+                                    attribution: 'Map \u00a9 <a href="https://memomaps.de/">memomaps.de</a> CC-BY-SA, map data \u00a9 OpenStreetMap ODbL' }
 };
 
 function _updateTileStatus(mapId) {
@@ -152,7 +154,9 @@ function _ttlUrl(url) {
 
 function _formatLinksHtml(url, sourceUrl) {
     var rdf = _rdfUrl(url);
-    var html = '<a href="' + escHtml(url) + '">JSON</a>';
+    var qi = url.indexOf('?');
+    var jsonUrl = qi >= 0 ? url.slice(0, qi) + '.json' + url.slice(qi) : url + '.json';
+    var html = '<a href="' + escHtml(jsonUrl) + '">JSON</a>';
     if (/^\/(map|node\/|way\/|relation\/)/.test(url)) {
         html += ' \u00b7 <a href="https://api.openstreetmap.org/api/0.6' + escHtml(url)
               + '" target="_blank">OSM XML</a>';
@@ -214,7 +218,7 @@ function _renderFeaturePanel(state, idx) {
     html += formatBar;
     state.featurePanel.innerHTML = html;
     state.currentIdx = idx;
-    // Sync node/way/relation input with the feature now shown in the panel
+    // Sync node/way/relation input with the feature now shown in the panel; reset example dropdown
     if (props.osm_type && props.osm_id) {
         var geoForm = document.forms['geo-form'];
         if (geoForm) {
@@ -223,6 +227,8 @@ function _renderFeaturePanel(state, idx) {
                 if (el) el.value = (t === String(props.osm_type)) ? String(props.osm_id) : '';
             });
         }
+        var geoExSel = document.getElementById('geo-example-select');
+        if (geoExSel) geoExSel.value = '';
     }
 }
 
@@ -253,6 +259,7 @@ function _navFeature(mapId, idx) {
 
 function _renderFeatures(state, geojson) {
     var featureIdx = 0;
+    var polygonLayers = [], lineLayers = [], pointLayers = [];
     L.geoJSON(geojson, {
         style: function(feature) {
             var t = (feature.geometry && feature.geometry.type) || '';
@@ -269,10 +276,13 @@ function _renderFeatures(state, geojson) {
             var t = (feature.geometry && feature.geometry.type) || '';
             if (t.indexOf('Polygon') !== -1) {
                 layer._origStyle = { color: '#3388ff', weight: 2, fillColor: '#3388ff', fillOpacity: 0.2 };
+                polygonLayers.push(layer);
             } else if (t.indexOf('Line') !== -1) {
                 layer._origStyle = { color: '#ff3333', weight: 2 };
+                lineLayers.push(layer);
             } else {
                 layer._origStyle = { color: '#33cc33', weight: 2, fillColor: '#33cc33', fillOpacity: 0.5 };
+                pointLayers.push(layer);
             }
             layer.on('click', function(e) {
                 L.DomEvent.stopPropagation(e);
@@ -286,7 +296,11 @@ function _renderFeatures(state, geojson) {
                 _renderFeaturePanel(st, this._featureIdx);
             });
         }
-    }).eachLayer(function(l) { state.featureLayer.addLayer(l); });
+    });
+    // Add in z-order: polygons first (bottom), lines middle, points on top so they stay clickable
+    polygonLayers.forEach(function(l) { state.featureLayer.addLayer(l); });
+    lineLayers.forEach(function(l) { state.featureLayer.addLayer(l); });
+    pointLayers.forEach(function(l) { state.featureLayer.addLayer(l); });
 }
 
 function loadGeoJsonUrl(mapId, url, statusEl) {
