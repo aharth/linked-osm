@@ -21,6 +21,11 @@ function setStatus(el, text, spinning) {
     el.classList.toggle('spinner', !!spinning);
 }
 
+function setStatusHtml(el, html, spinning) {
+    el.innerHTML = html;
+    el.classList.toggle('spinner', !!spinning);
+}
+
 function propsToHtml(props) {
     var html = '<dl>';
     for (var k in props) {

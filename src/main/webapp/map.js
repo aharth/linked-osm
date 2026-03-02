@@ -214,6 +214,16 @@ function _renderFeaturePanel(state, idx) {
     html += formatBar;
     state.featurePanel.innerHTML = html;
     state.currentIdx = idx;
+    // Sync node/way/relation input with the feature now shown in the panel
+    if (props.osm_type && props.osm_id) {
+        var geoForm = document.forms['geo-form'];
+        if (geoForm) {
+            ['node', 'way', 'relation'].forEach(function(t) {
+                var el = geoForm.elements[t];
+                if (el) el.value = (t === String(props.osm_type)) ? String(props.osm_id) : '';
+            });
+        }
+    }
 }
 
 function _renderDefaultPanel(state) {
