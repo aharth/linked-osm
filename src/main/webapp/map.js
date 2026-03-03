@@ -49,6 +49,13 @@ function initOsmMap(id, lat, lon, zoom) {
     var fg = L.featureGroup().addTo(m);
     var suffix = id.replace('map-', '');
     var panelEl = document.getElementById('feature-panel-' + suffix);
+    if (panelEl) {
+        panelEl.addEventListener('click', function() {
+            var st = window.maps[id];
+            if (!st || st.currentIdx < 0) return;
+            _navFeature(id, st.currentIdx);
+        });
+    }
     window.maps[id] = { map: m, tileLayer: tl, featureLayer: fg, fetchEpoch: 0, bboxLayer: null,
                            featurePanel: panelEl, highlightedLayer: null,
                            mapId: id, loadedFeatures: [], loadedUrl: null, currentIdx: -1,
@@ -61,8 +68,6 @@ function initOsmMap(id, lat, lon, zoom) {
                 st.highlightedLayer.setStyle(st.highlightedLayer._origStyle);
             st.highlightedLayer = null;
         }
-        st.currentIdx = -1;
-        _renderDefaultPanel(st);
     });
 
     function updateBbox() {
@@ -205,11 +210,6 @@ function _wrapGeometry(obj) {
     return obj;
 }
 
-function _renderSummaryPanel(state) {
-    if (!state.featurePanel) return;
-    state.featurePanel.innerHTML = '';
-}
-
 function _renderFeaturePanel(state, idx) {
     if (!state.featurePanel) return;
     var n = state.loadedFeatures.length;
@@ -258,14 +258,6 @@ function _renderFeaturePanel(state, idx) {
         var geoExSel = document.getElementById('geo-example-select');
         if (geoExSel) geoExSel.value = '';
     }
-}
-
-function _renderDefaultPanel(state) {
-    if (!state.featurePanel) return;
-    var n = state.loadedFeatures.length;
-    if (n === 0) { state.featurePanel.innerHTML = ''; }
-    else if (n === 1) { _renderFeaturePanel(state, 0); }
-    else { _renderSummaryPanel(state); }
 }
 
 function _navFeature(mapId, idx) {
@@ -350,9 +342,10 @@ function _setFetchState(mapId, newState, opts) {
     }
 }
 
-function loadGeoJsonUrl(mapId, url, statusEl) {
+function loadGeoJsonUrl(mapId, url) {
     var state = window.maps[mapId];
     if (!state) return;
+    var statusEl = document.getElementById('status-' + mapId.replace('map-', ''));
 
     state.fetchEpoch += 1;
     var epoch = state.fetchEpoch;
@@ -395,7 +388,7 @@ function loadGeoJsonUrl(mapId, url, statusEl) {
             state.currentIdx = -1;
             _renderFeatures(state, geojson);
             if (geojson.features.length > 0) { _navFeature(mapId, 0); }
-            else { _renderDefaultPanel(state); }
+            else { if (state.featurePanel) state.featurePanel.innerHTML = ''; }
             var count = state.featureLayer.getLayers().length;
             _setFetchState(mapId, 'loaded', { url: url, statusEl: statusEl, count: count, sourceUrl: sourceUrl });
             _updateSource(mapId, _attributionFor(url));

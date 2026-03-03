@@ -24,9 +24,9 @@
       <dt>Search</dt>
       <dd>
         <input type="text" id="search-input-main" placeholder="place name"
-               onkeydown="if(event.key==='Enter') loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(this.value),document.getElementById('status-main'))">
+               onkeydown="if(event.key==='Enter') loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(this.value))">
         <button type="button"
-                onclick="loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(document.getElementById('search-input-main').value),document.getElementById('status-main'))">Search</button>
+                onclick="loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(document.getElementById('search-input-main').value))">Search</button>
       </dd>
     </dl>
     <dl>
@@ -57,11 +57,11 @@
     <dd>
       <form name="geo-form" onsubmit="return false;">
         <label>node: <input type="text" name="node" size="10"></label>
-        <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+        <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v));">Load</button>
         <label>way: <input type="text" name="way" size="10"></label>
-        <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+        <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v));">Load</button>
         <label>relation: <input type="text" name="relation" size="10"></label>
-        <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v),document.getElementById('status-main'));">Load</button>
+        <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v));">Load</button>
       </form>
     </dd>
   </dl>
@@ -97,20 +97,19 @@
         <dt>Map data by bounding box</dt>
         <dd>
           <button type="button"
-                  onclick="loadGeoJsonUrl('map-main','/map?bbox='+encodeURIComponent(getBboxString('map-main')),document.getElementById('status-main'))">Load</button>
+                  onclick="loadGeoJsonUrl('map-main','/map?bbox='+encodeURIComponent(getBboxString('map-main')))">Load</button>
         </dd>
         <dt>Points of Interest by bounding box</dt>
         <dd>
           <button type="button"
-                  onclick="loadGeoJsonUrl('map-main','/poi?bbox='+encodeURIComponent(getBboxString('map-main')),document.getElementById('status-main'))">Load</button>
+                  onclick="loadGeoJsonUrl('map-main','/poi?bbox='+encodeURIComponent(getBboxString('map-main')))">Load</button>
         </dd>
         <dt>Nodes around a point</dt>
         <dd>
           radius (m): <input type="text" id="around-radius-main" value="100" size="6">
           <button type="button"
                   onclick="var st=window.maps['map-main'],c=st.map.getCenter();
-                           loadGeoJsonUrl('map-main','/around?lon='+c.lng.toFixed(6)+'&lat='+c.lat.toFixed(6)+'&radius='+encodeURIComponent(document.getElementById('around-radius-main').value),
-                           document.getElementById('status-main'))">Load</button>
+                           loadGeoJsonUrl('map-main','/around?lon='+c.lng.toFixed(6)+'&lat='+c.lat.toFixed(6)+'&radius='+encodeURIComponent(document.getElementById('around-radius-main').value))">Load</button>
         </dd>
       </dl>
     </div>
