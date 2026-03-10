@@ -25,13 +25,13 @@
              onkeydown="if(event.key==='Enter') setMapLocation('map-view',this.value)">
       <button type="button"
               onclick="setMapLocation('map-view',document.getElementById('bbox-input-view').value)">Go</button>
-      <span id="bbox-zoom-view"></span>
     </dd>
   </dl>
   <div class="osm-map-cols">
     <div><div id="map-view" class="map"></div></div>
     <div id="feature-panel-view" class="feature-panel"></div>
   </div>
+  <p id="bbox-zoom-view" class="map-controls"></p>
   <p id="links-view" class="map-controls"></p>
   <p id="status-view" class="map-controls"></p>
 

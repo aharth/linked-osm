@@ -45,6 +45,8 @@ function switchOsmTileLayer(mapId, layerName) {
 
 function initOsmMap(id, lat, lon, zoom) {
     var m = L.map(id).setView([lat, lon], zoom);
+    m.createPane('bboxPane');
+    m.getPane('bboxPane').style.zIndex = 450;
     var tl = L.tileLayer(OSM_TILE_LAYERS['Standard'].url, { attribution: '' }).addTo(m);
     var fg = L.featureGroup().addTo(m);
     var suffix = id.replace('map-', '');
@@ -76,7 +78,18 @@ function initOsmMap(id, lat, lon, zoom) {
         if (inputEl) inputEl.value = b.getWest().toFixed(6) + ',' + b.getSouth().toFixed(6) + ','
                                    + b.getEast().toFixed(6) + ',' + b.getNorth().toFixed(6);
         var zoomEl = document.getElementById('bbox-zoom-' + suffix);
-        if (zoomEl) zoomEl.textContent = 'zoom: ' + m.getZoom();
+        if (zoomEl) {
+            var _b2 = m.getBounds();
+            var _R = 6371;
+            var _lat1 = _b2.getSouth() * Math.PI / 180;
+            var _lat2 = _b2.getNorth() * Math.PI / 180;
+            var _dLon = Math.abs(_b2.getEast() - _b2.getWest()) * Math.PI / 180;
+            var _area = Math.abs(_R * _dLon * Math.cos((_lat1 + _lat2) / 2) * _R * Math.abs(_lat2 - _lat1));
+            var _areaStr = _area >= 1
+                ? _area.toFixed(_area >= 100 ? 0 : 1) + '\u00a0km\u00b2'
+                : (_area * 1e6).toFixed(0) + '\u00a0m\u00b2';
+            zoomEl.textContent = 'zoom: ' + m.getZoom() + ' \u00b7 ' + _areaStr;
+        }
         var tileEl = document.getElementById('tile-link-' + suffix);
         if (tileEl) {
             var c = m.getCenter();
@@ -361,8 +374,12 @@ function loadGeoJsonUrl(mapId, url) {
     var bbox = _parseBbox(url);
     if (bbox) {
         state.bboxLayer = L.rectangle([[bbox[1], bbox[0]], [bbox[3], bbox[2]]], {
-            color: '#888', weight: 3, fillOpacity: 0, dashArray: '6 4', interactive: false
+            color: '#888', weight: 3, fill: false, dashArray: '6 4', pane: 'bboxPane'
         }).addTo(state.map);
+        state.bboxLayer.on('click', function(e) {
+            L.DomEvent.stopPropagation(e);
+            state.map.fitBounds(this.getBounds());
+        });
     }
     _setFetchState(mapId, 'loading', { url: url, statusEl: statusEl });
 

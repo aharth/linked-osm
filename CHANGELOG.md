@@ -2,6 +2,9 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-03-10]
+- `map.js`: bbox rectangle rendered in a dedicated Leaflet pane (z-index 450) so it appears above feature layers and is clickable; clicking the frame zooms the map to the query bbox; area of current map view displayed alongside zoom level (e.g. `zoom: 14 · 3.2 km²`)
+
 ## [2026-03-02]
 - Bidirectional wiring of ID inputs ↔ feature panel: selecting a feature on the map (by click or prev/next navigation) now updates the node/way/relation text inputs in `geo-form` (linked-osm) and the GML `fid-input` field (linked-inspire); example dropdowns fill the relevant text input on change instead of triggering a load directly, with their redundant Load buttons removed
 

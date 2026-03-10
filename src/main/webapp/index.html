@@ -43,7 +43,6 @@
                onkeydown="if(event.key==='Enter') setMapLocation('map-main',this.value)">
         <button type="button"
                 onclick="setMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
-        <span id="bbox-zoom-main"></span>
       </dd>
     </dl>
   </div>
@@ -74,6 +73,7 @@
     </div>
 
     <div class="region-left">
+      <p id="bbox-zoom-main" class="map-controls"></p>
       <p id="tile-status-main" class="map-controls"></p>
       <p id="tile-link-main" class="map-controls"></p>
       <p id="tile-source-main" class="map-controls wms-source"></p>
