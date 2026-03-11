@@ -174,6 +174,24 @@ function _parseBbox(url) {
     return n; // [W, S, E, N]
 }
 
+function _makeBboxLayer(map, west, south, east, north) {
+    var rect = L.rectangle([[south, west], [north, east]], {
+        color: '#888', weight: 3, fill: false, dashArray: '6 4', pane: 'bboxPane'
+    }).addTo(map);
+    rect.on('mouseover', function() {
+        this.setStyle({ color: '#444', weight: 4, dashArray: '6 4' });
+        this.getElement() && (this.getElement().style.cursor = 'pointer');
+    });
+    rect.on('mouseout', function() {
+        this.setStyle({ color: '#888', weight: 3, dashArray: '6 4' });
+    });
+    rect.on('click', function(e) {
+        L.DomEvent.stopPropagation(e);
+        map.fitBounds(this.getBounds());
+    });
+    return rect;
+}
+
 function _attributionFor(url) {
     if (/\/search/.test(url)) return 'Nominatim \u00b7 \u00a9 OpenStreetMap contributors';
     return '\u00a9 OpenStreetMap contributors';
@@ -373,13 +391,7 @@ function loadGeoJsonUrl(mapId, url) {
     _updateSource(mapId, null);
     var bbox = _parseBbox(url);
     if (bbox) {
-        state.bboxLayer = L.rectangle([[bbox[1], bbox[0]], [bbox[3], bbox[2]]], {
-            color: '#888', weight: 3, fill: false, dashArray: '6 4', pane: 'bboxPane'
-        }).addTo(state.map);
-        state.bboxLayer.on('click', function(e) {
-            L.DomEvent.stopPropagation(e);
-            state.map.fitBounds(this.getBounds());
-        });
+        state.bboxLayer = _makeBboxLayer(state.map, bbox[0], bbox[1], bbox[2], bbox[3]);
     }
     _setFetchState(mapId, 'loading', { url: url, statusEl: statusEl });
 

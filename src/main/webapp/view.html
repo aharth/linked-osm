@@ -93,10 +93,7 @@
                 var west = parseFloat(parts[0]), south = parseFloat(parts[1]);
                 var east = parseFloat(parts[2]), north = parseFloat(parts[3]);
                 var state = window.maps['map-view'];
-                L.rectangle([[south, west], [north, east]], {
-                    color: '#666', weight: 2, dashArray: '6 4',
-                    fill: false, interactive: false
-                }).addTo(state.map);
+                _makeBboxLayer(state.map, west, south, east, north);
             }
         }
 
