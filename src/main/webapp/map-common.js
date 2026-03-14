@@ -48,7 +48,6 @@ function propsToHtml(props) {
         var dt;
         if (k.match(/^https?:\/\//)) {
             var label = k.includes('#') ? k.split('#').pop() : k.split('/').filter(Boolean).pop();
-            if (label.startsWith('Key:')) label = label.slice(4);
             dt = '<a href="' + escHtml(k) + '" target="_blank">' + escHtml(label) + '</a>';
         } else if (k.match(/^\//)) {
             var label = k.includes('#') ? k.split('#').pop() : k.split('/').filter(Boolean).pop();

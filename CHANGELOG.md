@@ -2,6 +2,24 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-03-15]
+- **`/tag/{key}={value}`**: `TagServlet` now routes `key=value` paths to a new `handleTagValueRequest`; `TaginfoConverter` fetches Taginfo `/api/4/tag/overview?key=K&value=V` and emits a SKOS description with `skos:broader /tag/{key}` and `rdfs:seeAlso` to the OSM wiki `Tag:` page
+- **`TaginfoConverter` URI encoding**: tag values in `rdf:resource`/`rdf:about` now percent-encoded via `uriEncodeValue()` — fixes 500 on keys with space-containing values (e.g. `communication:microwave=emergency services`)
+- **`RdfFilter` Jena base**: changed from full request URL to site root (`https://host/`) — fixes 500 when Jena relativised URIs with `:` in the first path segment
+- **Overpass XML link**: feature panel Overpass column now links to Overpass API XML instead of OSM API XML
+- **Overpass example dropdown**: Overpass Feature-by-ID form now has an example select populated from `examples.json`; OSM example select renamed `osm-example-select`
+- **FAQ**: two new entries — OSM vs Overpass bbox differences (area limit, relations skipped); Overpass `>>` recursive member resolution for single relations
+
+## [2026-03-14] (2)
+- **RDF/GeoJSON URI alignment**: tag key URIs changed from `http://wiki.openstreetmap.org/wiki/Key:{key}` to local `/tag/{key}` (served by `TagServlet`) in both GeoJSON properties and RDF output; `map-common.js` `Key:` prefix stripping removed
+- **XSLT namespace overhaul** (node.xsl, way.xsl, relation.xsl): removed `xmlns="http://osm.geovocab.org/vocab#"` default namespace; added `xmlns:osm="https://osmwrap.ontologycentral.com/vocab#"` and `xmlns:osmt="https://osmwrap.ontologycentral.com/tag/"`; generic tag template now emits `<osmt:{key}>` for simple keys and `<osm:tag osm:key="..." osm:value="..."/>` for keys containing `:` (previously dropped)
+- **way.xsl / relation.xsl tag coverage**: added generic tag template — previously all tags except `name:en`, `wikipedia`, `wikidata` were silently dropped; now all tags are emitted
+- **`rdf:type` + `dcterms:identifier`**: each `spatial:Feature` now asserts `rdf:type osm:Node/Way/Relation` and `dcterms:identifier` (numeric OSM ID)
+- **`source-prefix` XSLT parameter**: `foaf:page`, `rdf:about`, and `prov:used` URIs in all three XSLT stylesheets now use `{$source-prefix}` (default `/osm`); `FeatureServlet` passes `/osm`, `OverpassElementServlet` passes `/overpass` — fixing broken `foaf:page` links that previously pointed to `/node/` instead of `/osm/node/` or `/overpass/node/`
+- **`osmFeatureToGeoJson` sourcePrefix**: `GeoJsonConverter.osmFeatureToGeoJson` takes a new `sourcePrefix` arg; `FeatureServlet` passes `"/osm"` so GeoJSON `"id"` field is `/osm/{type}/{id}#id`
+- **`TaginfoConverter` linked data**: single-key `/tag/{key}` response now emits `rdfs:label`, `rdfs:seeAlso` (OSM wiki URL), and `rdf:type rdf:Property`
+- **Overpass Feature-by-ID form**: `index.html` Overpass column (si=2) now has node/way/relation ID inputs that call `loadGeoJsonUrl('map-main', '/overpass/{type}/{id}', 2)`
+
 ## [2026-03-14]
 - **4-column layout**: `map.css` grid changed to `32rem 1fr 1fr 1fr`; one column per source — map, Nominatim (si=0), OSM API (si=1), Overpass (si=2); `map.js` state arrays per-si (`featureLayers`, `featurePanels`, `fetchEpochBySi`, `controllerBySi`, `loadedFeaturesBySi`, `loadedUrlBySi`, `currentIdxBySi`); `loadGeoJsonUrl`, `_setFetchState`, `_updateSource`, `_renderFeatures`, `_navFeature`, `_renderFeaturePanel` all take explicit `si` argument
 - **Source-prefixed URL mappings**: `FeatureServlet` moved to `/osm/node/*`, `/osm/way/*`, `/osm/relation/*`; `SearchServlet` to `/nominatim/search`; `MapServlet` to `/osm/map`; `POIServlet` to `/overpass/poi`; `AroundServlet` to `/overpass/around`; new `OverpassFeaturesServlet` at `/overpass/features` with `bbox` and `type` (node/way/relation/nwr) parameters

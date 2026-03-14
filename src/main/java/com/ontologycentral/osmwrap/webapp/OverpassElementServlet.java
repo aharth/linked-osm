@@ -110,6 +110,7 @@ public class OverpassElementServlet extends HttpServlet {
 				String tmplKey = "/" + elementType + "/";
 				Templates tmpl = (Templates) ctx.getAttribute(tmplKey);
 				Transformer t = tmpl.newTransformer();
+				t.setParameter("source-prefix", "/overpass");
 				if ("relation".equals(elementType)) {
 					t.setParameter("element-id", id);
 				}

@@ -66,8 +66,10 @@ public class RdfFilter implements Filter {
 		if (host == null) host = httpRequest.getHeader("Host");
 		if (host == null) host = httpRequest.getServerName();
 		String queryString = httpRequest.getQueryString();
-		String base = proto + "://" + host + requestPath
-				+ (queryString != null ? "?" + queryString : "");
+		// Use site root as Jena base so relative URI references like /tag/name:en
+		// are relativised to tag/name:en (first segment "tag" has no colon) rather
+		// than name:en (first segment "name:en" has a colon, ambiguous with URI scheme).
+		String base = proto + "://" + host + "/";
 
 		if (serveTurtle && contentType != null && contentType.contains("application/rdf+xml")) {
 			byte[] original = capture.toByteArray();

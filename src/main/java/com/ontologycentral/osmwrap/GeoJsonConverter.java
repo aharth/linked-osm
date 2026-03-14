@@ -26,12 +26,10 @@ public final class GeoJsonConverter {
 	private static final Pattern TAG_PATTERN =
 		Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
 
-	private static final String OSM_KEY_BASE = "http://wiki.openstreetmap.org/wiki/Key:";
-
 	private GeoJsonConverter() {}
 
 	private static String osmTagKey(String key) {
-		return OSM_KEY_BASE + key;
+		return "/tag/" + key;
 	}
 
 	private static String transformOsmValue(String key, String value) {
@@ -317,7 +315,7 @@ public final class GeoJsonConverter {
 	 * @param geometryJson pre-computed GeoJSON geometry object string, or null
 	 */
 	public static String osmFeatureToGeoJson(String xml, String elementType, String id,
-			String geometryJson) {
+			String geometryJson, String sourcePrefix) {
 		StringBuilder props = new StringBuilder();
 		props.append("\"osm_type\":\"").append(escapeJson(elementType)).append("\"");
 		props.append(",\"osm_id\":\"").append(escapeJson(id)).append("\"");
@@ -332,7 +330,7 @@ public final class GeoJsonConverter {
 
 		return "{\"type\":\"Feature\""
 				+ ",\"@context\":\"https://geojson.org/geojson-ld/geojson-context.jsonld\""
-				+ ",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#id\""
+				+ ",\"id\":\"" + sourcePrefix + "/" + elementType + "/" + escapeJson(id) + "#id\""
 				+ ",\"properties\":{" + props + "}"
 				+ ",\"geometry\":" + (geometryJson != null ? geometryJson : "null")
 				+ "}";

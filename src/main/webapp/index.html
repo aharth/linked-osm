@@ -26,7 +26,7 @@
         <dt>Location</dt>
         <dd>
           <select id="loc-main">
-            <option value="">&#x2014; example select &#x2014;</option>
+            <option value="">&#x2014; select example &#x2014;</option>
           </select>
         </dd>
         <dd>
@@ -44,7 +44,7 @@
       <dl>
         <dt>Feature by ID</dt>
         <dd>
-          <select id="geo-example-select">
+          <select id="osm-example-select">
             <option value="">&#x2014; select example &#x2014;</option>
           </select>
         </dd>
@@ -60,7 +60,26 @@
         </dd>
       </dl>
     </div>
-    <div></div>
+    <div>
+      <dl>
+        <dt>Feature by ID</dt>
+        <dd>
+          <select id="overpass-example-select">
+            <option value="">&#x2014; select example &#x2014;</option>
+          </select>
+        </dd>
+        <dd>
+          <form name="overpass-form" onsubmit="return false;">
+            <label>node: <input type="text" name="node" size="10"></label>
+            <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/overpass/node/'+encodeURIComponent(v),2);">Load</button>
+            <label>way: <input type="text" name="way" size="10"></label>
+            <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/overpass/way/'+encodeURIComponent(v),2);">Load</button>
+            <label>relation: <input type="text" name="relation" size="10"></label>
+            <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/overpass/relation/'+encodeURIComponent(v),2);">Load</button>
+          </form>
+        </dd>
+      </dl>
+    </div>
 
     <!-- Row 1: map + panels -->
     <div id="map-main" class="map"></div>
@@ -167,8 +186,11 @@ fetch('examples.json').then(r => r.json()).then(ex => {
   var loc = document.getElementById('loc-main');
   ex.map.forEach(m => addOpt(loc, m.bbox, m.label));
 
-  var geo = document.getElementById('geo-example-select');
+  var geo = document.getElementById('osm-example-select');
   ex.features.forEach(f => addOpt(geo, '/'+f.type+'/'+f.id, f.type+'/'+f.id+' \u2014 '+f.label));
+
+  var ovp = document.getElementById('overpass-example-select');
+  ex.features.forEach(f => addOpt(ovp, '/'+f.type+'/'+f.id, f.type+'/'+f.id+' \u2014 '+f.label));
 });
   </script>
 </body>

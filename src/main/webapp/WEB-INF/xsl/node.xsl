@@ -4,6 +4,7 @@
    xmlns:foaf="http://xmlns.com/foaf/0.1/"
    xmlns:owl="http://www.w3.org/2002/07/owl#"
    xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:dcterms="http://purl.org/dc/terms/"
    xmlns:sioc="http://rdfs.org/sioc/ns#"
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:spatial="http://geovocab.org/spatial#"
@@ -12,15 +13,17 @@
    xmlns:locn="http://www.w3.org/ns/locn#"
    xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:dcat="http://www.w3.org/ns/dcat#"
+   xmlns:osm="https://osmwrap.ontologycentral.com/vocab#"
+   xmlns:osmt="https://osmwrap.ontologycentral.com/tag/"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-   xmlns="http://osm.geovocab.org/vocab#"
    version="2.0">
-  
+
   <xsl:output method="xml"/>
 
   <xsl:strip-space elements="*"/>
 
   <xsl:param name="upstream-bytes" select="-1"/>
+  <xsl:param name="source-prefix" select="'/osm'"/>
 
   <xsl:template match="osm">
     <rdf:RDF>
@@ -42,7 +45,7 @@
         <rdfs:label>OSM XML to RDF Node Transformation</rdfs:label>
         <prov:used>
           <prov:Entity>
-            <xsl:attribute name="rdf:about">https://api.openstreetmap.org/api/0.6/node/<xsl:value-of select="node/@id"/></xsl:attribute>
+            <xsl:attribute name="rdf:about"><xsl:value-of select="$source-prefix"/>/node/<xsl:value-of select="node/@id"/></xsl:attribute>
             <xsl:if test="$upstream-bytes >= 0">
               <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
             </xsl:if>
@@ -65,17 +68,19 @@
 
   <xsl:template match="node">
       <spatial:Feature>
-	<xsl:attribute name="rdf:about">/node/<xsl:value-of select="@id"/>#id</xsl:attribute>
+	<xsl:attribute name="rdf:about"><xsl:value-of select="$source-prefix"/>/node/<xsl:value-of select="@id"/>#id</xsl:attribute>
+	<rdf:type rdf:resource="https://osmwrap.ontologycentral.com/vocab#Node"/>
+	<dcterms:identifier><xsl:value-of select="@id"/></dcterms:identifier>
 	<geo:lat><xsl:value-of select="@lat"/></geo:lat>
 	<geo:long><xsl:value-of select="@lon"/></geo:long>
 
 	<!-- Links to document representations -->
 	<foaf:page rdf:resource="https://www.openstreetmap.org/node/{@id}"/>
-	<foaf:page rdf:resource="/node/{@id}.rdf"/>
-	<foaf:page rdf:resource="/node/{@id}.json"/>
+	<foaf:page><xsl:attribute name="rdf:resource"><xsl:value-of select="$source-prefix"/>/node/<xsl:value-of select="@id"/>.rdf</xsl:attribute></foaf:page>
+	<foaf:page><xsl:attribute name="rdf:resource"><xsl:value-of select="$source-prefix"/>/node/<xsl:value-of select="@id"/>.json</xsl:attribute></foaf:page>
 
 	<!-- Geometry representation -->
-	<geom:geometry rdf:resource="/node/{@id}#geo"/>
+	<geom:geometry><xsl:attribute name="rdf:resource"><xsl:value-of select="$source-prefix"/>/node/<xsl:value-of select="@id"/>#geo</xsl:attribute></geom:geometry>
 
 	<!-- PROV-O properties -->
 	<xsl:if test="@changeset">
@@ -105,7 +110,7 @@
 
       <!-- Geometry resource -->
       <geom:Geometry>
-	<xsl:attribute name="rdf:about">/node/<xsl:value-of select="@id"/>#geo</xsl:attribute>
+	<xsl:attribute name="rdf:about"><xsl:value-of select="$source-prefix"/>/node/<xsl:value-of select="@id"/>#geo</xsl:attribute>
 	<geo:lat><xsl:value-of select="@lat"/></geo:lat>
 	<geo:long><xsl:value-of select="@lon"/></geo:long>
 	<locn:geometry rdf:parseType="Literal">
@@ -166,11 +171,15 @@
 
   <xsl:template match="tag">
     <xsl:variable name="tag" select="@k"/>
-
-    <xsl:if test="not(contains($tag, ':'))">
-      <xsl:element name="{$tag}">
-	<xsl:value-of select="@v"/>
-      </xsl:element>
-    </xsl:if>
+    <xsl:choose>
+      <xsl:when test="not(contains($tag, ':'))">
+        <xsl:element name="osmt:{$tag}" namespace="https://osmwrap.ontologycentral.com/tag/">
+          <xsl:value-of select="@v"/>
+        </xsl:element>
+      </xsl:when>
+      <xsl:otherwise>
+        <osm:tag osm:key="/tag/{encode-for-uri(@k)}" osm:value="{@v}"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 </xsl:stylesheet>

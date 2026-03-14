@@ -212,7 +212,7 @@ public class FeatureServlet extends HttpServlet {
 				resp.setContentType("application/geo+json");
 				String elementType = ctrl.substring(1, ctrl.length() - 1);
 				GeoJsonConverter.GeometryResult geomResult = GeoJsonConverter.extractGeometryJson(xml, elementType, id);
-				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(xml, elementType, id, geomResult.geometryJson);
+				String geoJson = GeoJsonConverter.osmFeatureToGeoJson(xml, elementType, id, geomResult.geometryJson, "/osm");
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else if (format.equals("gml")) {
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl + ".gml");
@@ -223,6 +223,7 @@ public class FeatureServlet extends HttpServlet {
 				// RDF format - use existing XSLT transformation
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl);
 				Transformer t = tmpl.newTransformer();
+				t.setParameter("source-prefix", "/osm");
 				if (byteCount >= 0) {
 					t.setParameter("upstream-bytes", byteCount);
 				}

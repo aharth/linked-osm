@@ -159,7 +159,7 @@ function initOsmMap(id, lat, lon, zoom) {
     }
 
     // Wire example dropdown ↔ node/way/relation inputs (bidirectional) — si=1 only
-    var geoExSel = document.getElementById('geo-example-select');
+    var geoExSel = document.getElementById('osm-example-select');
     var geoForm  = document.forms['geo-form'];
     if (geoExSel && geoForm) {
         geoExSel.addEventListener('change', function() {
@@ -173,6 +173,24 @@ function initOsmMap(id, lat, lon, zoom) {
         ['node', 'way', 'relation'].forEach(function(t) {
             var el = geoForm.elements[t];
             if (el) el.addEventListener('input', function() { geoExSel.value = ''; });
+        });
+    }
+
+    // Wire overpass example dropdown → node/way/relation inputs — si=2
+    var ovpExSel = document.getElementById('overpass-example-select');
+    var ovpForm  = document.forms['overpass-form'];
+    if (ovpExSel && ovpForm) {
+        ovpExSel.addEventListener('change', function() {
+            var match = this.value && this.value.match(/^\/(node|way|relation)\/(\d+)$/);
+            if (!match) return;
+            ['node', 'way', 'relation'].forEach(function(t) {
+                var el = ovpForm.elements[t];
+                if (el) el.value = (t === match[1]) ? match[2] : '';
+            });
+        });
+        ['node', 'way', 'relation'].forEach(function(t) {
+            var el = ovpForm.elements[t];
+            if (el) el.addEventListener('input', function() { ovpExSel.value = ''; });
         });
     }
 }
@@ -308,10 +326,19 @@ function _renderFeaturePanel(state, idx, si) {
         var i = escHtml(String(props.osm_id));
         var base = (si === 2 ? '/overpass/' : '/osm/') + t + '/' + i;
         html += '<p><a href="' + base + '">' + base + '</a></p>';
+        var xmlLink;
+        if (si === 2) {
+            var ovpQ;
+            if (t === 'node')     ovpQ = '[out:xml][timeout:60]; node(' + i + '); out body;';
+            else if (t === 'way') ovpQ = '[out:xml][timeout:60]; way(' + i + '); out body; >; out skel qt;';
+            else                  ovpQ = '[out:xml][timeout:60]; relation(' + i + '); out body; >>; out skel qt;';
+            xmlLink = '<a href="https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(ovpQ) + '" target="_blank">Overpass XML</a>';
+        } else {
+            xmlLink = '<a href="https://api.openstreetmap.org/api/0.6/' + t + '/' + i + '" target="_blank">OSM XML</a>';
+        }
         formatBar = '<p>'
               + '<a href="' + base + '.json">JSON</a>'
-              + ' \u00b7 <a href="https://api.openstreetmap.org/api/0.6/' + t + '/' + i
-              + '" target="_blank">OSM XML</a>'
+              + ' \u00b7 ' + xmlLink
               + ' \u00b7 <a href="' + base + '.rdf">RDF/XML</a>'
               + ' \u00b7 <a href="' + base + '.ttl">Turtle</a>'
               + ' \u00b7 <a href="/sparql#from=' + base + '.rdf">SPARQL</a>'
@@ -330,7 +357,7 @@ function _renderFeaturePanel(state, idx, si) {
                 if (el) el.value = (tp === String(props.osm_type)) ? String(props.osm_id) : '';
             });
         }
-        var geoExSel = document.getElementById('geo-example-select');
+        var geoExSel = document.getElementById('osm-example-select');
         if (geoExSel) geoExSel.value = '';
     }
 }

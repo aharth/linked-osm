@@ -28,101 +28,16 @@ target/linked-osm-1.0.0-SNAPSHOT.war
 
 Requires **Tomcat 10 or higher** for Jakarta EE support.
 
-## API Endpoints
+## Tag Information
 
-### Feature data — nodes, ways, relations, changesets
+`/tag/{key}` (e.g. `/tag/oneway`) returns a SKOS description of the tag key with usage statistics from [taginfo.openstreetmap.org](https://taginfo.openstreetmap.org/).
+`/tag/{key}={value}` (e.g. `/tag/tower:construction=All_India_radio_tower`) returns a SKOS description of that specific key–value combination with its own usage statistics and a `skos:broader` link back to the key.
+Keys with a colon (e.g. `/tag/tower:construction`) are namespace variants of a base key (e.g. `/tag/tower`); the base key lists them as `skos:narrower` concepts.
+OSM tags are free-form key–value pairs: some keys act as flags whose presence alone carries meaning (e.g. `oneway=yes`, where the value is essentially boolean), some have a controlled vocabulary of values (e.g. `amenity=cafe`, `natural=water`), some carry free text (e.g. `name=…`, `description=…`), and some use a colon-namespaced key for language or role variants (e.g. `name:en=…`, `tower:construction=…`).
+Tag descriptions link to the corresponding [OpenStreetMap wiki](https://wiki.openstreetmap.org/) page.
 
-Rich semantic descriptions using NeoGeo vocabulary and PROV-O provenance:
+## OSM Element ID Stability
 
-| Extension | Format | Content-Type |
-|-----------|--------|-------------|
-| `.rdf` | RDF/XML | `application/rdf+xml` |
-| (none, `Accept: text/turtle`) | Turtle | `text/turtle` |
-| `.json` | GeoJSON Feature | `application/geo+json` |
-| `.gml` | WFS 2.0 GML | `application/gml+xml` |
+OpenStreetMap element IDs (node, way, relation) are **not stable over time**: elements can be deleted and their numeric IDs reassigned to new features, or split/merged operations produce new IDs.
+See the [OSM wiki on element IDs](https://wiki.openstreetmap.org/wiki/Elements) and the [Linked Data best practices note on URI stability](https://www.w3.org/TR/cooluris/) for background.
 
-Examples: `/node/{id}.rdf`, `/way/{id}.json`, `/relation/{id}.gml`, `/changeset/{id}.rdf`
-
-The no-extension canonical URI (e.g. `/node/1`) serves the format matching the `Accept` header and includes a `Content-Location` header pointing to the extension URL for the representation returned.
-
-### Geometry data
-
-Bare coordinate geometry for map rendering, with no semantic enrichment:
-
-- `/geo/osm/{type}/{id}.{format}` — from OSM API 0.6
-- `/geo/overpass/{type}/{id}.{format}` — from Overpass API (preferred for complex multipolygon relations)
-
-Supported formats: `json` (GeoJSON), `wkt` (Well-Known Text), `kml` (KML)
-
-### Search
-
-Nominatim place search; returns RDF/XML or GeoJSON:
-
-- `/search?q={query}`, `/search.json?q={query}`
-
-### Map data
-
-OSM API map data for a bounding box; returns RDF/XML or GeoJSON:
-
-- `/map?bbox={W,S,E,N}`, `/map.json?bbox={W,S,E,N}`
-
-### Points of interest
-
-Overpass amenity nodes in a bounding box; returns RDF/XML or GeoJSON:
-
-- `/poi?bbox={W,S,E,N}`, `/poi.json?bbox={W,S,E,N}`
-
-### Around
-
-Overpass nodes within a radius of a point; returns RDF/XML or GeoJSON:
-
-- `/around?lon={lon}&lat={lat}&radius={m}`, `/around.json?lon={lon}&lat={lat}&radius={m}`
-
-### Tag
-
-Tag statistics from [taginfo.openstreetmap.org](https://taginfo.openstreetmap.org/); returns RDF/XML or JSON-LD:
-
-- `/tag/{key}`
-
-
-## Testing
-
-`test_endpoints.sh` runs HTTP smoke-tests against a deployed instance.
-It reads example data from `src/main/webapp/examples.json` (single source of truth).
-
-### Prerequisites
-
-```
-curl  jq  xmllint (libxml2-utils)  rapper (raptor2-utils)  python3
-```
-
-### Light mode (default)
-
-Checks one node, one way, one relation, one search, one map bbox, and the view page.
-No Overpass calls, no inter-request delay — completes in a few seconds.
-
-```bash
-./test_endpoints.sh                                    # against osmwrap.ontologycentral.com
-./test_endpoints.sh http://localhost:8080/linked-osm   # against a local instance
-```
-
-### Heavy mode
-
-Full loop over all entries in `examples.json` × all formats (GeoJSON, RDF/XML, Turtle, GML),
-plus Overpass `/around` endpoints and named edge-case relations.
-Defaults to a 10-second delay between requests to stay within Overpass rate limits.
-
-```bash
-./test_endpoints.sh --heavy
-./test_endpoints.sh --heavy http://localhost:8080/linked-osm
-DELAY=5 ./test_endpoints.sh --heavy                   # override delay
-```
-
-### Exit code
-
-`0` when all tests pass, `1` if any fail.
-Each test prints `PASS` or `FAIL`; failures include the error output from the tool.
-
-## License
-
-This project transforms and provides access to OpenStreetMap data, which is available under the [Open Database License](https://opendatacommons.org/licenses/odbl/).

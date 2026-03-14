@@ -109,6 +109,34 @@
     <dd>One of the earliest changesets &mdash; <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a></dd>
   </dl>
 
+  <a name="osm-vs-overpass-bbox"></a>
+  <h2>Why does the Overpass column show more features than the OSM API column?</h2>
+
+  <p>
+    Two reasons.
+    First, the OSM API rejects bounding boxes larger than 0.25&nbsp;deg²; Overpass
+    has no such limit (the current area is shown in the status line).
+    Second, neither column extracts relations from bounding-box responses — only
+    tagged nodes (points) and ways (lines/polygons) become GeoJSON features.
+    Relations are skipped because their geometry depends on their
+    <code>type=</code> tag (multipolygon, route, turn restriction, …) and requires
+    member assembly that is not done for bulk queries.
+    Use <code>/overpass/relation/{id}</code> to load a specific relation with full
+    geometry.
+  </p>
+
+  <a name="overpass-recursion"></a>
+  <h2>Why does Overpass give better geometry for individual relations?</h2>
+
+  <p>
+    The Overpass query for a single relation uses <code>&gt;&gt;</code>, which
+    recursively resolves all member relations, ways, and nodes in one round-trip.
+    The OSM API <code>/relation/{id}/full</code> expands only one level deep, and
+    the GeoJSON conversion path does not reassemble member-way geometry the same way.
+    For complex multipolygons in particular, Overpass reliably produces a correct
+    <code>MultiPolygon</code> where the OSM API path may return only a centroid.
+  </p>
+
   <a name="large-relations"></a>
   <h2>Why do some large relations return 509, 529, or 504?</h2>
 
