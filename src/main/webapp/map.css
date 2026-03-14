@@ -12,7 +12,7 @@
 
 .region-cols {
     display: grid;
-    grid-template-columns: 32rem 1fr;
+    grid-template-columns: 32rem 1fr 1fr 1fr;
     column-gap: 1rem;
     align-items: start;
 }
@@ -32,5 +32,4 @@ input[type=text] { font-family: monospace; }
 .map-controls label { margin-right: 0.4em; }
 .map-controls select { font-family: monospace; }
 .wms-source { overflow-wrap: break-word; word-break: break-word; }
-.region-right { min-width: 20em; }
 .prop-note { font-size: 0.85em; color: #888; }

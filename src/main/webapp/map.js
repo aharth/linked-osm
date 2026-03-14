@@ -1,3 +1,30 @@
+function cancelLoad(mapId, si) {
+    var state = window.maps[mapId];
+    if (!state || !state.controllerBySi[si]) return;
+    state.controllerBySi[si].abort();
+}
+
+function clearLoad(mapId, si) {
+    var state = window.maps[mapId];
+    if (!state) return;
+    if (state.highlightedLayer) {
+        state.featureLayers[si].eachLayer(function(l) {
+            if (l === state.highlightedLayer) state.highlightedLayer = null;
+        });
+    }
+    state.featureLayers[si].clearLayers();
+    state.loadedFeaturesBySi[si] = [];
+    state.loadedUrlBySi[si] = null;
+    state.currentIdxBySi[si] = -1;
+    if (state.featurePanels[si]) state.featurePanels[si].innerHTML = '';
+    var suffix = mapId.replace('map-', '');
+    var statusEl = document.getElementById('status-' + suffix + '-' + si);
+    if (statusEl) setStatus(statusEl, '');
+    var linkEl = document.getElementById('geojson-link-' + suffix + '-' + si);
+    if (linkEl) linkEl.innerHTML = '';
+    _updateSource(mapId, null, si);
+}
+
 var OSM_TILE_LAYERS = {
     'Standard':      { url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                        attribution: '\u00a9 OpenStreetMap contributors' },
@@ -48,20 +75,33 @@ function initOsmMap(id, lat, lon, zoom) {
     m.createPane('bboxPane');
     m.getPane('bboxPane').style.zIndex = 450;
     var tl = L.tileLayer(OSM_TILE_LAYERS['Standard'].url, { attribution: '' }).addTo(m);
-    var fg = L.featureGroup().addTo(m);
     var suffix = id.replace('map-', '');
-    var panelEl = document.getElementById('feature-panel-' + suffix);
-    if (panelEl) {
-        panelEl.addEventListener('click', function() {
-            var st = window.maps[id];
-            if (!st || st.currentIdx < 0) return;
-            _navFeature(id, st.currentIdx);
-        });
-    }
-    window.maps[id] = { map: m, tileLayer: tl, featureLayer: fg, fetchEpoch: 0, bboxLayer: null,
-                           featurePanel: panelEl, highlightedLayer: null,
-                           mapId: id, loadedFeatures: [], loadedUrl: null, currentIdx: -1,
-                           activeLayerName: 'Standard' };
+
+    var featureLayers = [0, 1, 2].map(function() { return L.featureGroup().addTo(m); });
+
+    var featurePanels = [0, 1, 2].map(function(si) {
+        return document.getElementById('feature-panel-' + suffix + '-' + si) || null;
+    });
+
+    [0, 1, 2].forEach(function(si) {
+        (function(capturedSi) {
+            var panelEl = featurePanels[capturedSi];
+            if (panelEl) {
+                panelEl.addEventListener('click', function() {
+                    var st = window.maps[id];
+                    if (!st || st.currentIdxBySi[capturedSi] < 0) return;
+                    _navFeature(id, st.currentIdxBySi[capturedSi], capturedSi);
+                });
+            }
+        })(si);
+    });
+
+    window.maps[id] = { map: m, tileLayer: tl, featureLayers: featureLayers,
+                        featurePanels: featurePanels, fetchEpochBySi: [0, 0, 0],
+                        controllerBySi: [null, null, null],
+                        bboxLayer: null, highlightedLayer: null, mapId: id,
+                        loadedFeaturesBySi: [[], [], []], loadedUrlBySi: [null, null, null],
+                        currentIdxBySi: [-1, -1, -1], activeLayerName: 'Standard' };
 
     m.on('click', function() {
         var st = window.maps[id];
@@ -74,9 +114,10 @@ function initOsmMap(id, lat, lon, zoom) {
 
     function updateBbox() {
         var b = m.getBounds();
+        var bboxStr = b.getWest().toFixed(6) + ',' + b.getSouth().toFixed(6) + ','
+                    + b.getEast().toFixed(6) + ',' + b.getNorth().toFixed(6);
         var inputEl = document.getElementById('bbox-input-' + suffix);
-        if (inputEl) inputEl.value = b.getWest().toFixed(6) + ',' + b.getSouth().toFixed(6) + ','
-                                   + b.getEast().toFixed(6) + ',' + b.getNorth().toFixed(6);
+        if (inputEl) inputEl.value = bboxStr;
         var zoomEl = document.getElementById('bbox-zoom-' + suffix);
         if (zoomEl) {
             var _b2 = m.getBounds();
@@ -88,7 +129,9 @@ function initOsmMap(id, lat, lon, zoom) {
             var _areaStr = _area >= 1
                 ? _area.toFixed(_area >= 100 ? 0 : 1) + '\u00a0km\u00b2'
                 : (_area * 1e6).toFixed(0) + '\u00a0m\u00b2';
-            zoomEl.textContent = 'zoom: ' + m.getZoom() + ' \u00b7 ' + _areaStr;
+            var _degArea = Math.abs(_b2.getEast() - _b2.getWest()) * Math.abs(_b2.getNorth() - _b2.getSouth());
+            var _degAreaStr = _degArea.toFixed(4) + '\u00a0deg\u00b2';
+            zoomEl.textContent = 'zoom: ' + m.getZoom() + ' \u00b7 ' + _areaStr + ' \u00b7 ' + _degAreaStr;
         }
         var tileEl = document.getElementById('tile-link-' + suffix);
         if (tileEl) {
@@ -115,7 +158,7 @@ function initOsmMap(id, lat, lon, zoom) {
         bboxInp.addEventListener('input', function() { locSel.value = ''; });
     }
 
-    // Wire example dropdown ↔ node/way/relation inputs (bidirectional)
+    // Wire example dropdown ↔ node/way/relation inputs (bidirectional) — si=1 only
     var geoExSel = document.getElementById('geo-example-select');
     var geoForm  = document.forms['geo-form'];
     if (geoExSel && geoForm) {
@@ -197,9 +240,9 @@ function _attributionFor(url) {
     return '\u00a9 OpenStreetMap contributors';
 }
 
-function _updateSource(mapId, attribution) {
+function _updateSource(mapId, attribution, si) {
     var suffix = mapId.replace('map-', '');
-    var el = document.getElementById('source-' + suffix);
+    var el = document.getElementById('source-' + suffix + '-' + si);
     if (!el) return;
     el.textContent = attribution ? 'Source: ' + attribution : '';
 }
@@ -221,8 +264,8 @@ function _formatLinksHtml(url, sourceUrl) {
     var qi = url.indexOf('?');
     var jsonUrl = qi >= 0 ? url.slice(0, qi) + '.json' + url.slice(qi) : url + '.json';
     var html = '<a href="' + escHtml(jsonUrl) + '">JSON</a>';
-    if (/^\/(map|node\/|way\/|relation\/)/.test(url)) {
-        html += ' \u00b7 <a href="https://api.openstreetmap.org/api/0.6' + escHtml(url)
+    if (/^\/osm\/(map|node\/|way\/|relation\/)/.test(url)) {
+        html += ' \u00b7 <a href="https://api.openstreetmap.org/api/0.6' + escHtml(url.replace(/^\/osm/, ''))
               + '" target="_blank">OSM XML</a>';
     } else if (sourceUrl) {
         var label = /nominatim/.test(sourceUrl) ? 'Source XML' : 'OSM XML';
@@ -241,20 +284,21 @@ function _wrapGeometry(obj) {
     return obj;
 }
 
-function _renderFeaturePanel(state, idx) {
-    if (!state.featurePanel) return;
-    var n = state.loadedFeatures.length;
-    var feature = state.loadedFeatures[idx];
+function _renderFeaturePanel(state, idx, si) {
+    var panelEl = state.featurePanels[si];
+    if (!panelEl) return;
+    var n = state.loadedFeaturesBySi[si].length;
+    var feature = state.loadedFeaturesBySi[si][idx];
     if (!feature) return;
     var html = '';
     if (n > 1) {
         var mapId = escHtml(state.mapId);
         html += '<p>'
               + '<button type="button"' + (idx <= 0 ? ' disabled' : '')
-              + ' onclick="_navFeature(\'' + mapId + '\',' + (idx - 1) + ')">\u2039</button>'
+              + ' onclick="_navFeature(\'' + mapId + '\',' + (idx - 1) + ',' + si + ')">\u2039</button>'
               + ' ' + (idx + 1) + ' of ' + n + ' '
               + '<button type="button"' + (idx >= n - 1 ? ' disabled' : '')
-              + ' onclick="_navFeature(\'' + mapId + '\',' + (idx + 1) + ')">\u203a</button>'
+              + ' onclick="_navFeature(\'' + mapId + '\',' + (idx + 1) + ',' + si + ')">\u203a</button>'
               + '</p>';
     }
     var props = feature.properties || {};
@@ -262,7 +306,7 @@ function _renderFeaturePanel(state, idx) {
     if (props.osm_id && props.osm_type) {
         var t = escHtml(String(props.osm_type));
         var i = escHtml(String(props.osm_id));
-        var base = '/' + t + '/' + i;
+        var base = (si === 2 ? '/overpass/' : '/osm/') + t + '/' + i;
         html += '<p><a href="' + base + '">' + base + '</a></p>';
         formatBar = '<p>'
               + '<a href="' + base + '.json">JSON</a>'
@@ -275,15 +319,15 @@ function _renderFeaturePanel(state, idx) {
     }
     html += Object.keys(props).length > 0 ? propsToHtml(props) : '<em>no properties</em>';
     html += formatBar;
-    state.featurePanel.innerHTML = html;
-    state.currentIdx = idx;
-    // Sync node/way/relation input with the feature now shown in the panel; reset example dropdown
-    if (props.osm_type && props.osm_id) {
+    panelEl.innerHTML = html;
+    state.currentIdxBySi[si] = idx;
+    // Sync node/way/relation input with the feature now shown in the panel — si=1 only
+    if (si === 1 && props.osm_type && props.osm_id) {
         var geoForm = document.forms['geo-form'];
         if (geoForm) {
-            ['node', 'way', 'relation'].forEach(function(t) {
-                var el = geoForm.elements[t];
-                if (el) el.value = (t === String(props.osm_type)) ? String(props.osm_id) : '';
+            ['node', 'way', 'relation'].forEach(function(tp) {
+                var el = geoForm.elements[tp];
+                if (el) el.value = (tp === String(props.osm_type)) ? String(props.osm_id) : '';
             });
         }
         var geoExSel = document.getElementById('geo-example-select');
@@ -291,24 +335,24 @@ function _renderFeaturePanel(state, idx) {
     }
 }
 
-function _navFeature(mapId, idx) {
+function _navFeature(mapId, idx, si) {
     var state = window.maps[mapId];
-    if (!state || idx < 0 || idx >= state.loadedFeatures.length) return;
+    if (!state || idx < 0 || idx >= state.loadedFeaturesBySi[si].length) return;
     if (state.highlightedLayer) {
         if (state.highlightedLayer._origStyle && state.highlightedLayer.setStyle)
             state.highlightedLayer.setStyle(state.highlightedLayer._origStyle);
         state.highlightedLayer = null;
     }
-    state.featureLayer.eachLayer(function(l) {
+    state.featureLayers[si].eachLayer(function(l) {
         if (l._featureIdx === idx) {
             state.highlightedLayer = l;
             if (l.setStyle) l.setStyle({ color: '#ff0', weight: 4, fillColor: '#ff0', fillOpacity: 0.4 });
         }
     });
-    _renderFeaturePanel(state, idx);
+    _renderFeaturePanel(state, idx, si);
 }
 
-function _renderFeatures(state, geojson) {
+function _renderFeatures(state, geojson, si) {
     var featureIdx = 0;
     var polygonLayers = [], lineLayers = [], pointLayers = [];
     L.geoJSON(geojson, {
@@ -335,37 +379,42 @@ function _renderFeatures(state, geojson) {
                 layer._origStyle = { color: '#33cc33', weight: 2, fillColor: '#33cc33', fillOpacity: 0.5 };
                 pointLayers.push(layer);
             }
-            layer.on('click', function(e) {
-                L.DomEvent.stopPropagation(e);
-                var st = state;
-                if (st.highlightedLayer && st.highlightedLayer !== this) {
-                    if (st.highlightedLayer._origStyle && st.highlightedLayer.setStyle)
-                        st.highlightedLayer.setStyle(st.highlightedLayer._origStyle);
-                }
-                st.highlightedLayer = this;
-                if (this.setStyle) this.setStyle({ color: '#ff0', weight: 4, fillColor: '#ff0', fillOpacity: 0.4 });
-                _renderFeaturePanel(st, this._featureIdx);
-            });
+            layer.on('click', (function(capturedSi) {
+                return function(e) {
+                    L.DomEvent.stopPropagation(e);
+                    var st = state;
+                    if (st.highlightedLayer && st.highlightedLayer !== this) {
+                        if (st.highlightedLayer._origStyle && st.highlightedLayer.setStyle)
+                            st.highlightedLayer.setStyle(st.highlightedLayer._origStyle);
+                    }
+                    st.highlightedLayer = this;
+                    if (this.setStyle) this.setStyle({ color: '#ff0', weight: 4, fillColor: '#ff0', fillOpacity: 0.4 });
+                    _renderFeaturePanel(st, this._featureIdx, capturedSi);
+                };
+            })(si));
         }
     });
     // Add in z-order: polygons first (bottom), lines middle, points on top so they stay clickable
-    polygonLayers.forEach(function(l) { state.featureLayer.addLayer(l); });
-    lineLayers.forEach(function(l) { state.featureLayer.addLayer(l); });
-    pointLayers.forEach(function(l) { state.featureLayer.addLayer(l); });
+    polygonLayers.forEach(function(l) { state.featureLayers[si].addLayer(l); });
+    lineLayers.forEach(function(l) { state.featureLayers[si].addLayer(l); });
+    pointLayers.forEach(function(l) { state.featureLayers[si].addLayer(l); });
 }
 
 // All status-bar and link-bar DOM updates for the fetch lifecycle live here.
 // States: 'loading' | 'loaded' | 'idle'
 // opts: { url, statusEl, count?, errorMsg?, sourceUrl? }
-function _setFetchState(mapId, newState, opts) {
+function _setFetchState(mapId, newState, opts, si) {
     var suffix = mapId.replace('map-', '');
-    var linkEl = document.getElementById('geojson-link-' + suffix);
+    var linkEl = document.getElementById('geojson-link-' + suffix + '-' + si);
+    var mid = escHtml(mapId);
     if (newState === 'loading') {
-        if (opts.statusEl) setStatus(opts.statusEl, 'Loading\u2026');
+        if (opts.statusEl) setStatusHtml(opts.statusEl,
+            'Loading\u2026 <button type="button" onclick="cancelLoad(\'' + mid + '\',' + si + ')">Cancel</button>');
         if (linkEl) { linkEl.innerHTML = '<span class="spinner"></span>' + _formatLinksHtml(opts.url, null); linkEl.style.display = ''; }
     } else if (newState === 'loaded') {
         var c = opts.count;
-        if (opts.statusEl) setStatus(opts.statusEl, c + (c === 1 ? ' feature' : ' features'));
+        if (opts.statusEl) setStatusHtml(opts.statusEl,
+            c + (c === 1 ? ' feature' : ' features') + ' <button type="button" onclick="clearLoad(\'' + mid + '\',' + si + ')">Clear</button>');
         if (linkEl) { linkEl.innerHTML = _formatLinksHtml(opts.url, opts.sourceUrl); linkEl.style.display = ''; }
     } else if (newState === 'idle') {
         if (opts.statusEl) setStatus(opts.statusEl, opts.errorMsg ? 'Error: ' + opts.errorMsg : '');
@@ -373,29 +422,31 @@ function _setFetchState(mapId, newState, opts) {
     }
 }
 
-function loadGeoJsonUrl(mapId, url) {
+function loadGeoJsonUrl(mapId, url, si) {
     var state = window.maps[mapId];
     if (!state) return;
-    var statusEl = document.getElementById('status-' + mapId.replace('map-', ''));
+    var suffix = mapId.replace('map-', '');
+    var statusEl = document.getElementById('status-' + suffix + '-' + si);
 
-    state.fetchEpoch += 1;
-    var epoch = state.fetchEpoch;
+    state.fetchEpochBySi[si] += 1;
+    var epoch = state.fetchEpochBySi[si];
 
-    state.featureLayer.clearLayers();
+    state.featureLayers[si].clearLayers();
     state.highlightedLayer = null;
-    state.loadedFeatures = [];
-    state.loadedUrl = null;
-    state.currentIdx = -1;
-    if (state.featurePanel) state.featurePanel.innerHTML = '';
+    state.loadedFeaturesBySi[si] = [];
+    state.loadedUrlBySi[si] = null;
+    state.currentIdxBySi[si] = -1;
+    if (state.featurePanels[si]) state.featurePanels[si].innerHTML = '';
     if (state.bboxLayer) { state.map.removeLayer(state.bboxLayer); state.bboxLayer = null; }
-    _updateSource(mapId, null);
+    _updateSource(mapId, null, si);
     var bbox = _parseBbox(url);
     if (bbox) {
         state.bboxLayer = _makeBboxLayer(state.map, bbox[0], bbox[1], bbox[2], bbox[3]);
     }
-    _setFetchState(mapId, 'loading', { url: url, statusEl: statusEl });
+    _setFetchState(mapId, 'loading', { url: url, statusEl: statusEl }, si);
 
     var controller = new AbortController();
+    state.controllerBySi[si] = controller;
     var timer = setTimeout(function() { controller.abort(); }, FETCH_TIMEOUT);
     var sourceUrl = null;
 
@@ -403,32 +454,34 @@ function loadGeoJsonUrl(mapId, url) {
         .then(function(r) {
             sourceUrl = r.headers.get('X-Upstream-Source');
             clearTimeout(timer);
+            state.controllerBySi[si] = null;
             if (!r.ok) throw new Error('HTTP ' + r.status);
             return r.json();
         })
         .then(function(data) {
-            if (state.fetchEpoch !== epoch) return;
+            if (state.fetchEpochBySi[si] !== epoch) return;
             var geojson = _wrapGeometry(data);
             if (geojson.type !== 'FeatureCollection') {
                 geojson = { type: 'FeatureCollection', features: [geojson] };
             }
-            state.loadedFeatures = geojson.features;
-            state.loadedUrl = url;
-            state.currentIdx = -1;
-            _renderFeatures(state, geojson);
-            if (geojson.features.length > 0) { _navFeature(mapId, 0); }
-            else { if (state.featurePanel) state.featurePanel.innerHTML = ''; }
-            var count = state.featureLayer.getLayers().length;
-            _setFetchState(mapId, 'loaded', { url: url, statusEl: statusEl, count: count, sourceUrl: sourceUrl });
-            _updateSource(mapId, _attributionFor(url));
+            state.loadedFeaturesBySi[si] = geojson.features;
+            state.loadedUrlBySi[si] = url;
+            state.currentIdxBySi[si] = -1;
+            _renderFeatures(state, geojson, si);
+            if (geojson.features.length > 0) { _navFeature(mapId, 0, si); }
+            else { if (state.featurePanels[si]) state.featurePanels[si].innerHTML = ''; }
+            var count = state.featureLayers[si].getLayers().length;
+            _setFetchState(mapId, 'loaded', { url: url, statusEl: statusEl, count: count, sourceUrl: sourceUrl }, si);
+            _updateSource(mapId, geojson.attribution || _attributionFor(url), si);
             if (count > 0) {
-                try { state.map.fitBounds(state.featureLayer.getBounds(), { maxZoom: 16 }); } catch (e) {}
+                try { state.map.fitBounds(state.featureLayers[si].getBounds(), { maxZoom: 16 }); } catch (e) {}
             }
         })
         .catch(function(err) {
             clearTimeout(timer);
-            if (state.fetchEpoch !== epoch) return;
+            state.controllerBySi[si] = null;
+            if (state.fetchEpochBySi[si] !== epoch) return;
             var msg = err.name === 'AbortError' ? 'Client timeout (' + (FETCH_TIMEOUT / 1000) + 's)' : err.message;
-            _setFetchState(mapId, 'idle', { url: url, statusEl: statusEl, errorMsg: msg, sourceUrl: sourceUrl });
+            _setFetchState(mapId, 'idle', { url: url, statusEl: statusEl, errorMsg: msg, sourceUrl: sourceUrl }, si);
         });
 }

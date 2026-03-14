@@ -26,6 +26,20 @@ function setStatusHtml(el, html, spinning) {
     el.classList.toggle('spinner', !!spinning);
 }
 
+var _CURIE_PREFIXES = {
+    'rdf':  'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'rdfs': 'http://www.w3.org/2000/01/rdf-schema#',
+    'owl':  'http://www.w3.org/2002/07/owl#',
+    'dct':  'http://purl.org/dc/terms/',
+    'skos': 'http://www.w3.org/2004/02/skos/core#',
+};
+
+function _expandCurie(k) {
+    var m = k.match(/^([a-z]+):([^\/].*)$/);
+    if (m && _CURIE_PREFIXES[m[1]]) return _CURIE_PREFIXES[m[1]] + m[2];
+    return null;
+}
+
 function propsToHtml(props) {
     var html = '<dl>';
     for (var k in props) {
@@ -34,9 +48,16 @@ function propsToHtml(props) {
         var dt;
         if (k.match(/^https?:\/\//)) {
             var label = k.includes('#') ? k.split('#').pop() : k.split('/').filter(Boolean).pop();
+            if (label.startsWith('Key:')) label = label.slice(4);
             dt = '<a href="' + escHtml(k) + '" target="_blank">' + escHtml(label) + '</a>';
+        } else if (k.match(/^\//)) {
+            var label = k.includes('#') ? k.split('#').pop() : k.split('/').filter(Boolean).pop();
+            dt = '<a href="' + escHtml(k) + '">' + escHtml(label) + '</a>';
         } else {
-            dt = escHtml(k);
+            var expanded = _expandCurie(k);
+            dt = expanded
+                ? '<a href="' + escHtml(expanded) + '" target="_blank">' + escHtml(k) + '</a>'
+                : escHtml(k);
         }
         html += '<dt>' + dt + '</dt>';
         vals.forEach(function(rawVal) {

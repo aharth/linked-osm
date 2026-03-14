@@ -65,15 +65,43 @@ public final class UrlBuilder {
         if (coords.length != 4) {
             throw new IllegalArgumentException("Invalid bbox format. Use: west,south,east,north");
         }
-        String overpassBbox = coords[1] + "," + coords[0] + "," + coords[3] + "," + coords[2]; // south,west,north,east
+        String overpassBbox = coords[1] + "," + coords[0] + "," + coords[3] + "," + coords[2];
 
         String outStatement = (limit != null) ? "out meta " + limit + ";" : "out meta;";
 
         return "[out:xml][timeout:25];\n" +
                "(\n" +
-               "  node[amenity](" + overpassBbox + ");\n" +
+               "  node[~\"amenity|shop|tourism|leisure|healthcare\"~\".\"](" + overpassBbox + ");\n" +
                ");\n" +
                outStatement;
+    }
+
+    /**
+     * Builds Overpass API query for all features (node/way/relation) in a bounding box.
+     *
+     * @param bbox bounding box in format "west,south,east,north"
+     * @param type element type: "node", "way", "relation", or "nwr" (all)
+     * @return Overpass query string
+     */
+    public static String buildOverpassFeaturesQuery(String bbox, String type) {
+        String[] coords = bbox.split(",");
+        if (coords.length != 4) {
+            throw new IllegalArgumentException("Invalid bbox format. Use: west,south,east,north");
+        }
+        String overpassBbox = coords[1] + "," + coords[0] + "," + coords[3] + "," + coords[2];
+
+        if (type == null || type.isEmpty()) type = "nwr";
+        if (!type.equals("node") && !type.equals("way") && !type.equals("relation") && !type.equals("nwr")) {
+            throw new IllegalArgumentException("Invalid type: " + type + ". Use node, way, relation, or nwr.");
+        }
+
+        return "[out:xml][timeout:60];\n" +
+               "(\n" +
+               "  " + type + "(" + overpassBbox + ");\n" +
+               ");\n" +
+               "out body;\n" +
+               ">;\n" +
+               "out skel qt;";
     }
 
     /**

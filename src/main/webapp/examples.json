@@ -18,12 +18,12 @@
   "map": [
     {"bbox": "11.075,49.457,11.077,49.459",     "label": "Kaiserburg, Nuremberg"},
     {"bbox": "2.348,48.856,2.350,48.858",        "label": "Louvre, Paris"},
-    {"bbox": "-118.498,34.015,-118.496,34.018",  "label": "Santa Monica, Third Street"}
+    {"bbox": "-118.498,34.015,-118.496,34.018",  "label": "Third Street, Santa Monica"}
   ],
   "around": [
     {"lon": "11.077",   "lat": "49.458", "radius": "100", "label": "Kaiserburg, Nuremberg"},
     {"lon": "2.349",    "lat": "48.857", "radius": "100", "label": "Louvre, Paris"},
     {"lon": "-0.127",   "lat": "51.501", "radius": "30",  "label": "Westminster, London"},
-    {"lon": "-118.496", "lat": "34.017", "radius": "100", "label": "Santa Monica, Third Street"}
+    {"lon": "-118.496", "lat": "34.017", "radius": "100", "label": "Third Street, Santa Monica"}
   ]
 }

@@ -112,11 +112,11 @@ public class FeatureServlet extends HttpServlet {
 
 			// Determine the type based on servlet mapping
 			String servletPath = req.getServletPath();
-			if (servletPath.equals("/node")) {
+			if (servletPath.equals("/osm/node")) {
 				ctrl = "/node/";
-			} else if (servletPath.equals("/way")) {
+			} else if (servletPath.equals("/osm/way")) {
 				ctrl = "/way/";
-			} else if (servletPath.equals("/relation")) {
+			} else if (servletPath.equals("/osm/relation")) {
 				ctrl = "/relation/";
 			}
 		}

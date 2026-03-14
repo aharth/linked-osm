@@ -2,6 +2,16 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-03-14]
+- **4-column layout**: `map.css` grid changed to `32rem 1fr 1fr 1fr`; one column per source — map, Nominatim (si=0), OSM API (si=1), Overpass (si=2); `map.js` state arrays per-si (`featureLayers`, `featurePanels`, `fetchEpochBySi`, `controllerBySi`, `loadedFeaturesBySi`, `loadedUrlBySi`, `currentIdxBySi`); `loadGeoJsonUrl`, `_setFetchState`, `_updateSource`, `_renderFeatures`, `_navFeature`, `_renderFeaturePanel` all take explicit `si` argument
+- **Source-prefixed URL mappings**: `FeatureServlet` moved to `/osm/node/*`, `/osm/way/*`, `/osm/relation/*`; `SearchServlet` to `/nominatim/search`; `MapServlet` to `/osm/map`; `POIServlet` to `/overpass/poi`; `AroundServlet` to `/overpass/around`; new `OverpassFeaturesServlet` at `/overpass/features` with `bbox` and `type` (node/way/relation/nwr) parameters
+- **Cancel / Clear buttons**: per-si `AbortController` stored in `controllerBySi[si]`; Cancel button shown during fetch via `setStatusHtml`; Clear button shown after load; `cancelLoad(mapId, si)` and `clearLoad(mapId, si)` functions
+- **Overpass attribution**: `GeoJsonConverter.overpassNodesToGeoJson` and `osmMapToGeoJson` extract `<note>` text from Overpass XML and emit it as `"attribution"` on the FeatureCollection; `loadGeoJsonUrl` uses `geojson.attribution || _attributionFor(url)`
+- **GeoJSON-LD**: all FeatureCollections and single-Feature responses include `"@context":"https://geojson.org/geojson-ld/geojson-context.jsonld"`; OSM tag keys emitted as `http://wiki.openstreetmap.org/wiki/Key:{key}` URIs; `wikidata` values (`Q\d+`/`P\d+`) expanded to `https://www.wikidata.org/wiki/…`; `wikipedia` values expanded to `https://{lang}.wikipedia.org/wiki/…`; `propsToHtml` in `map-common.js` strips `Key:` prefix for display labels
+- **Bbox area display**: zoom status line now shows deg² alongside km²/m² (useful for OSM API /map hard limit of 0.25 deg²)
+- **Overpass element endpoints**: new `OverpassElementServlet` at `/overpass/node/*`, `/overpass/way/*`, `/overpass/relation/*`; queries Overpass QL (`node(ID); out body;` etc.); GeoJSON via `osmMapToGeoJson`; RDF via existing node/way/relation XSLT after stripping Overpass-specific `<note>` and `<meta>` elements (which would otherwise produce invalid RDF/XML and cause a 500 via `RdfFilter`); feature panel for si=2 links to `/overpass/{type}/{id}` instead of `/osm/{type}/{id}`
+- **examples.json**: "Third Street, Santa Monica" label order corrected; Overpass `around` examples added
+
 ## [2026-03-10]
 - `map.js`: bbox rectangle rendered in a dedicated Leaflet pane (z-index 450) so it appears above feature layers and is clickable; clicking the frame zooms the map to the query bbox; area of current map view displayed alongside zoom level (e.g. `zoom: 14 · 3.2 km²`)
 

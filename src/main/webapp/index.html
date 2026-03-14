@@ -19,72 +19,80 @@
   </p>
 
   <div class="region-cols">
-  <div class="region-left">
-    <dl>
-      <dt>Search</dt>
-      <dd>
-        <input type="text" id="search-input-main" placeholder="place name"
-               onkeydown="if(event.key==='Enter') loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(this.value))">
-        <button type="button"
-                onclick="loadGeoJsonUrl('map-main','/search?q='+encodeURIComponent(document.getElementById('search-input-main').value))">Search</button>
-      </dd>
-    </dl>
-    <dl>
-      <dt>Location</dt>
-      <dd>
-        <select id="loc-main">
-          <option value="">&#x2014; select &#x2014;</option>
-        </select>
-      </dd>
-      <dd>
-        <input type="text" id="bbox-input-main"
-               style="font-family:monospace;width:22em"
-               placeholder="W,S,E,N"
-               onkeydown="if(event.key==='Enter') setMapLocation('map-main',this.value)">
-        <button type="button"
-                onclick="setMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
-      </dd>
-    </dl>
-  </div>
-  <dl id="osm-element-controls" class="region-right">
-    <dt>Nodes, ways and relations</dt>
-    <dd>
-      <select id="geo-example-select">
-        <option value="">&#x2014; select element &#x2014;</option>
-      </select>
-    </dd>
-    <dd>
-      <form name="geo-form" onsubmit="return false;">
-        <label>node: <input type="text" name="node" size="10"></label>
-        <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/node/'+encodeURIComponent(v));">Load</button>
-        <label>way: <input type="text" name="way" size="10"></label>
-        <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/way/'+encodeURIComponent(v));">Load</button>
-        <label>relation: <input type="text" name="relation" size="10"></label>
-        <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/relation/'+encodeURIComponent(v));">Load</button>
-      </form>
-    </dd>
-  </dl>
-  </div>
 
-  <div class="region-cols" id="map-row">
-    <div id="map-main" class="map"></div>
-    <div class="region-right">
-      <div id="feature-panel-main" class="feature-panel"></div>
+    <!-- Row 0: above-panel controls (single-feature selectors) -->
+    <div>
+      <dl>
+        <dt>Location</dt>
+        <dd>
+          <select id="loc-main">
+            <option value="">&#x2014; example select &#x2014;</option>
+          </select>
+        </dd>
+        <dd>
+          <input type="text" id="bbox-input-main"
+                 style="font-family:monospace;width:22em"
+                 placeholder="W,S,E,N"
+                 onkeydown="if(event.key==='Enter') setMapLocation('map-main',this.value)">
+          <button type="button"
+                  onclick="setMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
+        </dd>
+      </dl>
     </div>
+    <div></div>
+    <div id="osm-element-controls">
+      <dl>
+        <dt>Feature by ID</dt>
+        <dd>
+          <select id="geo-example-select">
+            <option value="">&#x2014; select example &#x2014;</option>
+          </select>
+        </dd>
+        <dd>
+          <form name="geo-form" onsubmit="return false;">
+            <label>node: <input type="text" name="node" size="10"></label>
+            <button onclick="var v=this.form.elements['node'].value; if(v) loadGeoJsonUrl('map-main','/osm/node/'+encodeURIComponent(v),1);">Load</button>
+            <label>way: <input type="text" name="way" size="10"></label>
+            <button onclick="var v=this.form.elements['way'].value; if(v) loadGeoJsonUrl('map-main','/osm/way/'+encodeURIComponent(v),1);">Load</button>
+            <label>relation: <input type="text" name="relation" size="10"></label>
+            <button onclick="var v=this.form.elements['relation'].value; if(v) loadGeoJsonUrl('map-main','/osm/relation/'+encodeURIComponent(v),1);">Load</button>
+          </form>
+        </dd>
+      </dl>
+    </div>
+    <div></div>
 
-    <div class="region-left">
+    <!-- Row 1: map + panels -->
+    <div id="map-main" class="map"></div>
+    <div id="feature-panel-main-0" class="feature-panel"></div>
+    <div id="feature-panel-main-1" class="feature-panel"></div>
+    <div id="feature-panel-main-2" class="feature-panel"></div>
+
+    <!-- Row 2: status -->
+    <div>
       <p id="bbox-zoom-main" class="map-controls"></p>
       <p id="tile-status-main" class="map-controls"></p>
       <p id="tile-link-main" class="map-controls"></p>
       <p id="tile-source-main" class="map-controls wms-source"></p>
     </div>
-    <div class="region-right">
-      <p id="status-main" class="map-controls"></p>
-      <p id="geojson-link-main" class="map-controls"></p>
-      <p id="source-main" class="map-controls wms-source"></p>
+    <div>
+      <p id="status-main-0" class="map-controls"></p>
+      <p id="geojson-link-main-0" class="map-controls"></p>
+      <p id="source-main-0" class="map-controls wms-source"></p>
+    </div>
+    <div>
+      <p id="status-main-1" class="map-controls"></p>
+      <p id="geojson-link-main-1" class="map-controls"></p>
+      <p id="source-main-1" class="map-controls wms-source"></p>
+    </div>
+    <div>
+      <p id="status-main-2" class="map-controls"></p>
+      <p id="geojson-link-main-2" class="map-controls"></p>
+      <p id="source-main-2" class="map-controls wms-source"></p>
     </div>
 
-    <dl class="region-left" id="tile-layer-controls-main">
+    <!-- Row 3: below-panel controls (set queries) -->
+    <dl id="tile-layer-controls-main">
       <dt>Map Layer</dt>
       <dd>
         <select id="tile-select-main"></select>
@@ -92,27 +100,48 @@
                 onclick="switchOsmTileLayer('map-main', document.getElementById('tile-select-main').value)">Load</button>
       </dd>
     </dl>
-    <div class="region-right" id="feature-select-main">
-      <dl>
-        <dt>Map data by bounding box</dt>
-        <dd>
-          <button type="button"
-                  onclick="loadGeoJsonUrl('map-main','/map?bbox='+encodeURIComponent(getBboxString('map-main')))">Load</button>
-        </dd>
-        <dt>Points of Interest by bounding box</dt>
-        <dd>
-          <button type="button"
-                  onclick="loadGeoJsonUrl('map-main','/poi?bbox='+encodeURIComponent(getBboxString('map-main')))">Load</button>
-        </dd>
-        <dt>Nodes around a point</dt>
-        <dd>
-          radius (m): <input type="text" id="around-radius-main" value="100" size="6">
-          <button type="button"
-                  onclick="var st=window.maps['map-main'],c=st.map.getCenter();
-                           loadGeoJsonUrl('map-main','/around?lon='+c.lng.toFixed(6)+'&lat='+c.lat.toFixed(6)+'&radius='+encodeURIComponent(document.getElementById('around-radius-main').value))">Load</button>
-        </dd>
-      </dl>
-    </div>
+    <dl>
+      <dt>Search <a href="https://nominatim.openstreetmap.org/" target="_blank">Nominatim</a></dt>
+      <dd>
+        <input type="text" id="search-input-main" placeholder="place name"
+               onkeydown="if(event.key==='Enter') loadGeoJsonUrl('map-main','/nominatim/search?q='+encodeURIComponent(this.value),0)">
+        <button type="button"
+                onclick="loadGeoJsonUrl('map-main','/nominatim/search?q='+encodeURIComponent(document.getElementById('search-input-main').value),0)">Search</button>
+      </dd>
+    </dl>
+    <dl>
+      <dt>Features &#x2013; <a href="https://wiki.openstreetmap.org/wiki/API_v0.6#Map" target="_blank">OSM API</a></dt>
+      <dd>
+        <button type="button"
+                onclick="loadGeoJsonUrl('map-main','/osm/map?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value),1)">Load</button>
+      </dd>
+    </dl>
+    <dl>
+      <dt>Features &#x2013; <a href="https://overpass-api.de/" target="_blank">Overpass</a></dt>
+      <dd>
+        <select id="overpass-type-main">
+          <option value="nwr">all</option>
+          <option value="node">nodes</option>
+          <option value="way">ways</option>
+          <option value="relation">relations</option>
+        </select>
+        <button type="button"
+                onclick="loadGeoJsonUrl('map-main','/overpass/features?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value)+'&type='+document.getElementById('overpass-type-main').value,2)">Load</button>
+      </dd>
+      <dt>POI &#x2013; <a href="https://overpass-api.de/" target="_blank">Overpass</a></dt>
+      <dd>
+        <button type="button"
+                onclick="loadGeoJsonUrl('map-main','/overpass/poi?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value),2)">Load</button>
+      </dd>
+      <dt>Nodes around a point &#x2013; <a href="https://overpass-api.de/" target="_blank">Overpass</a></dt>
+      <dd>
+        radius (m): <input type="text" id="around-radius-main" value="100" size="6">
+        <button type="button"
+                onclick="var st=window.maps['map-main'],c=st.map.getCenter();
+                         loadGeoJsonUrl('map-main','/overpass/around?lon='+c.lng.toFixed(6)+'&lat='+c.lat.toFixed(6)+'&radius='+encodeURIComponent(document.getElementById('around-radius-main').value),2)">Load</button>
+      </dd>
+    </dl>
+
   </div>
 
 

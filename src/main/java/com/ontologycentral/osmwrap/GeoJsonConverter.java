@@ -26,7 +26,26 @@ public final class GeoJsonConverter {
 	private static final Pattern TAG_PATTERN =
 		Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
 
+	private static final String OSM_KEY_BASE = "http://wiki.openstreetmap.org/wiki/Key:";
+
 	private GeoJsonConverter() {}
+
+	private static String osmTagKey(String key) {
+		return OSM_KEY_BASE + key;
+	}
+
+	private static String transformOsmValue(String key, String value) {
+		if ("wikidata".equals(key) && value.matches("[QP]\\d+")) {
+			return "https://www.wikidata.org/wiki/" + value;
+		}
+		if ("wikipedia".equals(key) && value.contains(":")) {
+			int colon = value.indexOf(':');
+			String lang = value.substring(0, colon);
+			String article = value.substring(colon + 1).replace(' ', '_');
+			return "https://" + lang + ".wikipedia.org/wiki/" + article;
+		}
+		return value;
+	}
 
 	private static String decodeXmlEntities(String s) {
 		if (s == null) return null;
@@ -62,7 +81,7 @@ public final class GeoJsonConverter {
 	 */
 	public static String nominatimToGeoJson(String xml) {
 		StringBuilder sb = new StringBuilder();
-		sb.append("{\"type\":\"FeatureCollection\",\"features\":[");
+		sb.append("{\"type\":\"FeatureCollection\",\"@context\":\"https://geojson.org/geojson-ld/geojson-context.jsonld\",\"features\":[");
 
 		Pattern placePattern = Pattern.compile("<place\\s[^>]*?/>|<place\\s[^>]*?>[^<]*</place>");
 		Matcher placeMatcher = placePattern.matcher(xml);
@@ -109,7 +128,12 @@ public final class GeoJsonConverter {
 	 */
 	public static String overpassNodesToGeoJson(String xml) {
 		StringBuilder sb = new StringBuilder();
-		sb.append("{\"type\":\"FeatureCollection\",\"features\":[");
+		sb.append("{\"type\":\"FeatureCollection\",\"@context\":\"https://geojson.org/geojson-ld/geojson-context.jsonld\"");
+		Matcher noteMatcher = Pattern.compile("<note>([^<]*)</note>").matcher(xml);
+		if (noteMatcher.find()) {
+			sb.append(",\"attribution\":\"").append(escapeJson(noteMatcher.group(1).trim())).append("\"");
+		}
+		sb.append(",\"features\":[");
 
 		// Match both self-closing nodes and nodes with child tags
 		Pattern nodePattern = Pattern.compile("<node\\s([^>]*?)/>|<node\\s([^>]*?)>(.*?)</node>", Pattern.DOTALL);
@@ -139,8 +163,10 @@ public final class GeoJsonConverter {
 			if (body != null) {
 				Matcher tagMatcher = TAG_PATTERN.matcher(body);
 				while (tagMatcher.find()) {
-					sb.append(",\"").append(escapeJson(decodeXmlEntities(tagMatcher.group(1)))).append("\":\"");
-					sb.append(escapeJson(decodeXmlEntities(tagMatcher.group(2)))).append("\"");
+					String tagKey = decodeXmlEntities(tagMatcher.group(1));
+					String tagValue = decodeXmlEntities(tagMatcher.group(2));
+					sb.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
+					sb.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
 				}
 			}
 
@@ -158,7 +184,12 @@ public final class GeoJsonConverter {
 	 */
 	public static String osmMapToGeoJson(String xml) {
 		StringBuilder sb = new StringBuilder();
-		sb.append("{\"type\":\"FeatureCollection\",\"features\":[");
+		sb.append("{\"type\":\"FeatureCollection\",\"@context\":\"https://geojson.org/geojson-ld/geojson-context.jsonld\"");
+		Matcher noteMatcher = Pattern.compile("<note>([^<]*)</note>").matcher(xml);
+		if (noteMatcher.find()) {
+			sb.append(",\"attribution\":\"").append(escapeJson(noteMatcher.group(1).trim())).append("\"");
+		}
+		sb.append(",\"features\":[");
 
 		// First pass: build node coordinate lookup (all nodes have lat/lon in map response)
 		Map<String, double[]> nodeCoords = new HashMap<>();
@@ -204,8 +235,10 @@ public final class GeoJsonConverter {
 
 			Matcher tagMatcher = TAG_PATTERN.matcher(node[3]);
 			while (tagMatcher.find()) {
-				sb.append(",\"").append(escapeJson(tagMatcher.group(1))).append("\":\"");
-				sb.append(escapeJson(tagMatcher.group(2))).append("\"");
+				String tagKey = decodeXmlEntities(tagMatcher.group(1));
+				String tagValue = decodeXmlEntities(tagMatcher.group(2));
+				sb.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
+				sb.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
 			}
 
 			sb.append("}}");
@@ -261,8 +294,10 @@ public final class GeoJsonConverter {
 			// Extract way tags
 			Matcher tagMatcher = TAG_PATTERN.matcher(wayBody);
 			while (tagMatcher.find()) {
-				sb.append(",\"").append(escapeJson(tagMatcher.group(1))).append("\":\"");
-				sb.append(escapeJson(tagMatcher.group(2))).append("\"");
+				String tagKey = decodeXmlEntities(tagMatcher.group(1));
+				String tagValue = decodeXmlEntities(tagMatcher.group(2));
+				sb.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
+				sb.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
 			}
 
 			sb.append("}}");
@@ -289,11 +324,14 @@ public final class GeoJsonConverter {
 
 		Matcher tagMatcher = TAG_PATTERN.matcher(xml);
 		while (tagMatcher.find()) {
-			props.append(",\"").append(escapeJson(decodeXmlEntities(tagMatcher.group(1)))).append("\":\"");
-			props.append(escapeJson(decodeXmlEntities(tagMatcher.group(2)))).append("\"");
+			String tagKey = decodeXmlEntities(tagMatcher.group(1));
+			String tagValue = decodeXmlEntities(tagMatcher.group(2));
+			props.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
+			props.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
 		}
 
 		return "{\"type\":\"Feature\""
+				+ ",\"@context\":\"https://geojson.org/geojson-ld/geojson-context.jsonld\""
 				+ ",\"id\":\"/" + elementType + "/" + escapeJson(id) + "#id\""
 				+ ",\"properties\":{" + props + "}"
 				+ ",\"geometry\":" + (geometryJson != null ? geometryJson : "null")

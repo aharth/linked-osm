@@ -38,6 +38,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-class>com.ontologycentral.osmwrap.webapp.MapServlet</servlet-class>
 	</servlet>
 	<servlet>
+		<servlet-name>overpassFeatures</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.OverpassFeaturesServlet</servlet-class>
+	</servlet>
+	<servlet>
 		<servlet-name>poi</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.POIServlet</servlet-class>
 	</servlet>
@@ -54,6 +58,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-class>com.ontologycentral.osmwrap.webapp.TagServlet</servlet-class>
 	</servlet>
 	<servlet>
+		<servlet-name>overpassElement</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.OverpassElementServlet</servlet-class>
+	</servlet>
+	<servlet>
 		<servlet-name>sparql</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.SparqlServlet</servlet-class>
 	</servlet>
@@ -68,79 +76,95 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>osm</servlet-name>
-		<url-pattern>/node/*</url-pattern>
+		<url-pattern>/osm/node/*</url-pattern>
 	</servlet-mapping>
-		<servlet-mapping>
+	<servlet-mapping>
 		<servlet-name>osm</servlet-name>
-		<url-pattern>/relation/*</url-pattern>
+		<url-pattern>/osm/relation/*</url-pattern>
 	</servlet-mapping>
-		<servlet-mapping>
+	<servlet-mapping>
 		<servlet-name>osm</servlet-name>
-		<url-pattern>/way/*</url-pattern>
+		<url-pattern>/osm/way/*</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>search</servlet-name>
-		<url-pattern>/search</url-pattern>
+		<url-pattern>/nominatim/search</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>search</servlet-name>
-		<url-pattern>/search.json</url-pattern>
+		<url-pattern>/nominatim/search.json</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>search</servlet-name>
-		<url-pattern>/search.rdf</url-pattern>
+		<url-pattern>/nominatim/search.rdf</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>search</servlet-name>
-		<url-pattern>/search.ttl</url-pattern>
+		<url-pattern>/nominatim/search.ttl</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>map</servlet-name>
-		<url-pattern>/map</url-pattern>
+		<url-pattern>/osm/map</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>map</servlet-name>
-		<url-pattern>/map.rdf</url-pattern>
+		<url-pattern>/osm/map.rdf</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>map</servlet-name>
-		<url-pattern>/map.json</url-pattern>
+		<url-pattern>/osm/map.json</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>map</servlet-name>
-		<url-pattern>/map.ttl</url-pattern>
+		<url-pattern>/osm/map.ttl</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>overpassFeatures</servlet-name>
+		<url-pattern>/overpass/features</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>overpassFeatures</servlet-name>
+		<url-pattern>/overpass/features.json</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>overpassFeatures</servlet-name>
+		<url-pattern>/overpass/features.rdf</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>overpassFeatures</servlet-name>
+		<url-pattern>/overpass/features.ttl</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>poi</servlet-name>
-		<url-pattern>/poi</url-pattern>
+		<url-pattern>/overpass/poi</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>poi</servlet-name>
-		<url-pattern>/poi.json</url-pattern>
+		<url-pattern>/overpass/poi.json</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>poi</servlet-name>
-		<url-pattern>/poi.rdf</url-pattern>
+		<url-pattern>/overpass/poi.rdf</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>poi</servlet-name>
-		<url-pattern>/poi.ttl</url-pattern>
+		<url-pattern>/overpass/poi.ttl</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>around</servlet-name>
-		<url-pattern>/around</url-pattern>
+		<url-pattern>/overpass/around</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>around</servlet-name>
-		<url-pattern>/around.json</url-pattern>
+		<url-pattern>/overpass/around.json</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>around</servlet-name>
-		<url-pattern>/around.rdf</url-pattern>
+		<url-pattern>/overpass/around.rdf</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>around</servlet-name>
-		<url-pattern>/around.ttl</url-pattern>
+		<url-pattern>/overpass/around.ttl</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>changeset</servlet-name>
@@ -149,6 +173,18 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>tag</servlet-name>
 		<url-pattern>/tag/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>overpassElement</servlet-name>
+		<url-pattern>/overpass/node/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>overpassElement</servlet-name>
+		<url-pattern>/overpass/way/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>overpassElement</servlet-name>
+		<url-pattern>/overpass/relation/*</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>sparql</servlet-name>
