@@ -34,7 +34,7 @@ public class OverpassFeaturesServlet extends HttpServlet {
 
 		String bbox = req.getParameter("bbox");
 		String type = req.getParameter("type");
-		String limit = req.getParameter("limit");
+		String filter = req.getParameter("filter");
 
 		boolean wantJson = AcceptHeader.prefersJson(req.getServletPath(), req.getHeader("Accept"));
 
@@ -42,7 +42,7 @@ public class OverpassFeaturesServlet extends HttpServlet {
 
 		String overpassQuery;
 		try {
-			overpassQuery = UrlBuilder.buildOverpassFeaturesQuery(bbox, type);
+			overpassQuery = UrlBuilder.buildOverpassFeaturesQuery(bbox, type, filter);
 		} catch (IllegalArgumentException e) {
 			resp.sendError(400, e.getMessage());
 			return;

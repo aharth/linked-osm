@@ -138,8 +138,9 @@
           <option value="way">ways</option>
           <option value="relation">relations</option>
         </select>
+        filter: <input type="text" id="features-filter-main" placeholder="building=yes" size="16">
         <button type="button"
-                onclick="loadGeoJsonUrl('map-main','/overpass/features?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value)+'&type='+document.getElementById('overpass-type-main').value,2)">Load bbox</button>
+                onclick="var f=document.getElementById('features-filter-main').value;loadGeoJsonUrl('map-main','/overpass/features?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value)+'&amp;type='+document.getElementById('overpass-type-main').value+(f?'&amp;filter='+encodeURIComponent(f):''),2)">Load bbox</button>
       </dd>
       <dt>POI &#x2013; <a href="https://overpass-api.de/" target="_blank">Overpass</a></dt>
       <dd>

@@ -37,77 +37,6 @@ public class TaginfoConverter {
 	}
 
 	/**
-	 * Fetch overview for a specific key=value tag from Taginfo API
-	 */
-	public String fetchTagInfo(String key, String value) throws IOException {
-		String url = TAGINFO_API_BASE + "/tag/overview?key="
-				+ URLEncoder.encode(key, StandardCharsets.UTF_8)
-				+ "&value=" + URLEncoder.encode(value, StandardCharsets.UTF_8);
-		return HttpClientUtil.fetchUrl(url);
-	}
-
-	/**
-	 * Convert a specific key=value tag to SKOS RDF/XML
-	 */
-	public String convertTagValueToSKOSRDF(String key, String value, String tagInfoJson, String baseUri) {
-		String encodedValue = uriEncodeValue(value);
-		StringBuilder rdf = new StringBuilder();
-		rdf.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-		rdf.append("<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n");
-		rdf.append("         xmlns:skos=\"http://www.w3.org/2004/02/skos/core#\"\n");
-		rdf.append("         xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n");
-		rdf.append("         xmlns:osm=\"http://osm.geovocab.org/vocab#\"\n");
-		rdf.append("         xmlns:dc=\"http://purl.org/dc/elements/1.1/\">\n");
-		rdf.append("\n  <rdf:Description rdf:about=\"").append(baseUri).append(escapeXml(key)).append("=").append(encodedValue).append("\">\n");
-		rdf.append("    <rdf:type rdf:resource=\"http://www.w3.org/2004/02/skos/core#Concept\"/>\n");
-		rdf.append("    <skos:prefLabel xml:lang=\"en\">").append(escapeXml(key)).append("=").append(escapeXml(value)).append("</skos:prefLabel>\n");
-		rdf.append("    <rdfs:label>").append(escapeXml(value)).append("</rdfs:label>\n");
-		rdf.append("    <rdfs:seeAlso rdf:resource=\"http://wiki.openstreetmap.org/wiki/Tag:").append(escapeXml(key)).append("=").append(escapeXml(value)).append("\"/>\n");
-		rdf.append("    <skos:broader rdf:resource=\"").append(baseUri).append(escapeXml(key)).append("\"/>\n");
-		long countAll = extractCount(tagInfoJson, "\"type\":\"all\"");
-		long countNodes = extractCount(tagInfoJson, "\"type\":\"nodes\"");
-		long countWays = extractCount(tagInfoJson, "\"type\":\"ways\"");
-		long countRelations = extractCount(tagInfoJson, "\"type\":\"relations\"");
-		if (countAll > 0) rdf.append("    <osm:countAll rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">").append(countAll).append("</osm:countAll>\n");
-		if (countNodes > 0) rdf.append("    <osm:countNodes rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">").append(countNodes).append("</osm:countNodes>\n");
-		if (countWays > 0) rdf.append("    <osm:countWays rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">").append(countWays).append("</osm:countWays>\n");
-		if (countRelations > 0) rdf.append("    <osm:countRelations rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">").append(countRelations).append("</osm:countRelations>\n");
-		rdf.append("  </rdf:Description>\n");
-		rdf.append("\n</rdf:RDF>\n");
-		return rdf.toString();
-	}
-
-	/**
-	 * Convert a specific key=value tag to SKOS JSON-LD
-	 */
-	public String convertTagValueToSKOSJson(String key, String value, String tagInfoJson, String baseUri) {
-		String encodedValue = uriEncodeValue(value);
-		StringBuilder json = new StringBuilder();
-		json.append("{\n");
-		json.append("  \"@context\": {\n");
-		json.append("    \"@vocab\": \"http://www.w3.org/2004/02/skos/core#\",\n");
-		json.append("    \"osm\": \"http://osm.geovocab.org/vocab#\",\n");
-		json.append("    \"rdfs\": \"http://www.w3.org/2000/01/rdf-schema#\"\n");
-		json.append("  },\n");
-		json.append("  \"@id\": \"").append(baseUri).append(escapeJson(key)).append("=").append(escapeJson(encodedValue)).append("\",\n");
-		json.append("  \"@type\": \"Concept\",\n");
-		json.append("  \"prefLabel\": \"").append(escapeJson(key)).append("=").append(escapeJson(value)).append("\",\n");
-		json.append("  \"rdfs:label\": \"").append(escapeJson(value)).append("\",\n");
-		json.append("  \"broader\": {\"@id\": \"").append(baseUri).append(escapeJson(key)).append("\"},\n");
-		long countAll = extractCount(tagInfoJson, "\"type\":\"all\"");
-		long countNodes = extractCount(tagInfoJson, "\"type\":\"nodes\"");
-		long countWays = extractCount(tagInfoJson, "\"type\":\"ways\"");
-		long countRelations = extractCount(tagInfoJson, "\"type\":\"relations\"");
-		json.append("  \"osm:statistics\": {\n");
-		if (countAll > 0) json.append("    \"osm:countAll\": ").append(countAll).append(",\n");
-		if (countNodes > 0) json.append("    \"osm:countNodes\": ").append(countNodes).append(",\n");
-		if (countWays > 0) json.append("    \"osm:countWays\": ").append(countWays).append(",\n");
-		if (countRelations > 0) json.append("    \"osm:countRelations\": ").append(countRelations).append("\n");
-		json.append("  }\n}\n");
-		return json.toString();
-	}
-
-	/**
 	 * Fetch all keys from Taginfo API
 	 */
 	public String fetchAllKeys() throws IOException {
@@ -171,14 +100,11 @@ public class TaginfoConverter {
 			}
 		}
 
-		// Add values as narrower concepts (also Layer 2, or Layer 3 if variants exist)
+		// Add used values as skos:example literals
 		String[] values = extractValues(valuesJson);
-		if (values.length > 0 && variants.length == 0) {
-			// Only show values if no namespace variants exist
-			for (String value : values) {
-				if (value != null && !value.isEmpty()) {
-					rdf.append("    <skos:narrower rdf:resource=\"").append(baseUri).append(escapeXml(key)).append("=").append(uriEncodeValue(value)).append("\"/>\n");
-				}
+		for (String value : values) {
+			if (value != null && !value.isEmpty()) {
+				rdf.append("    <skos:example>").append(escapeXml(value)).append("</skos:example>\n");
 			}
 		}
 
@@ -192,19 +118,6 @@ public class TaginfoConverter {
 				rdf.append("    <skos:prefLabel xml:lang=\"en\">").append(escapeXml(variant)).append("</skos:prefLabel>\n");
 				rdf.append("    <skos:broader rdf:resource=\"").append(baseUri).append(escapeXml(key)).append("\"/>\n");
 				rdf.append("  </rdf:Description>\n");
-			}
-		}
-
-		// Add value concepts (only if no variants)
-		if (variants.length == 0) {
-			for (String value : values) {
-				if (value != null && !value.isEmpty()) {
-					rdf.append("\n  <rdf:Description rdf:about=\"").append(baseUri).append(escapeXml(key)).append("=").append(uriEncodeValue(value)).append("\">\n");
-					rdf.append("    <rdf:type rdf:resource=\"http://www.w3.org/2004/02/skos/core#Concept\"/>\n");
-					rdf.append("    <skos:prefLabel xml:lang=\"en\">").append(escapeXml(value)).append("</skos:prefLabel>\n");
-					rdf.append("    <skos:broader rdf:resource=\"").append(baseUri).append(escapeXml(key)).append("\"/>\n");
-					rdf.append("  </rdf:Description>\n");
-				}
 			}
 		}
 
@@ -237,8 +150,6 @@ public class TaginfoConverter {
 		rdf.append("    <rdfs:label>").append(escapeXml(key)).append("</rdfs:label>\n");
 		rdf.append("    <rdfs:seeAlso rdf:resource=\"http://wiki.openstreetmap.org/wiki/Key:").append(escapeXml(key)).append("\"/>\n");
 
-		// Extract statistics from the Taginfo response structure
-		// The response has counts array with type/count pairs
 		long countAll = extractCount(keyInfoJson, "\"type\":\"all\"");
 		long countNodes = extractCount(keyInfoJson, "\"type\":\"nodes\"");
 		long countWays = extractCount(keyInfoJson, "\"type\":\"ways\"");
@@ -257,29 +168,15 @@ public class TaginfoConverter {
 			rdf.append("    <osm:countRelations rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">").append(countRelations).append("</osm:countRelations>\n");
 		}
 
-		// Add values as narrower concepts
+		// Add used values as skos:example literals
 		String[] values = extractValues(valuesJson);
-		if (values.length > 0) {
-			for (String value : values) {
-				if (value != null && !value.isEmpty()) {
-					rdf.append("    <skos:narrower rdf:resource=\"").append(baseUri).append(escapeXml(key)).append("=").append(uriEncodeValue(value)).append("\"/>\n");
-				}
+		for (String value : values) {
+			if (value != null && !value.isEmpty()) {
+				rdf.append("    <skos:example>").append(escapeXml(value)).append("</skos:example>\n");
 			}
 		}
 
 		rdf.append("  </rdf:Description>\n");
-
-		// Add value concepts
-		for (String value : values) {
-			if (value != null && !value.isEmpty()) {
-				rdf.append("\n  <rdf:Description rdf:about=\"").append(baseUri).append(escapeXml(key)).append("=").append(uriEncodeValue(value)).append("\">\n");
-				rdf.append("    <rdf:type rdf:resource=\"http://www.w3.org/2004/02/skos/core#Concept\"/>\n");
-				rdf.append("    <skos:prefLabel xml:lang=\"en\">").append(escapeXml(value)).append("</skos:prefLabel>\n");
-				rdf.append("    <skos:broader rdf:resource=\"").append(baseUri).append(escapeXml(key)).append("\"/>\n");
-				rdf.append("  </rdf:Description>\n");
-			}
-		}
-
 		rdf.append("\n</rdf:RDF>\n");
 		return rdf.toString();
 	}
@@ -331,43 +228,41 @@ public class TaginfoConverter {
 		}
 		json.append("\n  },\n");
 
-		// Extract namespace variants and values
+		// Add namespace variants as narrower concepts
 		String[] variants = extractNamespaceVariants(namespacesJson, key);
 		String[] values = extractValues(valuesJson);
 
-		// Show narrower concepts (variants or values)
-		json.append("  \"narrower\": [\n");
-		int count = 0;
-
-		// Add variants first if they exist
-		for (String variant : variants) {
-			if (variant != null && !variant.isEmpty()) {
-				if (count > 0) json.append(",\n");
-				json.append("    {\n");
-				json.append("      \"@id\": \"").append(baseUri).append(escapeJson(variant)).append("\",\n");
-				json.append("      \"@type\": \"Concept\",\n");
-				json.append("      \"prefLabel\": \"").append(escapeJson(variant)).append("\"\n");
-				json.append("    }");
-				count++;
-			}
-		}
-
-		// Add values only if no variants exist
-		if (variants.length == 0) {
-			for (int i = 0; i < values.length; i++) {
-				if (values[i] != null && !values[i].isEmpty()) {
+		if (variants.length > 0) {
+			json.append("  \"narrower\": [\n");
+			int count = 0;
+			for (String variant : variants) {
+				if (variant != null && !variant.isEmpty()) {
 					if (count > 0) json.append(",\n");
 					json.append("    {\n");
-					json.append("      \"@id\": \"").append(baseUri).append(escapeJson(key)).append("=").append(escapeJson(values[i])).append("\",\n");
+					json.append("      \"@id\": \"").append(baseUri).append(escapeJson(variant)).append("\",\n");
 					json.append("      \"@type\": \"Concept\",\n");
-					json.append("      \"prefLabel\": \"").append(escapeJson(values[i])).append("\"\n");
+					json.append("      \"prefLabel\": \"").append(escapeJson(variant)).append("\"\n");
 					json.append("    }");
 					count++;
 				}
 			}
+			json.append("\n  ],\n");
 		}
 
-		json.append("\n  ]\n");
+		// Add used values as skos:example literals
+		if (values.length > 0) {
+			json.append("  \"example\": [\n");
+			int count = 0;
+			for (String value : values) {
+				if (value != null && !value.isEmpty()) {
+					if (count > 0) json.append(",\n");
+					json.append("    \"").append(escapeJson(value)).append("\"");
+					count++;
+				}
+			}
+			json.append("\n  ],\n");
+		}
+
 		json.append("}\n");
 		return json.toString();
 	}
@@ -397,36 +292,27 @@ public class TaginfoConverter {
 		long countRelations = extractCount(keyInfoJson, "\"type\":\"relations\"");
 
 		json.append("  \"osm:statistics\": {\n");
-		if (countAll > 0) {
-			json.append("    \"osm:countAll\": ").append(countAll).append(",\n");
-		}
-		if (countNodes > 0) {
-			json.append("    \"osm:countNodes\": ").append(countNodes).append(",\n");
-		}
-		if (countWays > 0) {
-			json.append("    \"osm:countWays\": ").append(countWays).append(",\n");
-		}
-		if (countRelations > 0) {
-			json.append("    \"osm:countRelations\": ").append(countRelations);
-		}
+		if (countAll > 0) json.append("    \"osm:countAll\": ").append(countAll).append(",\n");
+		if (countNodes > 0) json.append("    \"osm:countNodes\": ").append(countNodes).append(",\n");
+		if (countWays > 0) json.append("    \"osm:countWays\": ").append(countWays).append(",\n");
+		if (countRelations > 0) json.append("    \"osm:countRelations\": ").append(countRelations);
 		json.append("\n  },\n");
 
+		// Add used values as skos:example literals
 		String[] values = extractValues(valuesJson);
-		json.append("  \"narrower\": [\n");
-		for (int i = 0; i < values.length; i++) {
-			if (values[i] != null && !values[i].isEmpty()) {
-				json.append("    {\n");
-				json.append("      \"@id\": \"").append(baseUri).append(escapeJson(key)).append("=").append(escapeJson(values[i])).append("\",\n");
-				json.append("      \"@type\": \"Concept\",\n");
-				json.append("      \"prefLabel\": \"").append(escapeJson(values[i])).append("\"\n");
-				json.append("    }");
-				if (i < values.length - 1) {
-					json.append(",");
+		if (values.length > 0) {
+			json.append("  \"example\": [\n");
+			int count = 0;
+			for (String value : values) {
+				if (value != null && !value.isEmpty()) {
+					if (count > 0) json.append(",\n");
+					json.append("    \"").append(escapeJson(value)).append("\"");
+					count++;
 				}
-				json.append("\n");
 			}
+			json.append("\n  ],\n");
 		}
-		json.append("  ]\n");
+
 		json.append("}\n");
 		return json.toString();
 	}
@@ -732,20 +618,6 @@ public class TaginfoConverter {
 			return 0;
 		} catch (Exception e) {
 			return 0;
-		}
-	}
-
-	/**
-	 * Percent-encode a string for use as a URI path component value.
-	 * Uses URLEncoder then restores '+' → '%20'.
-	 */
-	private String uriEncodeValue(String value) {
-		if (value == null) return "";
-		try {
-			return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8)
-					.replace("+", "%20");
-		} catch (Exception e) {
-			return value;
 		}
 	}
 

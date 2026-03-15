@@ -85,7 +85,7 @@ public final class UrlBuilder {
      * @param type element type: "node", "way", "relation", or "nwr" (all)
      * @return Overpass query string
      */
-    public static String buildOverpassFeaturesQuery(String bbox, String type) {
+    public static String buildOverpassFeaturesQuery(String bbox, String type, String filter) {
         String[] coords = bbox.split(",");
         if (coords.length != 4) {
             throw new IllegalArgumentException("Invalid bbox format. Use: west,south,east,north");
@@ -97,9 +97,21 @@ public final class UrlBuilder {
             throw new IllegalArgumentException("Invalid type: " + type + ". Use node, way, relation, or nwr.");
         }
 
+        String tagFilter;
+        if (filter == null || filter.isBlank()) {
+            tagFilter = "";
+        } else if (filter.contains("=")) {
+            int eq = filter.indexOf('=');
+            String k = filter.substring(0, eq).strip();
+            String v = filter.substring(eq + 1).strip();
+            tagFilter = "[\"" + k + "\"=\"" + v + "\"]";
+        } else {
+            tagFilter = "[\"" + filter.strip() + "\"]";
+        }
+
         return "[out:xml][timeout:60];\n" +
                "(\n" +
-               "  " + type + "(" + overpassBbox + ");\n" +
+               "  " + type + tagFilter + "(" + overpassBbox + ");\n" +
                ");\n" +
                "out geom;";
     }

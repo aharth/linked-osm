@@ -67,12 +67,9 @@ public class TagServlet extends HttpServlet {
 			return;
 		}
 
-		// Split key=value if present
-		int eqIdx = key.indexOf('=');
-		if (eqIdx > 0) {
-			String tagKey = key.substring(0, eqIdx);
-			String tagValue = key.substring(eqIdx + 1);
-			handleTagValueRequest(resp, tagKey, tagValue, format);
+		// key=value paths are not supported; values are listed on the key resource
+		if (key.indexOf('=') > 0) {
+			resp.sendError(404, "Tag value URIs are not supported; see /tag/" + key.substring(0, key.indexOf('=')));
 			return;
 		}
 
@@ -112,35 +109,6 @@ public class TagServlet extends HttpServlet {
 			return;
 		}
 
-		os.close();
-	}
-
-	private void handleTagValueRequest(HttpServletResponse resp, String key, String value, String format)
-			throws IOException {
-		OutputStream os = resp.getOutputStream();
-		try {
-			_log.info("fetching tag info for: " + key + "=" + value);
-			String tagInfo = converter.fetchTagInfo(key, value);
-			String output;
-			if (format.equals("json")) {
-				resp.setContentType("application/ld+json");
-				output = converter.convertTagValueToSKOSJson(key, value, tagInfo, "/tag/");
-			} else {
-				resp.setContentType("application/rdf+xml");
-				output = converter.convertTagValueToSKOSRDF(key, value, tagInfo, "/tag/");
-			}
-			resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
-			resp.setHeader("Cache-Control", "public, max-age=86400");
-			os.write(output.getBytes(StandardCharsets.UTF_8));
-		} catch (IOException e) {
-			_log.warning("Error fetching tag info: " + e.getMessage());
-			resp.sendError(503, "Unable to fetch tag information: " + e.getMessage());
-			return;
-		} catch (RuntimeException e) {
-			_log.warning("Error processing tag: " + e.getMessage());
-			resp.sendError(500, "Error processing tag: " + e.getMessage());
-			return;
-		}
 		os.close();
 	}
 

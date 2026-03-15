@@ -24,7 +24,7 @@
   <dl>
     <dt><code>/osm/node/{id}.rdf</code>, <code>/osm/way/{id}.rdf</code>, <code>/osm/relation/{id}.rdf</code></dt>
     <dd>
-      <strong>Feature data</strong> &mdash; rich semantic descriptions including all OSM tags,
+      Feature data &mdash; rich semantic descriptions including all OSM tags,
       provenance information (PROV-O), and links to related resources.
       Returns RDF/XML by default; requesting with
       <code>Accept: text/turtle</code> returns Turtle format.
@@ -32,7 +32,7 @@
     </dd>
     <dt><code>/geo/osm/{type}/{id}.json</code>, <code>/geo/overpass/{type}/{id}.json</code></dt>
     <dd>
-      <strong>Geometry data</strong> &mdash; bare coordinate geometry for map rendering,
+      Geometry data &mdash; bare coordinate geometry for map rendering,
       with no semantic enrichment.
       Returns GeoJSON. Two upstream sources are available: the OSM API and the Overpass API
       (useful for complex multipolygon relations).
@@ -48,17 +48,17 @@
   <dl>
     <dt><code>/osm/way/100#id</code></dt>
     <dd>
-      The <strong>feature</strong> &mdash; the real-world geographic object (a road, building,
+      The feature &mdash; the real-world geographic object (a road, building,
       etc.) typed as <code>spatial:Feature</code>. Requesting <code>/osm/way/100</code> (or
       <code>/osm/way/100.rdf</code>) returns an RDF document describing this resource. The hash
       fragment means the feature itself is never directly retrievable as a document; it is
-      identified <em>within</em> the document at <code>/osm/way/100</code>, following the
+      identified within the document at <code>/osm/way/100</code>, following the
       <a href="https://www.w3.org/TR/cooluris/#hashuri">W3C hash-URI pattern</a> for
       non-information resources.
     </dd>
     <dt><code>/osm/way/100#geo</code></dt>
     <dd>
-      The <strong>geometry</strong> &mdash; a <code>geom:Geometry</code> resource carrying
+      The geometry &mdash; a <code>geom:Geometry</code> resource carrying
       the spatial representation of the feature: WKT literal
       (<code>locn:geometry</code> with datatype
       <code>geosparql:wktLiteral</code>), centroid coordinates
@@ -118,16 +118,16 @@
   <p>
     All endpoints support two methods for selecting the response format:
   </p>
-  <ul>
-    <li><strong>File extension</strong>: append <code>.rdf</code>, <code>.json</code>,
-      or <code>.ttl</code> to feature URIs; <code>.json</code> to geometry URIs.</li>
-    <li><strong>HTTP Accept header</strong>:
-      <code>Accept: application/rdf+xml</code> (RDF/XML),
+  <dl>
+    <dt>File extension</dt>
+    <dd>Append <code>.rdf</code>, <code>.json</code>,
+      or <code>.ttl</code> to feature URIs; <code>.json</code> to geometry URIs.</dd>
+    <dt>HTTP Accept header</dt>
+    <dd><code>Accept: application/rdf+xml</code> (RDF/XML),
       <code>Accept: text/turtle</code> (Turtle, via Apache Jena),
       <code>Accept: application/geo+json</code> or
-      <code>Accept: application/json</code> (GeoJSON).
-    </li>
-  </ul>
+      <code>Accept: application/json</code> (GeoJSON).</dd>
+  </dl>
 
   <!-- Geometry building -->
 
@@ -144,7 +144,7 @@
     <code>/osm/relation/{id}.rdf</code> carries only a centroid, not a WKT shape.
   </p>
   <p>
-    The <strong>GeoJSON geometry endpoints</strong> do not have this limitation &mdash;
+    The GeoJSON geometry endpoints do not have this limitation &mdash;
     <code>/geo/osm/relation/{id}.json</code> and
     <code>/geo/overpass/relation/{id}.json</code> both run the ring-assembly in Java and
     return a correct <code>MultiPolygon</code>.
@@ -180,17 +180,17 @@
     attempting a fetch that would time out or exhaust bandwidth.  Possible error codes:
   </p>
   <dl>
-    <dt><strong>413 Content Too Large</strong></dt>
+    <dt>413 Content Too Large</dt>
     <dd>
       The relation has more than 200 way members.  The error message names the count and
       suggests the <code>/geo/overpass/relation/{id}.json</code> geometry endpoint as an
       alternative.
     </dd>
-    <dt><strong>509 Bandwidth Limit Exceeded</strong> / <strong>529 Too Many Requests</strong></dt>
+    <dt>509 Bandwidth Limit Exceeded / 529 Too Many Requests</dt>
     <dd>
       The upstream OSM API rejected the request.  The upstream error body is forwarded verbatim.
     </dd>
-    <dt><strong>504 Gateway Timeout</strong></dt>
+    <dt>504 Gateway Timeout</dt>
     <dd>
       The OSM API did not begin sending a response within the wrapper's 120-second client
       timeout.
@@ -215,21 +215,22 @@
     <code>/osm/relation/51477.rdf</code> results in only one upstream network request &mdash;
     the second request is served from the cached XML.
   </p>
-  <p>
-    Cache behaviour:
-  </p>
-  <ul>
-    <li><strong>Capacity:</strong> up to 2&nbsp;GB of raw XML (entries are evicted by
-      least-recently-used / low-frequency policy once the limit is approached).</li>
-    <li><strong>Expiry:</strong> entries expire 24&nbsp;hours after they were written,
+  <dl>
+    <dt>Capacity</dt>
+    <dd>Up to 2&nbsp;GB of raw XML (entries are evicted by
+      least-recently-used / low-frequency policy once the limit is approached).</dd>
+    <dt>Expiry</dt>
+    <dd>Entries expire 24&nbsp;hours after they were written,
       consistent with the <code>Cache-Control: public, Expires: +1&nbsp;day</code> headers
-      sent to clients.</li>
-    <li><strong>Concurrency:</strong> if the same URL is requested by multiple clients
+      sent to clients.</dd>
+    <dt>Concurrency</dt>
+    <dd>If the same URL is requested by multiple clients
       simultaneously, only one upstream fetch is performed; the other requests wait and
-      share the result.</li>
-    <li><strong>Scope:</strong> the cache is in-process and resets on webapp restart.
-      Other endpoints (search, POI, around) are not cached server-side.</li>
-  </ul>
+      share the result.</dd>
+    <dt>Scope</dt>
+    <dd>The cache is in-process and resets on webapp restart.
+      Other endpoints (search, POI, around) are not cached server-side.</dd>
+  </dl>
 
   <a name="bot"></a>
   <h2>What is the automated HTTP client?</h2>

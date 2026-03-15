@@ -3,6 +3,10 @@
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
 ## [2026-03-15]
+- **PROV entity-centric pattern extended**: `search.xsl`, `poi.xsl`, `map.xsl` migrated from `prov:Activity` / `#transformation` to direct `prov:hadPrimarySource`, `prov:generatedAtTime`, `prov:wasAttributedTo` on `<>`; `dcat:byteSize` on upstream URI subject; `POIServlet`, `AroundServlet`, `OverpassFeaturesServlet` now pass `upstream-url`; `poi.xsl` and `map.xsl` attribution/license/publisher fixed to hardcoded correct values
+- **Overpass features filter**: `buildOverpassFeaturesQuery` accepts optional `filter` param (`key=value` → exact match, `key` → key-exists, blank → no filter); UI adds filter text input alongside type select
+- **`/tag/{key}={value}` removed**: tag value URIs return 404; used values now listed as `skos:example` literals on the key resource instead of `skos:narrower` URI references; `fetchTagInfo`, `convertTagValueToSKOS*`, `uriEncodeValue` removed
+- **`faq.html` / `bot.html`**: bold and italic removed; `<ul>` with bold lead terms converted to `<dl>`
 - **PROV-O fixes** (`node.xsl`, `way.xsl`, `relation.xsl`): `dc:attribution` hardcoded to `© OpenStreetMap contributors`; `dc:license` changed to `<https://opendatacommons.org/licenses/odbl/>` URI; `dc:publisher` URL updated to `https://`; `rdfs:comment @copyright/@attribution` attributes dropped (empty in OSM API responses); `prov:hadPrimarySource` emitted with the actual upstream URL when `$upstream-url` param is set; `foaf:page` `.ttl` link added alongside `.rdf`/`.json`
 - **`upstream-url` XSLT parameter**: `FeatureServlet` passes the OSM API URL actually used (plain `/relation/{id}` or `/relation/{id}/full`); `SearchServlet` passes the Nominatim query URL; `OverpassElementServlet` passes the Overpass interpreter URL with percent-encoded QL query — so each RDF document's `prov:hadPrimarySource` points to the exact upstream response
 - **`search.xsl`**: `prov:Entity rdf:about` now derived from `$upstream-url` param instead of hardcoded Nominatim base URL
