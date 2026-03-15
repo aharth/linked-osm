@@ -34,10 +34,6 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-class>com.ontologycentral.osmwrap.webapp.SearchServlet</servlet-class>
 	</servlet>
 	<servlet>
-		<servlet-name>map</servlet-name>
-		<servlet-class>com.ontologycentral.osmwrap.webapp.MapServlet</servlet-class>
-	</servlet>
-	<servlet>
 		<servlet-name>overpassFeatures</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.OverpassFeaturesServlet</servlet-class>
 	</servlet>
@@ -101,22 +97,6 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>search</servlet-name>
 		<url-pattern>/nominatim/search.ttl</url-pattern>
-	</servlet-mapping>
-	<servlet-mapping>
-		<servlet-name>map</servlet-name>
-		<url-pattern>/osm/map</url-pattern>
-	</servlet-mapping>
-	<servlet-mapping>
-		<servlet-name>map</servlet-name>
-		<url-pattern>/osm/map.rdf</url-pattern>
-	</servlet-mapping>
-	<servlet-mapping>
-		<servlet-name>map</servlet-name>
-		<url-pattern>/osm/map.json</url-pattern>
-	</servlet-mapping>
-	<servlet-mapping>
-		<servlet-name>map</servlet-name>
-		<url-pattern>/osm/map.ttl</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>overpassFeatures</servlet-name>

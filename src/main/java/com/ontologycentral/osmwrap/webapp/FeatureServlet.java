@@ -230,7 +230,7 @@ public class FeatureServlet extends HttpServlet {
 				if (ctrl.equals("/relation/")) {
 					t.setParameter("element-id", id);
 				}
-				resp.setContentType("application/rdf+xml");
+				resp.setContentType("text/turtle");
 				_log.info("applying xslt");
 				t.transform(new StreamSource(new StringReader(xml)), new StreamResult(os));
 			}

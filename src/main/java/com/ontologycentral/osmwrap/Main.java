@@ -53,9 +53,6 @@ public class Main {
             } else if (cmd.hasOption("search")) {
                 String query = cmd.getOptionValue("search");
                 searchFeatures(query);
-            } else if (cmd.hasOption("map")) {
-                String bbox = cmd.getOptionValue("map");
-                fetchMapData(bbox);
             } else if (cmd.hasOption("poi")) {
                 String bbox = cmd.getOptionValue("poi");
                 fetchPOIData(bbox);
@@ -119,13 +116,6 @@ public class Main {
                 .hasArg()
                 .argName("QUERY")
                 .desc("Search for features using Nominatim")
-                .build());
-
-        options.addOption(Option.builder("m")
-                .longOpt("map")
-                .hasArg()
-                .argName("BBOX")
-                .desc("Fetch map data for bounding box (west,south,east,north)")
                 .build());
 
         options.addOption(Option.builder("p")
@@ -239,29 +229,8 @@ public class Main {
         }
     }
 
-    private static void fetchMapData(String bbox) throws IOException {
-        String url = UrlBuilder.buildMapUrl(bbox);
-        logger.info("Fetching map data for bbox " + bbox + " from " + url);
-
-        try {
-            HttpResponse<InputStream> response = HttpClientUtil.get(url);
-            if (response.statusCode() != 200) {
-                System.err.println("Error: HTTP " + response.statusCode() + " from map data");
-                System.exit(1);
-            }
-            // TODO: Apply XSLT transformation to convert to RDF/XML
-            // For now, just output the raw OSM XML
-            try (InputStream input = response.body()) {
-                HttpClientUtil.copyStream(input, System.out);
-            }
-        } catch (IOException e) {
-            System.err.println("Error: " + e.getMessage());
-            System.exit(1);
-        }
-    }
-
     private static void fetchPOIData(String bbox) throws IOException {
-        String overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox, null);
+        String overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox, null, null);
         logger.info("Fetching POI data for bbox " + bbox + " from Overpass API");
 
         try {

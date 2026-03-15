@@ -73,11 +73,7 @@
         <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
       </prov:SoftwareAgent>
 
-      <xsl:apply-templates/>
     </rdf:RDF>
   </xsl:template>
 
-  <xsl:import href="node.xsl"/>
-  <xsl:import href="relation.xsl"/>
-  <xsl:import href="way.xsl"/>
 </xsl:stylesheet>

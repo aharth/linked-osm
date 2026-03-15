@@ -34,6 +34,7 @@ public class POIServlet extends HttpServlet {
 
 		String bbox = req.getParameter("bbox");
 		String limit = req.getParameter("limit");
+		String filter = req.getParameter("filter");
 
 		boolean wantJson = AcceptHeader.prefersJson(req.getServletPath(), req.getHeader("Accept"));
 
@@ -41,7 +42,7 @@ public class POIServlet extends HttpServlet {
 
 		String overpassQuery;
 		try {
-			overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox, limit);
+			overpassQuery = UrlBuilder.buildOverpassPOIQuery(bbox, limit, filter);
 		} catch (IllegalArgumentException e) {
 			resp.sendError(400, e.getMessage());
 			return;

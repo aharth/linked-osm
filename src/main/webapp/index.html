@@ -35,12 +35,12 @@
                  placeholder="W,S,E,N"
                  onkeydown="if(event.key==='Enter') setMapLocation('map-main',this.value)">
           <button type="button"
-                  onclick="setMapLocation('map-main',document.getElementById('bbox-input-main').value)">Go</button>
+                  onclick="setMapLocation('map-main',document.getElementById('bbox-input-main').value)">Pan</button>
         </dd>
       </dl>
     </div>
     <div></div>
-    <div id="osm-element-controls">
+    <div>
       <dl>
         <dt>Feature by ID</dt>
         <dd>
@@ -116,7 +116,7 @@
       <dd>
         <select id="tile-select-main"></select>
         <button type="button"
-                onclick="switchOsmTileLayer('map-main', document.getElementById('tile-select-main').value)">Load</button>
+                onclick="switchOsmTileLayer('map-main', document.getElementById('tile-select-main').value)">Switch</button>
       </dd>
     </dl>
     <dl>
@@ -128,13 +128,7 @@
                 onclick="loadGeoJsonUrl('map-main','/nominatim/search?q='+encodeURIComponent(document.getElementById('search-input-main').value),0)">Search</button>
       </dd>
     </dl>
-    <dl>
-      <dt>Features &#x2013; <a href="https://wiki.openstreetmap.org/wiki/API_v0.6#Map" target="_blank">OSM API</a></dt>
-      <dd>
-        <button type="button"
-                onclick="loadGeoJsonUrl('map-main','/osm/map?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value),1)">Load</button>
-      </dd>
-    </dl>
+    <div></div>
     <dl>
       <dt>Features &#x2013; <a href="https://overpass-api.de/" target="_blank">Overpass</a></dt>
       <dd>
@@ -145,19 +139,20 @@
           <option value="relation">relations</option>
         </select>
         <button type="button"
-                onclick="loadGeoJsonUrl('map-main','/overpass/features?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value)+'&type='+document.getElementById('overpass-type-main').value,2)">Load</button>
+                onclick="loadGeoJsonUrl('map-main','/overpass/features?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value)+'&type='+document.getElementById('overpass-type-main').value,2)">Load bbox</button>
       </dd>
       <dt>POI &#x2013; <a href="https://overpass-api.de/" target="_blank">Overpass</a></dt>
       <dd>
+        filter: <input type="text" id="poi-filter-main" placeholder="amenity=cafe" size="16">
         <button type="button"
-                onclick="loadGeoJsonUrl('map-main','/overpass/poi?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value),2)">Load</button>
+                onclick="var f=document.getElementById('poi-filter-main').value;loadGeoJsonUrl('map-main','/overpass/poi?bbox='+encodeURIComponent(document.getElementById('bbox-input-main').value)+(f?'&amp;filter='+encodeURIComponent(f):''),2)">Load bbox</button>
       </dd>
       <dt>Nodes around a point &#x2013; <a href="https://overpass-api.de/" target="_blank">Overpass</a></dt>
       <dd>
         radius (m): <input type="text" id="around-radius-main" value="100" size="6">
         <button type="button"
                 onclick="var st=window.maps['map-main'],c=st.map.getCenter();
-                         loadGeoJsonUrl('map-main','/overpass/around?lon='+c.lng.toFixed(6)+'&lat='+c.lat.toFixed(6)+'&radius='+encodeURIComponent(document.getElementById('around-radius-main').value),2)">Load</button>
+                         loadGeoJsonUrl('map-main','/overpass/around?lon='+c.lng.toFixed(6)+'&lat='+c.lat.toFixed(6)+'&radius='+encodeURIComponent(document.getElementById('around-radius-main').value),2)">Load bbox</button>
       </dd>
     </dl>
 

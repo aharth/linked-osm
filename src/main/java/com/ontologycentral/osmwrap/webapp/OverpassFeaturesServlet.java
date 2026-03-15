@@ -71,11 +71,11 @@ public class OverpassFeaturesServlet extends HttpServlet {
 			if (wantJson) {
 				String xml = HttpClientUtil.readToString(is);
 				is.close();
-				String geoJson = GeoJsonConverter.osmMapToGeoJson(xml);
+				String geoJson = GeoJsonConverter.overpassFeaturesToGeoJson(xml);
 				resp.setContentType("application/geo+json");
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else {
-				Templates tmpl = (Templates) ctx.getAttribute(Listener.POI);
+				Templates tmpl = (Templates) ctx.getAttribute(Listener.MAP);
 				Transformer t = tmpl.newTransformer();
 				response.headers().firstValueAsLong("content-length")
 						.ifPresent(n -> t.setParameter("upstream-bytes", n));

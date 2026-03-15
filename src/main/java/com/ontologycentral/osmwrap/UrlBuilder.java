@@ -30,16 +30,6 @@ public final class UrlBuilder {
     }
 
     /**
-     * Builds URL for OSM map data with bounding box.
-     *
-     * @param bbox bounding box in format "west,south,east,north"
-     * @return complete API URL
-     */
-    public static String buildMapUrl(String bbox) {
-        return ApiConstants.OSM_API_BASE + "/map?bbox=" + bbox;
-    }
-
-    /**
      * Builds URL for Nominatim search.
      *
      * @param query the search query
@@ -59,7 +49,7 @@ public final class UrlBuilder {
      * @param bbox bounding box in format "west,south,east,north"
      * @return Overpass query string
      */
-    public static String buildOverpassPOIQuery(String bbox, String limit) {
+    public static String buildOverpassPOIQuery(String bbox, String limit, String filter) {
         // Convert bbox from "west,south,east,north" to "south,west,north,east" for Overpass API
         String[] coords = bbox.split(",");
         if (coords.length != 4) {
@@ -67,11 +57,23 @@ public final class UrlBuilder {
         }
         String overpassBbox = coords[1] + "," + coords[0] + "," + coords[3] + "," + coords[2];
 
+        String tagFilter;
+        if (filter == null || filter.isBlank()) {
+            tagFilter = "[~\"amenity|shop|tourism|leisure|healthcare\"~\".\"]";
+        } else if (filter.contains("=")) {
+            int eq = filter.indexOf('=');
+            String k = filter.substring(0, eq).strip();
+            String v = filter.substring(eq + 1).strip();
+            tagFilter = "[\"" + k + "\"=\"" + v + "\"]";
+        } else {
+            tagFilter = "[\"" + filter.strip() + "\"]";
+        }
+
         String outStatement = (limit != null) ? "out meta " + limit + ";" : "out meta;";
 
         return "[out:xml][timeout:25];\n" +
                "(\n" +
-               "  node[~\"amenity|shop|tourism|leisure|healthcare\"~\".\"](" + overpassBbox + ");\n" +
+               "  node" + tagFilter + "(" + overpassBbox + ");\n" +
                ");\n" +
                outStatement;
     }
@@ -99,9 +101,7 @@ public final class UrlBuilder {
                "(\n" +
                "  " + type + "(" + overpassBbox + ");\n" +
                ");\n" +
-               "out body;\n" +
-               ">;\n" +
-               "out skel qt;";
+               "out geom;";
     }
 
     /**

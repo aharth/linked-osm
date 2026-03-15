@@ -8,11 +8,12 @@
 
   <h1>Frequently Asked Questions</h1>
 
-  <a name="license"></a>
   <p>
     OpenStreetMap data is licensed under the
     <a href="https://www.openstreetmap.org/copyright">Open Database License (ODbL)</a>.
   </p>
+
+  <!-- Data model -->
 
   <a name="feature-vs-geometry"></a>
   <h2>What is the difference between feature data and geometry data?</h2>
@@ -20,9 +21,8 @@
   <p>
     There are two distinct kinds of endpoints:
   </p>
-
   <dl>
-    <dt><code>/node/{id}.rdf</code>, <code>/way/{id}.rdf</code>, <code>/relation/{id}.rdf</code></dt>
+    <dt><code>/osm/node/{id}.rdf</code>, <code>/osm/way/{id}.rdf</code>, <code>/osm/relation/{id}.rdf</code></dt>
     <dd>
       <strong>Feature data</strong> &mdash; rich semantic descriptions including all OSM tags,
       provenance information (PROV-O), and links to related resources.
@@ -30,7 +30,6 @@
       <code>Accept: text/turtle</code> returns Turtle format.
       Uses <a href="https://api.openstreetmap.org/">OSM API 0.6</a>.
     </dd>
-
     <dt><code>/geo/osm/{type}/{id}.json</code>, <code>/geo/overpass/{type}/{id}.json</code></dt>
     <dd>
       <strong>Geometry data</strong> &mdash; bare coordinate geometry for map rendering,
@@ -41,24 +40,46 @@
     </dd>
   </dl>
 
+  <a name="hash-uris"></a>
+  <h2>What do the <code>#id</code> and <code>#geo</code> URI fragments mean?</h2>
   <p>
-    Each OSM element also has a <em>resource URI</em> with a hash fragment
-    (e.g. <code>/node/1#id</code>) that identifies the geographic feature itself
-    (distinct from any document describing it), following
-    <a href="https://www.w3.org/TR/cooluris/">W3C Linked Data best practices</a>.
+    Each OSM element is described by two related resources, distinguished by a hash fragment:
   </p>
+  <dl>
+    <dt><code>/osm/way/100#id</code></dt>
+    <dd>
+      The <strong>feature</strong> &mdash; the real-world geographic object (a road, building,
+      etc.) typed as <code>spatial:Feature</code>. Requesting <code>/osm/way/100</code> (or
+      <code>/osm/way/100.rdf</code>) returns an RDF document describing this resource. The hash
+      fragment means the feature itself is never directly retrievable as a document; it is
+      identified <em>within</em> the document at <code>/osm/way/100</code>, following the
+      <a href="https://www.w3.org/TR/cooluris/#hashuri">W3C hash-URI pattern</a> for
+      non-information resources.
+    </dd>
+    <dt><code>/osm/way/100#geo</code></dt>
+    <dd>
+      The <strong>geometry</strong> &mdash; a <code>geom:Geometry</code> resource carrying
+      the spatial representation of the feature: WKT literal
+      (<code>locn:geometry</code> with datatype
+      <code>geosparql:wktLiteral</code>), centroid coordinates
+      (<code>geo:lat</code>, <code>geo:long</code>), and links to the GeoJSON endpoints.
+      The feature links to its geometry via <code>geom:geometry</code>.
+    </dd>
+  </dl>
+
+  <!-- URI patterns -->
 
   <a name="uri-patterns"></a>
   <h2>What URI patterns are supported?</h2>
 
-  <h3>Feature URIs (RDF + GeoJSON + GML)</h3>
+  <h3>Feature URIs (RDF + GeoJSON)</h3>
   <dl>
-    <dt><code>/node/{id}</code>, <code>/node/{id}.rdf</code>, <code>/node/{id}.json</code>, <code>/node/{id}.gml</code></dt>
-    <dd>OSM node as RDF/XML, GeoJSON, or GML (XSLT-transformed from OSM API XML)</dd>
-    <dt><code>/way/{id}</code>, <code>/way/{id}.rdf</code>, <code>/way/{id}.json</code>, <code>/way/{id}.gml</code></dt>
-    <dd>OSM way as RDF/XML, GeoJSON, or GML</dd>
-    <dt><code>/relation/{id}</code>, <code>/relation/{id}.rdf</code>, <code>/relation/{id}.json</code>, <code>/relation/{id}.gml</code></dt>
-    <dd>OSM relation as RDF/XML, GeoJSON, or GML</dd>
+    <dt><code>/osm/node/{id}</code>, <code>/osm/node/{id}.rdf</code>, <code>/osm/node/{id}.json</code></dt>
+    <dd>OSM node as RDF/XML or GeoJSON (XSLT-transformed from OSM API XML)</dd>
+    <dt><code>/osm/way/{id}</code>, <code>/osm/way/{id}.rdf</code>, <code>/osm/way/{id}.json</code></dt>
+    <dd>OSM way as RDF/XML or GeoJSON</dd>
+    <dt><code>/osm/relation/{id}</code>, <code>/osm/relation/{id}.rdf</code>, <code>/osm/relation/{id}.json</code></dt>
+    <dd>OSM relation as RDF/XML or GeoJSON</dd>
     <dt><code>/changeset/{id}</code>, <code>/changeset/{id}.rdf</code></dt>
     <dd>OSM changeset as RDF/XML</dd>
   </dl>
@@ -67,62 +88,72 @@
   <dl>
     <dt><code>/geo/osm/{type}/{id}.json</code></dt>
     <dd>GeoJSON geometry from OSM API</dd>
-    <dt><code>/geo/osm/{type}/{id}.wkt</code></dt>
-    <dd>WKT geometry from OSM API</dd>
-    <dt><code>/geo/osm/{type}/{id}.kml</code></dt>
-    <dd>KML geometry from OSM API</dd>
     <dt><code>/geo/overpass/{type}/{id}.json</code></dt>
     <dd>GeoJSON geometry from Overpass API (better for complex multipolygons)</dd>
   </dl>
 
-  <h3>Derived data URIs</h3>
+  <h3>Overpass feature URIs (RDF + GeoJSON)</h3>
   <dl>
-    <dt><code>/search?q={query}</code>, <code>/search.json?q={query}</code></dt>
+    <dt><code>/overpass/node/{id}</code>, <code>/overpass/way/{id}</code>, <code>/overpass/relation/{id}</code></dt>
+    <dd>Single feature fetched from Overpass API; same format options as OSM feature URIs</dd>
+  </dl>
+
+  <h3>Bbox and search URIs</h3>
+  <dl>
+    <dt><code>/nominatim/search?q={query}</code>, <code>/nominatim/search.json?q={query}</code></dt>
     <dd>Nominatim place search; returns RDF/XML or GeoJSON</dd>
-    <dt><code>/map?bbox={W,S,E,N}</code>, <code>/map.json?bbox={W,S,E,N}</code></dt>
-    <dd>OSM API map data for a bounding box; returns RDF/XML or GeoJSON</dd>
-    <dt><code>/poi?bbox={W,S,E,N}</code>, <code>/poi.json?bbox={W,S,E,N}</code></dt>
-    <dd>Overpass points of interest (amenity nodes) in a bounding box</dd>
-    <dt><code>/around?lon={lon}&amp;lat={lat}&amp;radius={m}</code></dt>
+    <dt><code>/overpass/features?bbox={W,S,E,N}</code>, <code>/overpass/features.json?bbox={W,S,E,N}</code></dt>
+    <dd>All features (nodes, ways, relations) in a bounding box from Overpass; returns RDF/XML or GeoJSON</dd>
+    <dt><code>/overpass/poi?bbox={W,S,E,N}</code>, <code>/overpass/poi.json?bbox={W,S,E,N}</code></dt>
+    <dd>Overpass points of interest in a bounding box; optional <code>&amp;filter=</code> param (e.g. <code>amenity=cafe</code> or <code>amenity</code>)</dd>
+    <dt><code>/overpass/around?lon={lon}&amp;lat={lat}&amp;radius={m}</code></dt>
     <dd>Overpass nodes within radius metres of a point; returns RDF/XML or GeoJSON</dd>
-    <dt><code>/around.json?lon={lon}&amp;lat={lat}&amp;radius={m}</code></dt>
-    <dd>Overpass nodes within radius metres of a point; returns GeoJSON</dd>
     <dt><code>/tag/{key}</code></dt>
     <dd>Tag information from taginfo.openstreetmap.org; returns RDF/XML or JSON-LD</dd>
   </dl>
 
-  <a name="element-examples"></a>
-  <h2>Example nodes, ways, relations and changesets</h2>
-
-  <dl>
-    <dt><a href="/node/1.rdf">node/1.rdf</a> | <a href="/node/1.json">node/1.json</a> | <a href="/geo/osm/node/1.json">geo/osm/node/1.json</a></dt>
-    <dd>Monte Piselli radio mast, Italy &mdash; The very first node in OpenStreetMap! &mdash; <a href="https://www.openstreetmap.org/node/1">view on OSM</a></dd>
-    <dt><a href="/node/1675605507.rdf">node/1675605507.rdf</a> | <a href="/node/1675605507.json">node/1675605507.json</a> | <a href="/geo/osm/node/1675605507.json">geo/osm/node/1675605507.json</a></dt>
-    <dd>Caf&#xe9; Wanderer, Nuremberg &mdash; <a href="https://www.openstreetmap.org/node/1675605507">view on OSM</a></dd>
-    <dt><a href="/way/100.rdf">way/100.rdf</a> | <a href="/way/100.json">way/100.json</a> | <a href="/geo/osm/way/100.json">geo/osm/way/100.json</a></dt>
-    <dd>Roundabout, Germany &mdash; <a href="https://www.openstreetmap.org/way/100">view on OSM</a></dd>
-    <dt><a href="/way/32113829.rdf">way/32113829.rdf</a> | <a href="/way/32113829.json">way/32113829.json</a> | <a href="/geo/osm/way/32113829.json">geo/osm/way/32113829.json</a></dt>
-    <dd>Palas building, Kaiserburg Nuremberg &mdash; <a href="https://www.openstreetmap.org/way/32113829">view on OSM</a></dd>
-    <dt><a href="/relation/147.rdf">relation/147.rdf</a> | <a href="/relation/147.json">relation/147.json</a> | <a href="/geo/osm/relation/147.json">geo/osm/relation/147.json</a></dt>
-    <dd>Tigris River multipolygon &mdash; Earliest surviving relation! &mdash; <a href="https://www.openstreetmap.org/relation/147">view on OSM</a></dd>
-    <dt><a href="/changeset/137.rdf">changeset/137.rdf</a></dt>
-    <dd>One of the earliest changesets &mdash; <a href="https://www.openstreetmap.org/changeset/137">view on OSM</a></dd>
-  </dl>
-
-  <a name="osm-vs-overpass-bbox"></a>
-  <h2>Why does the Overpass column show more features than the OSM API column?</h2>
+  <a name="content-negotiation"></a>
+  <h2>How does content negotiation work?</h2>
 
   <p>
-    Two reasons.
-    First, the OSM API rejects bounding boxes larger than 0.25&nbsp;deg²; Overpass
-    has no such limit (the current area is shown in the status line).
-    Second, neither column extracts relations from bounding-box responses — only
-    tagged nodes (points) and ways (lines/polygons) become GeoJSON features.
-    Relations are skipped because their geometry depends on their
-    <code>type=</code> tag (multipolygon, route, turn restriction, …) and requires
-    member assembly that is not done for bulk queries.
-    Use <code>/overpass/relation/{id}</code> to load a specific relation with full
-    geometry.
+    All endpoints support two methods for selecting the response format:
+  </p>
+  <ul>
+    <li><strong>File extension</strong>: append <code>.rdf</code>, <code>.json</code>,
+      or <code>.ttl</code> to feature URIs; <code>.json</code> to geometry URIs.</li>
+    <li><strong>HTTP Accept header</strong>:
+      <code>Accept: application/rdf+xml</code> (RDF/XML),
+      <code>Accept: text/turtle</code> (Turtle, via Apache Jena),
+      <code>Accept: application/geo+json</code> or
+      <code>Accept: application/json</code> (GeoJSON).
+    </li>
+  </ul>
+
+  <!-- Geometry building -->
+
+  <a name="relation-wkt"></a>
+  <h2>Why do relations lack a WKT geometry in the RDF output?</h2>
+
+  <p>
+    For nodes and ways, the XSLT stylesheet can produce a WKT literal directly from the
+    coordinates in the OSM XML response.  For a <code>type=multipolygon</code> relation
+    the geometry is more complex: the member ways are unordered fragments that must be
+    stitched together into closed outer and inner rings before a
+    <code>MULTIPOLYGON(...)</code> literal can be formed.  This ring-assembly algorithm
+    is not expressible in XSLT 2.0, so the <code>#geo</code> block in
+    <code>/osm/relation/{id}.rdf</code> carries only a centroid, not a WKT shape.
+  </p>
+  <p>
+    The <strong>GeoJSON geometry endpoints</strong> do not have this limitation &mdash;
+    <code>/geo/osm/relation/{id}.json</code> and
+    <code>/geo/overpass/relation/{id}.json</code> both run the ring-assembly in Java and
+    return a correct <code>MultiPolygon</code>.
+  </p>
+  <p>
+    Thematic or organisational relations that group other features without defining a
+    drawable shape (e.g. a route network or a list of countries) have no node coordinates
+    at all; for these, neither <code>geom:geometry</code> nor a <code>#geo</code> resource
+    is emitted.
   </p>
 
   <a name="overpass-recursion"></a>
@@ -141,7 +172,7 @@
   <h2>Why do some large relations return 509, 529, or 504?</h2>
 
   <p>
-    All relation formats (RDF, GML, GeoJSON) fetch the
+    All relation formats (RDF, GeoJSON) fetch the
     <code>/relation/{id}/full</code> endpoint from the OSM API, which returns every
     member way and every node of every way in a single response.  For large
     administrative or geographic boundaries this can amount to tens of megabytes of XML.
@@ -162,81 +193,22 @@
     </dd>
   </dl>
   <p>
-    The following relations are known to be affected by size limits:
-  </p>
-  <dl>
-    <dt><a href="/relation/71525.rdf">relation/71525.rdf</a> | <a href="/relation/71525.json">relation/71525.json</a> | <a href="/geo/osm/relation/71525.json">geo/osm/relation/71525.json</a></dt>
-    <dd>Paris administrative boundary &mdash; <a href="https://www.openstreetmap.org/relation/71525">view on OSM</a></dd>
-    <dt><a href="/relation/13986332.rdf">relation/13986332.rdf</a> | <a href="/relation/13986332.json">relation/13986332.json</a> | <a href="/geo/osm/relation/13986332.json">geo/osm/relation/13986332.json</a></dt>
-    <dd>Sebalder Reichswald forest &mdash; <a href="https://www.openstreetmap.org/relation/13986332">view on OSM</a></dd>
-  </dl>
-  <p>
     For large relations the <code>/geo/overpass/relation/{id}.json</code> geometry endpoint
     is a better alternative, as it delegates geometry assembly to the Overpass API in a
     single query rather than fetching the full member graph from the OSM API.
   </p>
 
-  <a name="hash-uris"></a>
-  <h2>What do the <code>#id</code> and <code>#geo</code> URI fragments mean?</h2>
-  <p>
-    Each OSM element is described by two related resources, distinguished by a hash fragment:
-  </p>
-  <dl>
-    <dt><code>/way/100#id</code></dt>
-    <dd>
-      The <strong>feature</strong> &mdash; the real-world geographic object (a road, building,
-      etc.) typed as <code>spatial:Feature</code>. Requesting <code>/way/100</code> (or
-      <code>/way/100.rdf</code>) returns an RDF document describing this resource. The hash
-      fragment means the feature itself is never directly retrievable as a document; it is
-      identified <em>within</em> the document at <code>/way/100</code>, following the
-      <a href="https://www.w3.org/TR/cooluris/#hashuri">W3C hash-URI pattern</a> for
-      non-information resources.
-    </dd>
-    <dt><code>/way/100#geo</code></dt>
-    <dd>
-      The <strong>geometry</strong> &mdash; a <code>geom:Geometry</code> resource carrying
-      the spatial representation of the feature: WKT literal
-      (<code>locn:geometry</code> with datatype
-      <code>geosparql:wktLiteral</code>), centroid coordinates
-      (<code>geo:lat</code>, <code>geo:long</code>), and links to the GeoJSON endpoints.
-      The feature links to its geometry via <code>geom:geometry</code>.
-    </dd>
-  </dl>
-
-  <a name="relation-wkt"></a>
-  <h2>Why do relations lack a WKT geometry in the RDF output?</h2>
-
-  <p>
-    For nodes and ways, the XSLT stylesheet can produce a WKT literal directly from the
-    coordinates in the OSM XML response.  For a <code>type=multipolygon</code> relation
-    the geometry is more complex: the member ways are unordered fragments that must be
-    stitched together into closed outer and inner rings before a
-    <code>MULTIPOLYGON(...)</code> literal can be formed.  This ring-assembly algorithm
-    is not expressible in XSLT 2.0, so the <code>#geo</code> block in
-    <code>/relation/{id}.rdf</code> carries only a centroid, not a WKT shape.
-  </p>
-  <p>
-    The <strong>GeoJSON geometry endpoints</strong> do not have this limitation &mdash;
-    <code>/geo/osm/relation/{id}.json</code> and
-    <code>/geo/overpass/relation/{id}.json</code> both run the ring-assembly in Java and
-    return a correct <code>MultiPolygon</code>.
-  </p>
-  <p>
-    Thematic or organisational relations that group other features without defining a
-    drawable shape (e.g. a route network or a list of countries) have no node coordinates
-    at all; for these, neither <code>geom:geometry</code> nor a <code>#geo</code> resource
-    is emitted.
-  </p>
+  <!-- Infrastructure -->
 
   <a name="caching"></a>
   <h2>Are responses cached?</h2>
 
   <p>
     The server caches the raw OSM XML it fetches from upstream (OSM API, Overpass API)
-    for feature endpoints (<code>/node/*</code>, <code>/way/*</code>,
-    <code>/relation/*</code>).  A single in-memory cache is shared across all response
-    formats, so a request for <code>/relation/51477.json</code> immediately followed by
-    <code>/relation/51477.rdf</code> results in only one upstream network request &mdash;
+    for feature endpoints (<code>/osm/node/*</code>, <code>/osm/way/*</code>,
+    <code>/osm/relation/*</code>).  A single in-memory cache is shared across all response
+    formats, so a request for <code>/osm/relation/51477.json</code> immediately followed by
+    <code>/osm/relation/51477.rdf</code> results in only one upstream network request &mdash;
     the second request is served from the cached XML.
   </p>
   <p>
@@ -252,26 +224,7 @@
       simultaneously, only one upstream fetch is performed; the other requests wait and
       share the result.</li>
     <li><strong>Scope:</strong> the cache is in-process and resets on webapp restart.
-      Other endpoints (search, map, POI, around) are not cached server-side.</li>
-  </ul>
-
-  <a name="content-negotiation"></a>
-  <h2>How does content negotiation work?</h2>
-
-  <p>
-    All endpoints support two methods for selecting the response format:
-  </p>
-  <ul>
-    <li><strong>File extension</strong>: append <code>.rdf</code>, <code>.json</code>,
-      or <code>.gml</code> to feature URIs; <code>.json</code>, <code>.wkt</code>,
-      or <code>.kml</code> to geometry URIs.</li>
-    <li><strong>HTTP Accept header</strong>:
-      <code>Accept: application/rdf+xml</code> (RDF/XML),
-      <code>Accept: text/turtle</code> (Turtle, via Apache Jena),
-      <code>Accept: application/geo+json</code> or
-      <code>Accept: application/json</code> (GeoJSON),
-      <code>Accept: application/gml+xml</code> (GML, feature endpoints only).
-    </li>
+      Other endpoints (search, POI, around) are not cached server-side.</li>
   </ul>
 
   <a name="bot"></a>

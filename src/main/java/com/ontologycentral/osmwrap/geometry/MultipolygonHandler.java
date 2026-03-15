@@ -280,6 +280,29 @@ public class MultipolygonHandler {
     }
 
     /**
+     * Build multipolygon geometry from pre-parsed member way segments.
+     * Reuses the private stitchWaySegments logic.
+     *
+     * @param outerSegments way coordinate sequences with role "outer"
+     * @param innerSegments way coordinate sequences with role "inner" (holes)
+     * @return assembled MultipolygonGeometry
+     */
+    public static MultipolygonGeometry buildFromSegments(
+            List<List<double[]>> outerSegments,
+            List<List<double[]>> innerSegments) {
+        MultipolygonGeometry geom = new MultipolygonGeometry();
+        for (List<double[]> stitched : stitchWaySegments(outerSegments)) {
+            Ring ring = new Ring(stitched, "outer");
+            if (ring.isClosed()) geom.addOuterRing(ring);
+        }
+        for (List<double[]> stitched : stitchWaySegments(innerSegments)) {
+            Ring ring = new Ring(stitched, "inner");
+            if (ring.isClosed()) geom.addInnerRing(ring);
+        }
+        return geom;
+    }
+
+    /**
      * Convert multipolygon to GeoJSON format
      */
     public static String toGeoJSON(MultipolygonGeometry geometry) {

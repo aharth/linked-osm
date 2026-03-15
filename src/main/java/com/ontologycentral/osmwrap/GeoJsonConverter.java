@@ -176,11 +176,11 @@ public final class GeoJsonConverter {
 	}
 
 	/**
-	 * Convert OSM API map response to a GeoJSON FeatureCollection.
-	 * Extracts nodes with tags as Points, and ways as LineStrings
-	 * (node coordinates are in the same XML response).
+	 * Convert Overpass XML response with {@code out geom} to a GeoJSON FeatureCollection.
+	 * Handles nodes (Point), ways (LineString/Polygon), and relations
+	 * (Polygon/MultiPolygon for multipolygons, MultiLineString for routes).
 	 */
-	public static String osmMapToGeoJson(String xml) {
+	public static String overpassFeaturesToGeoJson(String xml) {
 		StringBuilder sb = new StringBuilder();
 		sb.append("{\"type\":\"FeatureCollection\",\"@context\":\"https://geojson.org/geojson-ld/geojson-context.jsonld\"");
 		Matcher noteMatcher = Pattern.compile("<note>([^<]*)</note>").matcher(xml);
@@ -189,107 +189,88 @@ public final class GeoJsonConverter {
 		}
 		sb.append(",\"features\":[");
 
-		// First pass: build node coordinate lookup (all nodes have lat/lon in map response)
-		Map<String, double[]> nodeCoords = new HashMap<>();
+		boolean first = true;
+
+		// Nodes
 		Pattern nodePattern = Pattern.compile("<node\\s([^>]*?)/>|<node\\s([^>]*?)>(.*?)</node>", Pattern.DOTALL);
 		Matcher nodeMatcher = nodePattern.matcher(xml);
-
-		// Also collect nodes that have tags (these are named features worth showing)
-		List<String[]> taggedNodes = new ArrayList<>();
-
 		while (nodeMatcher.find()) {
 			String attrs = nodeMatcher.group(1) != null ? nodeMatcher.group(1) : nodeMatcher.group(2);
 			String body = nodeMatcher.group(3);
 
-			String id = extractAttr(attrs, "id");
 			String lat = extractAttr(attrs, "lat");
 			String lon = extractAttr(attrs, "lon");
-			if (id == null || lat == null || lon == null) continue;
+			if (lat == null || lon == null) continue;
 
-			try {
-				nodeCoords.put(id, new double[]{ Double.parseDouble(lon), Double.parseDouble(lat) });
-			} catch (NumberFormatException e) {
-				continue;
-			}
+			String id = extractAttr(attrs, "id");
 
-			// Node with tags = named feature
-			if (body != null && body.contains("<tag")) {
-				taggedNodes.add(new String[]{ id, lat, lon, body });
-			}
-		}
-
-		boolean first = true;
-
-		// Emit tagged nodes as Point features
-		for (String[] node : taggedNodes) {
 			if (!first) sb.append(",");
 			first = false;
 
-			sb.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"Point\",\"coordinates\":[");
-			sb.append(node[2]).append(",").append(node[1]);
+			sb.append("{\"type\":\"Feature\"");
+			sb.append(",\"id\":\"/overpass/node/").append(escapeJson(id)).append("#id\"");
+			sb.append(",\"geometry\":{\"type\":\"Point\",\"coordinates\":[");
+			sb.append(lon).append(",").append(lat);
 			sb.append("]},\"properties\":{");
 			sb.append("\"osm_type\":\"node\"");
-			sb.append(",\"osm_id\":\"").append(escapeJson(node[0])).append("\"");
-
-			Matcher tagMatcher = TAG_PATTERN.matcher(node[3]);
-			while (tagMatcher.find()) {
-				String tagKey = decodeXmlEntities(tagMatcher.group(1));
-				String tagValue = decodeXmlEntities(tagMatcher.group(2));
-				sb.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
-				sb.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
+			sb.append(",\"osm_id\":\"").append(escapeJson(id)).append("\"");
+			if (body != null) {
+				Matcher tagMatcher = TAG_PATTERN.matcher(body);
+				while (tagMatcher.find()) {
+					String tagKey = decodeXmlEntities(tagMatcher.group(1));
+					String tagValue = decodeXmlEntities(tagMatcher.group(2));
+					sb.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
+					sb.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
+				}
 			}
-
 			sb.append("}}");
 		}
 
-		// Second pass: extract ways as LineStrings
+		// Ways (inline nd lat/lon from out geom)
+		Pattern ndLatLon = Pattern.compile("<nd\\s+lat=['\"]([^'\"]+)['\"]\\s+lon=['\"]([^'\"]+)['\"]");
 		Pattern wayPattern = Pattern.compile("<way\\s([^>]*?)>(.*?)</way>", Pattern.DOTALL);
 		Matcher wayMatcher = wayPattern.matcher(xml);
-
 		while (wayMatcher.find()) {
 			String wayAttrs = wayMatcher.group(1);
 			String wayBody = wayMatcher.group(2);
-
 			String wayId = extractAttr(wayAttrs, "id");
 
-			// Collect nd refs and resolve coordinates
-			Pattern ndPattern = Pattern.compile("<nd\\s+ref=['\"]([^'\"]*)['\"]");
-			Matcher ndMatcher = ndPattern.matcher(wayBody);
-
-			StringBuilder coords = new StringBuilder();
-			int coordCount = 0;
-			String firstRef = null;
-			String lastRef = null;
-			while (ndMatcher.find()) {
-				String ref = ndMatcher.group(1);
-				double[] c = nodeCoords.get(ref);
-				if (c != null) {
-					if (coordCount == 0) firstRef = ref;
-					lastRef = ref;
-					if (coordCount > 0) coords.append(",");
-					coords.append("[").append(c[0]).append(",").append(c[1]).append("]");
-					coordCount++;
+			List<double[]> coords = new ArrayList<>();
+			Matcher ndm = ndLatLon.matcher(wayBody);
+			while (ndm.find()) {
+				try {
+					double lat = Double.parseDouble(ndm.group(1));
+					double lon = Double.parseDouble(ndm.group(2));
+					coords.add(new double[]{lon, lat});
+				} catch (NumberFormatException e) {
+					// skip
 				}
 			}
 
-			if (coordCount < 2) continue;
+			if (coords.size() < 2) continue;
 
 			if (!first) sb.append(",");
 			first = false;
 
-			// Closed way (first node == last node) -> Polygon
-			boolean closed = coordCount >= 4 && firstRef != null && firstRef.equals(lastRef);
+			boolean closed = coords.size() >= 4
+					&& Math.abs(coords.get(0)[0] - coords.get(coords.size() - 1)[0]) < 1e-9
+					&& Math.abs(coords.get(0)[1] - coords.get(coords.size() - 1)[1]) < 1e-9;
 			String geomType = closed ? "Polygon" : "LineString";
 
-			sb.append("{\"type\":\"Feature\",\"geometry\":{\"type\":\"").append(geomType).append("\",\"coordinates\":");
+			sb.append("{\"type\":\"Feature\"");
+			sb.append(",\"id\":\"/overpass/way/").append(escapeJson(wayId)).append("#id\"");
+			sb.append(",\"geometry\":{\"type\":\"").append(geomType).append("\",\"coordinates\":");
 			if (closed) sb.append("[");
-			sb.append("[").append(coords).append("]");
+			sb.append("[");
+			for (int i = 0; i < coords.size(); i++) {
+				if (i > 0) sb.append(",");
+				sb.append("[").append(coords.get(i)[0]).append(",").append(coords.get(i)[1]).append("]");
+			}
+			sb.append("]");
 			if (closed) sb.append("]");
 			sb.append("},\"properties\":{");
 			sb.append("\"osm_type\":\"way\"");
 			sb.append(",\"osm_id\":\"").append(escapeJson(wayId)).append("\"");
-
-			// Extract way tags
 			Matcher tagMatcher = TAG_PATTERN.matcher(wayBody);
 			while (tagMatcher.find()) {
 				String tagKey = decodeXmlEntities(tagMatcher.group(1));
@@ -297,7 +278,90 @@ public final class GeoJsonConverter {
 				sb.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
 				sb.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
 			}
+			sb.append("}}");
+		}
 
+		// Relations
+		Pattern memberPattern = Pattern.compile(
+				"<member type=['\"]way['\"] ref=['\"][^'\"]*['\"] role=['\"]([^'\"]*)['\"]>(.*?)</member>",
+				Pattern.DOTALL);
+		Pattern relPattern = Pattern.compile("<relation\\s([^>]*?)>(.*?)</relation>", Pattern.DOTALL);
+		Matcher relMatcher = relPattern.matcher(xml);
+		while (relMatcher.find()) {
+			String relAttrs = relMatcher.group(1);
+			String relBody = relMatcher.group(2);
+			String relId = extractAttr(relAttrs, "id");
+
+			List<List<double[]>> outerSegments = new ArrayList<>();
+			List<List<double[]>> innerSegments = new ArrayList<>();
+			List<List<double[]>> otherSegments = new ArrayList<>();
+
+			Matcher mm = memberPattern.matcher(relBody);
+			while (mm.find()) {
+				String role = mm.group(1);
+				String memberBody = mm.group(2);
+				List<double[]> seg = new ArrayList<>();
+				Matcher ndm = ndLatLon.matcher(memberBody);
+				while (ndm.find()) {
+					try {
+						double lat = Double.parseDouble(ndm.group(1));
+						double lon = Double.parseDouble(ndm.group(2));
+						seg.add(new double[]{lon, lat});
+					} catch (NumberFormatException e) {
+						// skip
+					}
+				}
+				if (seg.size() < 2) continue;
+				if ("outer".equals(role)) outerSegments.add(seg);
+				else if ("inner".equals(role)) innerSegments.add(seg);
+				else otherSegments.add(seg);
+			}
+
+			String geomJson;
+			if (!outerSegments.isEmpty()) {
+				com.ontologycentral.osmwrap.geometry.MultipolygonGeometry geom =
+						com.ontologycentral.osmwrap.geometry.MultipolygonHandler
+								.buildFromSegments(outerSegments, innerSegments);
+				geomJson = com.ontologycentral.osmwrap.geometry.MultipolygonHandler.toGeoJSON(geom);
+			} else {
+				// Route or generic: MultiLineString from all segments
+				List<List<double[]>> all = new ArrayList<>(otherSegments);
+				all.addAll(innerSegments);
+				if (all.isEmpty()) {
+					geomJson = "null";
+				} else {
+					StringBuilder msb = new StringBuilder("{\"type\":\"MultiLineString\",\"coordinates\":[");
+					for (int si = 0; si < all.size(); si++) {
+						if (si > 0) msb.append(",");
+						msb.append("[");
+						List<double[]> seg = all.get(si);
+						for (int ci = 0; ci < seg.size(); ci++) {
+							if (ci > 0) msb.append(",");
+							msb.append("[").append(seg.get(ci)[0]).append(",").append(seg.get(ci)[1]).append("]");
+						}
+						msb.append("]");
+					}
+					msb.append("]}");
+					geomJson = msb.toString();
+				}
+			}
+
+			if (!first) sb.append(",");
+			first = false;
+
+			sb.append("{\"type\":\"Feature\"");
+			sb.append(",\"id\":\"/overpass/relation/").append(escapeJson(relId)).append("#id\"");
+			sb.append(",\"geometry\":").append(geomJson);
+			sb.append(",\"properties\":{");
+			sb.append("\"osm_type\":\"relation\"");
+			sb.append(",\"osm_id\":\"").append(escapeJson(relId)).append("\"");
+			Matcher tagMatcher = TAG_PATTERN.matcher(relBody);
+			while (tagMatcher.find()) {
+				String tagKey = decodeXmlEntities(tagMatcher.group(1));
+				String tagValue = decodeXmlEntities(tagMatcher.group(2));
+				sb.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
+				sb.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
+			}
 			sb.append("}}");
 		}
 

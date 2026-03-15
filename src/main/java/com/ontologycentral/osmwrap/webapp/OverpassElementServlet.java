@@ -98,7 +98,7 @@ public class OverpassElementServlet extends HttpServlet {
 
 			if (wantJson) {
 				resp.setContentType("application/geo+json");
-				String geoJson = GeoJsonConverter.osmMapToGeoJson(xml);
+				String geoJson = GeoJsonConverter.overpassFeaturesToGeoJson(xml);
 				os.write(geoJson.getBytes(StandardCharsets.UTF_8));
 			} else {
 				// Strip Overpass-specific elements (<note>, <meta>) not present in OSM API XML:
@@ -114,7 +114,7 @@ public class OverpassElementServlet extends HttpServlet {
 				if ("relation".equals(elementType)) {
 					t.setParameter("element-id", id);
 				}
-				resp.setContentType("application/rdf+xml");
+				resp.setContentType("text/turtle");
 				_log.info("applying xslt");
 				t.transform(new StreamSource(new StringReader(rdfXml)), new StreamResult(os));
 			}

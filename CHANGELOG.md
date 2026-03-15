@@ -3,6 +3,17 @@
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
 ## [2026-03-15]
+- **OSM API bbox endpoint removed**: `MapServlet`, `buildMapUrl`, `--map` CLI flag, and `/osm/map*` web.xml entries deleted; `osmMapToGeoJson` replaced by `overpassFeaturesToGeoJson` (nodes→Point, ways→LineString/Polygon with inline `out geom` coords, relations→Polygon/MultiPolygon via `MultipolygonHandler.buildFromSegments` or MultiLineString for routes)
+- **`OverpassFeaturesServlet`**: fixed to use `Listener.MAP` template and `overpassFeaturesToGeoJson`; Overpass query switched from two-pass `out body; >; out skel qt` to `out geom`
+- **POI filter**: `buildOverpassPOIQuery` gains a `filter` param (`key=value` → exact match, `key` → key-exists, blank → default amenity/shop/tourism regex); `index.html` POI row adds a filter text input
+- **4-column grid fixed**: Overpass bbox controls moved to Overpass column (col 3); OSM API map `<dl>` removed from UI
+- **EOX OSM tile layer**: added to `OSM_TILE_LAYERS` as a WMS entry; `switchOsmTileLayer` branches on `layer.type === 'wms'` to use `L.tileLayer.wms`; PNG link uses new `_centerTileWmsUrl` (WMS GetMap for center tile bbox)
+- **Button labels**: Pan (viewport navigation), Switch (tile layer), Load bbox (Overpass features/POI/around), Load (feature by ID), Search (Nominatim)
+- **`faq.html`**: URI paths corrected throughout (`/osm/node/`, `/nominatim/search`, `/overpass/poi` etc.); example link sections removed; questions reordered into groups (data model, URI patterns, geometry building, infrastructure)
+- **Turtle-native XSLT output**: `node.xsl`, `way.xsl`, `relation.xsl` now emit Turtle (`xsl:output method="text"`) instead of RDF/XML; all OSM tag keys emitted as full URIs `<https://osmwrap.ontologycentral.com/tag/{key}>` — colons in keys (e.g. `addr:street`, `name:en`) are valid in URI angle-bracket notation and require no workaround
+- **Blank node workaround removed**: the `osm:tag [ osm:key "..." ; osm:value "..." ]` pattern for colon-containing keys is gone
+- **`RdfFilter` updated**: detects `text/turtle` servlet output; passes through for Turtle clients, converts Turtle→RDF/XML via Jena for RDF/XML clients; `.rdf` suffix now forces RDF/XML (analogous to `.ttl` forcing Turtle)
+- **FeatureServlet / OverpassElementServlet**: content type changed from `application/rdf+xml` to `text/turtle`
 - **`/tag/{key}={value}`**: `TagServlet` now routes `key=value` paths to a new `handleTagValueRequest`; `TaginfoConverter` fetches Taginfo `/api/4/tag/overview?key=K&value=V` and emits a SKOS description with `skos:broader /tag/{key}` and `rdfs:seeAlso` to the OSM wiki `Tag:` page
 - **`TaginfoConverter` URI encoding**: tag values in `rdf:resource`/`rdf:about` now percent-encoded via `uriEncodeValue()` — fixes 500 on keys with space-containing values (e.g. `communication:microwave=emergency services`)
 - **`RdfFilter` Jena base**: changed from full request URL to site root (`https://host/`) — fixes 500 when Jena relativised URIs with `:` in the first path segment

@@ -39,7 +39,10 @@ var OSM_TILE_LAYERS = {
     'CARTO Dark Matter': { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
                            attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO' },
     'Transport (\u00d6PNVKarte)': { url: 'https://tile.memomaps.de/tilegen/{z}/{x}/{y}.png',
-                                    attribution: 'Map \u00a9 <a href="https://memomaps.de/">memomaps.de</a> CC-BY-SA, map data \u00a9 OpenStreetMap ODbL' }
+                                    attribution: 'Map \u00a9 <a href="https://memomaps.de/">memomaps.de</a> CC-BY-SA, map data \u00a9 OpenStreetMap ODbL' },
+    'EOX OSM':   { type: 'wms', url: 'https://tiles.maps.eox.at/wms',
+                   wmsLayers: 'osm_3857', format: 'image/jpeg',
+                   attribution: '\u00a9 OpenStreetMap contributors, Rendering \u00a9 <a href="https://eox.at">EOX</a>' }
 };
 
 function _updateTileStatus(mapId) {
@@ -55,7 +58,9 @@ function _updateTileStatus(mapId) {
     if (tileEl) {
         var c = state.map.getCenter();
         var z = state.map.getZoom();
-        var pngUrl = _centerTileUrl(layer.url, c.lat, c.lng, z);
+        var pngUrl = layer.type === 'wms'
+            ? _centerTileWmsUrl(layer.url, layer.wmsLayers, layer.format, c.lat, c.lng, z)
+            : _centerTileUrl(layer.url, c.lat, c.lng, z);
         tileEl.innerHTML = '<a href="' + escHtml(pngUrl) + '" target="_blank">PNG</a>';
     }
 }
@@ -65,7 +70,13 @@ function switchOsmTileLayer(mapId, layerName) {
     if (!state) return;
     if (state.tileLayer) state.map.removeLayer(state.tileLayer);
     var layer = OSM_TILE_LAYERS[layerName] || OSM_TILE_LAYERS['Standard'];
-    state.tileLayer = L.tileLayer(layer.url, { attribution: '' }).addTo(state.map);
+    if (layer.type === 'wms') {
+        state.tileLayer = L.tileLayer.wms(layer.url,
+            { layers: layer.wmsLayers, format: layer.format || 'image/jpeg',
+              transparent: false, attribution: '' }).addTo(state.map);
+    } else {
+        state.tileLayer = L.tileLayer(layer.url, { attribution: '' }).addTo(state.map);
+    }
     state.activeLayerName = layerName;
     _updateTileStatus(mapId);
 }
@@ -135,11 +146,13 @@ function initOsmMap(id, lat, lon, zoom) {
         }
         var tileEl = document.getElementById('tile-link-' + suffix);
         if (tileEl) {
+            var layerName = (window.maps[id] || {}).activeLayerName || 'Standard';
+            var activeLayer = OSM_TILE_LAYERS[layerName] || OSM_TILE_LAYERS['Standard'];
             var c = m.getCenter();
             var z = m.getZoom();
-            var layerName = (window.maps[id] || {}).activeLayerName || 'Standard';
-            var layerUrl = (OSM_TILE_LAYERS[layerName] || OSM_TILE_LAYERS['Standard']).url;
-            var pngUrl = _centerTileUrl(layerUrl, c.lat, c.lng, z);
+            var pngUrl = activeLayer.type === 'wms'
+                ? _centerTileWmsUrl(activeLayer.url, activeLayer.wmsLayers, activeLayer.format, c.lat, c.lng, z)
+                : _centerTileUrl(activeLayer.url, c.lat, c.lng, z);
             tileEl.innerHTML = '<a href="' + escHtml(pngUrl) + '" target="_blank">PNG</a>';
         }
     }
@@ -223,6 +236,24 @@ function _centerTileUrl(layerUrl, lat, lon, z) {
     var ty = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180)
            + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
     return layerUrl.replace('{s}', 'a').replace('{z}', z).replace('{x}', tx).replace('{y}', ty);
+}
+
+function _centerTileWmsUrl(wmsUrl, wmsLayers, format, lat, lon, z) {
+    var tx = Math.floor((lon + 180) / 360 * Math.pow(2, z));
+    var ty = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180)
+           + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
+    var R = 6378137, n = Math.pow(2, z);
+    var tileSize = 2 * Math.PI * R / n;
+    var minx = tx * tileSize - Math.PI * R;
+    var maxy = Math.PI * R - ty * tileSize;
+    var maxx = minx + tileSize;
+    var miny = maxy - tileSize;
+    return wmsUrl + '?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap'
+        + '&LAYERS=' + encodeURIComponent(wmsLayers)
+        + '&SRS=EPSG:3857'
+        + '&BBOX=' + minx.toFixed(2) + ',' + miny.toFixed(2) + ',' + maxx.toFixed(2) + ',' + maxy.toFixed(2)
+        + '&WIDTH=256&HEIGHT=256'
+        + '&FORMAT=' + encodeURIComponent(format || 'image/jpeg');
 }
 
 function _parseBbox(url) {

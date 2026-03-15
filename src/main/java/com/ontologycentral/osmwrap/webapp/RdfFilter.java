@@ -54,9 +54,10 @@ public class RdfFilter implements Filter {
 		String lastSegment = requestPath.substring(requestPath.lastIndexOf('/') + 1);
 
 		boolean forceTurtle = lastSegment.endsWith(".ttl");
+		boolean forceRdfXml = lastSegment.endsWith(".rdf");
 		boolean hasExtension = lastSegment.contains(".");
-		boolean serveTurtle = forceTurtle || !AcceptHeader.prefers(accepted,
-				"application", "rdf+xml", "text", "turtle");
+		boolean serveTurtle = (forceTurtle || !AcceptHeader.prefers(accepted,
+				"application", "rdf+xml", "text", "turtle")) && !forceRdfXml;
 
 		httpResponse.setHeader("Vary", "Accept");
 
@@ -71,29 +72,60 @@ public class RdfFilter implements Filter {
 		// than name:en (first segment "name:en" has a colon, ambiguous with URI scheme).
 		String base = proto + "://" + host + "/";
 
-		if (serveTurtle && contentType != null && contentType.contains("application/rdf+xml")) {
-			byte[] original = capture.toByteArray();
+		byte[] data = capture.toByteArray();
 
+		if (contentType != null && contentType.contains("text/turtle")) {
+			// XSLT-generated Turtle: pass through or convert to RDF/XML
+			if (serveTurtle) {
+				if (!hasExtension) {
+					httpResponse.setHeader("Content-Location", requestPath + ".ttl");
+				}
+				httpResponse.setContentType("text/turtle");
+				httpResponse.setContentLength(data.length);
+				httpResponse.getOutputStream().write(data);
+			} else {
+				try {
+					Model model = ModelFactory.createDefaultModel();
+					RDFParser.create()
+							.source(new java.io.ByteArrayInputStream(data))
+							.lang(Lang.TURTLE)
+							.base(base)
+							.parse(model);
+					ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
+					RDFWriter.create()
+							.lang(Lang.RDFXML)
+							.source(model)
+							.output(rdfOut);
+					byte[] result = rdfOut.toByteArray();
+					if (!hasExtension) {
+						httpResponse.setHeader("Content-Location", requestPath + ".rdf");
+					}
+					httpResponse.setContentType("application/rdf+xml");
+					httpResponse.setContentLength(result.length);
+					httpResponse.getOutputStream().write(result);
+				} catch (Exception e) {
+					_log.warning("Turtle parse error: " + e.getMessage());
+					httpResponse.sendError(500, "Turtle parse error: " + e.getMessage());
+					return;
+				}
+			}
+		} else if (serveTurtle && contentType != null && contentType.contains("application/rdf+xml")) {
+			// Other servlets still output RDF/XML: convert to Turtle
 			try {
 				Model model = ModelFactory.createDefaultModel();
-
 				RDFParser.create()
-						.source(new java.io.ByteArrayInputStream(original))
+						.source(new java.io.ByteArrayInputStream(data))
 						.lang(Lang.RDFXML)
 						.base(base)
 						.parse(model);
-
 				ByteArrayOutputStream out = new ByteArrayOutputStream();
-
 				RDFWriter.create()
 						.source(model)
 						.lang(Lang.TURTLE)
 						.base(base)
 						.output(out);
-
 				String turtle = out.toString("UTF-8");
 				byte[] result = turtle.getBytes("UTF-8");
-
 				if (!hasExtension) {
 					httpResponse.setHeader("Content-Location", requestPath + ".ttl");
 				}
@@ -106,7 +138,6 @@ public class RdfFilter implements Filter {
 				return;
 			}
 		} else {
-			byte[] data = capture.toByteArray();
 			if (!hasExtension && contentType != null) {
 				String ext = null;
 				if (contentType.contains("application/rdf+xml"))             ext = ".rdf";
