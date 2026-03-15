@@ -11,7 +11,7 @@
   <!-- Data model -->
 
   <a name="feature-vs-geometry"></a>
-  <h2>What is the difference between feature data and geometry data?</h2>
+  <h2>What is the difference between a feature and a geometry?</h2>
 
   <p>
     There are two distinct kinds of endpoints:
@@ -19,15 +19,14 @@
   <dl>
     <dt><code>/osm/node/{id}.rdf</code>, <code>/osm/way/{id}.rdf</code>, <code>/osm/relation/{id}.rdf</code></dt>
     <dd>
-      Feature data &mdash; rich semantic descriptions including all OSM tags,
-      provenance information (PROV-O), and links to related resources.
-      Returns RDF/XML by default; requesting with
-      <code>Accept: text/turtle</code> returns Turtle format.
+      A description of the feature &mdash; the real-world geographic object &mdash; including
+      all OSM tags, provenance (PROV-O), and links to related resources.
+      Returns RDF/XML by default; <code>Accept: text/turtle</code> returns Turtle.
       Uses <a href="https://api.openstreetmap.org/">OSM API 0.6</a>.
     </dd>
     <dt><code>/geo/osm/{type}/{id}.json</code>, <code>/geo/overpass/{type}/{id}.json</code></dt>
     <dd>
-      Geometry data &mdash; bare coordinate geometry for map rendering,
+      A description of the geometry &mdash; bare coordinate geometry for map rendering,
       with no semantic enrichment.
       Returns GeoJSON. Two upstream sources are available: the OSM API and the Overpass API
       (useful for complex multipolygon relations).
@@ -67,7 +66,7 @@
   <a name="uri-patterns"></a>
   <h2>What URI patterns are supported?</h2>
 
-  <h3>Feature URIs (RDF + GeoJSON)</h3>
+  <h3>Feature URIs</h3>
   <dl>
     <dt><code>/osm/node/{id}</code>, <code>/osm/node/{id}.rdf</code>, <code>/osm/node/{id}.json</code></dt>
     <dd>OSM node as RDF/XML or GeoJSON (XSLT-transformed from OSM API XML)</dd>
@@ -79,7 +78,7 @@
     <dd>OSM changeset as RDF/XML</dd>
   </dl>
 
-  <h3>Geometry URIs</h3>
+  <h3>Geometry URIs (GeoJSON)</h3>
   <dl>
     <dt><code>/geo/osm/{type}/{id}.json</code></dt>
     <dd>GeoJSON geometry from OSM API</dd>
@@ -139,7 +138,7 @@
     <code>/osm/relation/{id}.rdf</code> carries only a centroid, not a WKT shape.
   </p>
   <p>
-    The GeoJSON geometry endpoints do not have this limitation &mdash;
+    The geometry endpoints do not have this limitation &mdash;
     <code>/geo/osm/relation/{id}.json</code> and
     <code>/geo/overpass/relation/{id}.json</code> both run the ring-assembly in Java and
     return a correct <code>MultiPolygon</code>.
