@@ -16,19 +16,22 @@
   <xsl:strip-space elements="*"/>
 
   <xsl:param name="upstream-bytes" select="-1"/>
+  <xsl:param name="upstream-url" select="''"/>
 
   <xsl:template match="osm">
     <rdf:RDF>
       <rdf:Description rdf:about="">
 	<rdfs:comment><xsl:value-of select="@generator"/></rdfs:comment>
-	<rdfs:comment><xsl:value-of select="@copyright"/></rdfs:comment>
-	<dc:attribution><xsl:value-of select="@attribution"/></dc:attribution>
-	<dc:license><xsl:value-of select="@license"/></dc:license>
-	<dc:date><xsl:value-of select="node/@timestamp"/></dc:date>
-	<dc:publisher>OpenStreetMap Contributors (https://www.openstreetmap.org/) via Linked OSM (http://osmwrap.ontologycentral.com/)</dc:publisher>
+	<dc:attribution>&#169; OpenStreetMap contributors</dc:attribution>
+	<dc:license rdf:resource="https://opendatacommons.org/licenses/odbl/"/>
+	<dc:publisher>OpenStreetMap Contributors (https://www.openstreetmap.org/) via Linked OSM (https://osmwrap.ontologycentral.com/)</dc:publisher>
 	<rdfs:seeAlso rdf:resource="https://www.openstreetmap.org/copyright"/>
 	<rdfs:seeAlso rdf:resource="https://wiki.openstreetmap.org/wiki/Legal_FAQ"/>
-	<prov:wasGeneratedBy rdf:resource="#transformation"/>
+	<xsl:if test="$upstream-url != ''">
+	  <prov:hadPrimarySource rdf:resource="{$upstream-url}"/>
+	</xsl:if>
+	<prov:generatedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></prov:generatedAtTime>
+	<prov:wasAttributedTo rdf:resource="/#osmwrap"/>
 	<xsl:for-each select="node">
 	  <rdfs:seeAlso>
 	    <rdf:Description>
@@ -52,24 +55,16 @@
 	</xsl:for-each>
       </rdf:Description>
 
-      <!-- PROV: Transformation activity -->
-      <prov:Activity rdf:about="#transformation">
-        <rdfs:label>OSM XML to RDF Map Transformation</rdfs:label>
-        <prov:used>
-          <prov:Entity rdf:about="https://api.openstreetmap.org/api/0.6/map">
-            <xsl:if test="$upstream-bytes >= 0">
-              <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
-            </xsl:if>
-          </prov:Entity>
-        </prov:used>
-        <prov:wasAssociatedWith rdf:resource="/#osmwrap"/>
-        <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
-      </prov:Activity>
+      <xsl:if test="$upstream-url != '' and $upstream-bytes >= 0">
+        <rdf:Description rdf:about="{$upstream-url}">
+          <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
+        </rdf:Description>
+      </xsl:if>
 
       <!-- PROV: Agent (osmwrap service) -->
       <prov:SoftwareAgent rdf:about="/#osmwrap">
         <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
-        <foaf:homepage rdf:resource="http://osmwrap.ontologycentral.com/"/>
+        <foaf:homepage rdf:resource="https://osmwrap.ontologycentral.com/"/>
         <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
       </prov:SoftwareAgent>
 

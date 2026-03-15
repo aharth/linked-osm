@@ -77,6 +77,7 @@ public class OverpassFeaturesServlet extends HttpServlet {
 			} else {
 				Templates tmpl = (Templates) ctx.getAttribute(Listener.MAP);
 				Transformer t = tmpl.newTransformer();
+				t.setParameter("upstream-url", archive + "?" + postData);
 				response.headers().firstValueAsLong("content-length")
 						.ifPresent(n -> t.setParameter("upstream-bytes", n));
 				resp.setContentType("application/rdf+xml");

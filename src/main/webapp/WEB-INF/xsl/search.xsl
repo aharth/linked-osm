@@ -26,24 +26,20 @@
 	<dc:attribution><xsl:value-of select="@attribution"/></dc:attribution>
 	<dc:date><xsl:value-of select="@timestamp"/></dc:date>
 	<dc:publisher>Nominatim (https://nominatim.openstreetmap.org/) via Linked OSM (https://osmwrap.ontologycentral.com/)</dc:publisher>
-	<prov:wasGeneratedBy rdf:resource="#transformation"/>
+	<prov:hadPrimarySource>
+	  <xsl:attribute name="rdf:resource"><xsl:value-of select="$upstream-url"/></xsl:attribute>
+	</prov:hadPrimarySource>
+	<prov:generatedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></prov:generatedAtTime>
+	<prov:wasAttributedTo rdf:resource="/#osmwrap"/>
 	<xsl:apply-templates/>
       </rdf:Description>
 
-      <!-- PROV: Transformation activity -->
-      <prov:Activity rdf:about="#transformation">
-        <rdfs:label>Nominatim XML to RDF Search Transformation</rdfs:label>
-        <prov:used>
-          <prov:Entity>
-            <xsl:attribute name="rdf:about"><xsl:value-of select="$upstream-url"/></xsl:attribute>
-            <xsl:if test="$upstream-bytes >= 0">
-              <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
-            </xsl:if>
-          </prov:Entity>
-        </prov:used>
-        <prov:wasAssociatedWith rdf:resource="/#osmwrap"/>
-        <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
-      </prov:Activity>
+      <xsl:if test="$upstream-bytes >= 0">
+        <rdf:Description>
+          <xsl:attribute name="rdf:about"><xsl:value-of select="$upstream-url"/></xsl:attribute>
+          <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
+        </rdf:Description>
+      </xsl:if>
 
       <!-- PROV: Agent (osmwrap service) -->
       <prov:SoftwareAgent rdf:about="/#osmwrap">

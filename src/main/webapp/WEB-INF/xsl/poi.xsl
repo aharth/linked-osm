@@ -16,38 +16,36 @@
   <xsl:strip-space elements="*"/>
 
   <xsl:param name="upstream-bytes" select="-1"/>
+  <xsl:param name="upstream-url" select="''"/>
 
   <xsl:template match="osm">
     <rdf:RDF>
       <rdf:Description rdf:about="">
 	<rdfs:comment><xsl:value-of select="@generator"/></rdfs:comment>
-	<dc:attribution>Overpass API (https://overpass-api.de/)</dc:attribution>
-	<dc:publisher>Overpass API (https://overpass-api.de/) via Linked OSM (http://osmwrap.ontologycentral.com/)</dc:publisher>
+	<dc:attribution>&#169; OpenStreetMap contributors</dc:attribution>
+	<dc:license rdf:resource="https://opendatacommons.org/licenses/odbl/"/>
+	<dc:publisher>Overpass API (https://overpass-api.de/) via Linked OSM (https://osmwrap.ontologycentral.com/)</dc:publisher>
 	<xsl:for-each select="note">
 	  <rdfs:comment><xsl:value-of select="."/></rdfs:comment>
 	</xsl:for-each>
-	<prov:wasGeneratedBy rdf:resource="#transformation"/>
+	<xsl:if test="$upstream-url != ''">
+	  <prov:hadPrimarySource rdf:resource="{$upstream-url}"/>
+	</xsl:if>
+	<prov:generatedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></prov:generatedAtTime>
+	<prov:wasAttributedTo rdf:resource="/#osmwrap"/>
 	<xsl:apply-templates select="node"/>
       </rdf:Description>
 
-      <!-- PROV: Transformation activity -->
-      <prov:Activity rdf:about="#transformation">
-        <rdfs:label>Overpass XML to RDF POI Transformation</rdfs:label>
-        <prov:used>
-          <prov:Entity rdf:about="https://overpass-api.de/api/interpreter">
-            <xsl:if test="$upstream-bytes >= 0">
-              <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
-            </xsl:if>
-          </prov:Entity>
-        </prov:used>
-        <prov:wasAssociatedWith rdf:resource="/#osmwrap"/>
-        <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
-      </prov:Activity>
+      <xsl:if test="$upstream-url != '' and $upstream-bytes >= 0">
+        <rdf:Description rdf:about="{$upstream-url}">
+          <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
+        </rdf:Description>
+      </xsl:if>
 
       <!-- PROV: Agent (osmwrap service) -->
       <prov:SoftwareAgent rdf:about="/#osmwrap">
         <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
-        <foaf:homepage rdf:resource="http://osmwrap.ontologycentral.com/"/>
+        <foaf:homepage rdf:resource="https://osmwrap.ontologycentral.com/"/>
         <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
       </prov:SoftwareAgent>
     </rdf:RDF>
