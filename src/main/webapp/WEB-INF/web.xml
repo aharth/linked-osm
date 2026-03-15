@@ -11,6 +11,7 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<filter-mapping>
 		<filter-name>rdf</filter-name>
 		<url-pattern>/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
 	</filter-mapping>
 
 	<listener>
@@ -60,6 +61,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet>
 		<servlet-name>sparql</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.SparqlServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>error</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.ErrorServlet</servlet-class>
 	</servlet>
 
 	<servlet-mapping>
@@ -170,6 +175,19 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-name>sparql</servlet-name>
 		<url-pattern>/sparql</url-pattern>
 	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>error</servlet-name>
+		<url-pattern>/error</url-pattern>
+	</servlet-mapping>
+
+	<error-page><error-code>400</error-code><location>/error</location></error-page>
+	<error-page><error-code>404</error-code><location>/error</location></error-page>
+	<error-page><error-code>406</error-code><location>/error</location></error-page>
+	<error-page><error-code>413</error-code><location>/error</location></error-page>
+	<error-page><error-code>500</error-code><location>/error</location></error-page>
+	<error-page><error-code>502</error-code><location>/error</location></error-page>
+	<error-page><error-code>503</error-code><location>/error</location></error-page>
+	<error-page><error-code>504</error-code><location>/error</location></error-page>
 
 	<welcome-file-list>
 		<welcome-file>index.html</welcome-file>

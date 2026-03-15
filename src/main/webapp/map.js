@@ -513,7 +513,17 @@ function loadGeoJsonUrl(mapId, url, si) {
             sourceUrl = r.headers.get('X-Upstream-Source');
             clearTimeout(timer);
             state.controllerBySi[si] = null;
-            if (!r.ok) throw new Error('HTTP ' + r.status);
+            if (!r.ok) {
+                var status = r.status;
+                return r.text().then(function(body) {
+                    var msg = String(status);
+                    try {
+                        var j = JSON.parse(body);
+                        if (j.error) msg = status + ' \u2014 ' + j.error;
+                    } catch (e) {}
+                    throw new Error(msg);
+                });
+            }
             return r.json();
         })
         .then(function(data) {

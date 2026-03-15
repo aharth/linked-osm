@@ -90,6 +90,7 @@ public class RdfFilter implements Filter {
 							.source(new java.io.ByteArrayInputStream(data))
 							.lang(Lang.TURTLE)
 							.base(base)
+							.checking(false)
 							.parse(model);
 					ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
 					RDFWriter.create()

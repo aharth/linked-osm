@@ -50,6 +50,9 @@ public class FeatureServlet extends HttpServlet {
 	/** Tracks upstream fetches that are currently in progress, keyed by upstream URL. */
 	private final ConcurrentHashMap<String, CompletableFuture<Object[]>> inFlight = new ConcurrentHashMap<>();
 
+	/** Maximum number of way members before skipping /full geometry fetch. */
+	private static final int MAX_RELATION_WAYS = 200;
+
 	/** Signals that an upstream fetch returned a non-200 status. */
 	private static final class FetchException extends Exception {
 		final int status;
@@ -57,6 +60,66 @@ public class FeatureServlet extends HttpServlet {
 			super(msg);
 			this.status = status;
 		}
+	}
+
+	/**
+	 * Fetch XML from upstream with cache and in-flight deduplication.
+	 * Returns {xml, byteCount} or throws FetchException / IOException.
+	 * Writes the error response and returns null if upstream returned non-200.
+	 */
+	private Object[] fetchXml(String url, HttpServletResponse resp) throws IOException {
+		Object[] cached = xmlCache.getIfPresent(url);
+		if (cached != null) {
+			_log.info("cache hit: " + url);
+			return cached;
+		}
+		CompletableFuture<Object[]> fresh = new CompletableFuture<>();
+		CompletableFuture<Object[]> existing = inFlight.putIfAbsent(url, fresh);
+		if (existing != null) {
+			_log.info("joining in-flight fetch: " + url);
+			try {
+				return existing.join();
+			} catch (CompletionException ce) {
+				Throwable cause = ce.getCause();
+				int errStatus = (cause instanceof FetchException) ? ((FetchException) cause).status : 502;
+				resp.sendError(errStatus, cause.getMessage());
+				return null;
+			}
+		}
+		try {
+			HttpResponse<InputStream> response = HttpClientUtil.get(url);
+			int responseCode = response.statusCode();
+			if (responseCode != 200) {
+				fresh.completeExceptionally(new FetchException(responseCode, "upstream " + responseCode));
+				resp.setStatus(responseCode);
+				response.headers().firstValue("Content-Type").ifPresent(resp::setContentType);
+				HttpClientUtil.copyStream(response.body(), resp.getOutputStream());
+				return null;
+			}
+			long byteCount = response.headers().firstValueAsLong("content-length").orElse(-1L);
+			String xml = HttpClientUtil.readToString(response.body());
+			response.body().close();
+			Object[] result = new Object[]{xml, byteCount};
+			xmlCache.put(url, result);
+			fresh.complete(result);
+			return result;
+		} catch (IOException | RuntimeException e) {
+			fresh.completeExceptionally(e);
+			throw e;
+		} finally {
+			inFlight.remove(url, fresh);
+		}
+	}
+
+	private static int countWayMembers(String xml) {
+		int count = 0;
+		int pos = 0;
+		String needle = "<member type=\"way\"";
+		while ((pos = xml.indexOf(needle, pos)) >= 0) {
+			count++;
+			pos += needle.length();
+		}
+		return count;
 	}
 
 	public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
@@ -128,12 +191,10 @@ public class FeatureServlet extends HttpServlet {
 
 		ServletContext ctx = getServletContext();
 
-		// Relations always use /full (all formats) so geometry can be assembled inline.
 		// Ways use /full for rdf and gml (need node coordinates); json uses simple endpoint.
+		// Relations: fetch simple URL first to count way members; only fetch /full if small enough.
 		String archive;
-		if (ctrl.equals("/relation/")) {
-			archive = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
-		} else if ((format.equals("rdf") || format.equals("gml")) && ctrl.equals("/way/")) {
+		if ((format.equals("rdf") || format.equals("gml")) && ctrl.equals("/way/")) {
 			archive = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
 		} else {
 			archive = ApiConstants.OSM_API_BASE + ctrl + id;
@@ -142,68 +203,40 @@ public class FeatureServlet extends HttpServlet {
 		_log.info("retrieving " + archive);
 
 		try {
-			// --- Fetch XML with cache and in-flight deduplication ---
-			//
-			// Three cases in priority order:
-			//   1. Cache hit   — use stored XML immediately, no upstream call.
-			//   2. In-flight   — another thread is already fetching this URL; join its
-			//                    CompletableFuture and use the result when it arrives.
-			//   3. Cold miss   — register a new CompletableFuture so other threads can
-			//                    join it, then perform the upstream fetch.
-			//
-			// This ensures at most one upstream request is in flight per URL at any time.
+			String xml;
+			long byteCount;
 
-			String xml = null;
-			long byteCount = -1L;
-
-			Object[] cached = xmlCache.getIfPresent(archive);
-			if (cached != null) {
-				xml = (String) cached[0];
-				byteCount = (long) cached[1];
-				_log.info("cache hit: " + archive);
-			} else {
-				CompletableFuture<Object[]> fresh = new CompletableFuture<>();
-				CompletableFuture<Object[]> existing = inFlight.putIfAbsent(archive, fresh);
-
-				if (existing != null) {
-					// Case 2: join the in-flight fetch
-					_log.info("joining in-flight fetch: " + archive);
-					try {
-						Object[] result = existing.join();
-						xml = (String) result[0];
-						byteCount = (long) result[1];
-					} catch (CompletionException ce) {
-						Throwable cause = ce.getCause();
-						int errStatus = (cause instanceof FetchException) ? ((FetchException) cause).status : 502;
-						resp.sendError(errStatus, cause.getMessage());
-						return;
-					}
-				} else {
-					// Case 3: cold miss — this thread is the designated fetcher
-					try {
-						HttpResponse<InputStream> response = HttpClientUtil.get(archive);
-						int responseCode = response.statusCode();
-						if (responseCode != 200) {
-							// Signal waiting threads then proxy the error body to this response.
-							fresh.completeExceptionally(new FetchException(responseCode, "upstream " + responseCode));
-							resp.setStatus(responseCode);
-							response.headers().firstValue("Content-Type").ifPresent(resp::setContentType);
-							HttpClientUtil.copyStream(response.body(), resp.getOutputStream());
-							return;
-						}
-						byteCount = response.headers().firstValueAsLong("content-length").orElse(-1L);
-						xml = HttpClientUtil.readToString(response.body());
-						response.body().close();
-						Object[] result = new Object[]{xml, byteCount};
-						xmlCache.put(archive, result);
-						fresh.complete(result);
-					} catch (IOException | RuntimeException e) {
-						fresh.completeExceptionally(e);
-						throw e;
-					} finally {
-						inFlight.remove(archive, fresh);
-					}
+			if (ctrl.equals("/relation/")) {
+				// Two-step fetch: probe the simple relation first to count way members.
+				// If the relation has many ways, /full would be hundreds of MB — skip it
+				// and serve the relation metadata without geometry instead.
+				Object[] simpleResult = fetchXml(archive, resp);
+				if (simpleResult == null) return;
+				String simpleXml = (String) simpleResult[0];
+				int wayCount = countWayMembers(simpleXml);
+				_log.info("relation " + id + " has " + wayCount + " way members");
+				if (wayCount > MAX_RELATION_WAYS) {
+					_log.info("relation " + id + ": " + wayCount + " ways > " + MAX_RELATION_WAYS + ", refusing /full");
+					resp.sendError(413, "Relation " + id + " has " + wayCount + " way members (limit "
+							+ MAX_RELATION_WAYS + "). Use /geo/overpass/relation/" + id + ".json for geometry.");
+					return;
 				}
+				if (wayCount > 0) {
+					String fullUrl = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
+					_log.info("retrieving full: " + fullUrl);
+					Object[] fullResult = fetchXml(fullUrl, resp);
+					if (fullResult == null) return;
+					xml = (String) fullResult[0];
+					byteCount = (long) fullResult[1];
+				} else {
+					xml = simpleXml;
+					byteCount = (long) simpleResult[1];
+				}
+			} else {
+				Object[] result = fetchXml(archive, resp);
+				if (result == null) return;
+				xml = (String) result[0];
+				byteCount = (long) result[1];
 			}
 
 			// --- Format dispatch ---

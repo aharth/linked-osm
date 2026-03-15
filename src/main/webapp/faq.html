@@ -169,27 +169,31 @@
   </p>
 
   <a name="large-relations"></a>
-  <h2>Why do some large relations return 509, 529, or 504?</h2>
+  <h2>Why do some large relations return an error?</h2>
 
   <p>
-    All relation formats (RDF, GeoJSON) fetch the
-    <code>/relation/{id}/full</code> endpoint from the OSM API, which returns every
-    member way and every node of every way in a single response.  For large
-    administrative or geographic boundaries this can amount to tens of megabytes of XML.
-    There are three distinct failure modes:
+    RDF and GML relation responses require fetching <code>/relation/{id}/full</code> from
+    the OSM API, which returns every member way and every node of every way in one response.
+    For large administrative or geographic boundaries this can be tens of megabytes of XML.
+    The wrapper first fetches the lightweight <code>/relation/{id}</code> response to count
+    way members; if the count exceeds 200 the request is rejected immediately rather than
+    attempting a fetch that would time out or exhaust bandwidth.  Possible error codes:
   </p>
   <dl>
+    <dt><strong>413 Content Too Large</strong></dt>
+    <dd>
+      The relation has more than 200 way members.  The error message names the count and
+      suggests the <code>/geo/overpass/relation/{id}.json</code> geometry endpoint as an
+      alternative.
+    </dd>
     <dt><strong>509 Bandwidth Limit Exceeded</strong> / <strong>529 Too Many Requests</strong></dt>
     <dd>
-      The upstream OSM API (or Overpass API for <code>/around</code> queries) rejected
-      the request because it would strain their capacity.  The upstream error body is
-      forwarded verbatim.
+      The upstream OSM API rejected the request.  The upstream error body is forwarded verbatim.
     </dd>
     <dt><strong>504 Gateway Timeout</strong></dt>
     <dd>
-      The OSM API accepted the request but did not begin sending a response within the
-      wrapper's 120-second client timeout.  This is a client-side limit, distinct from
-      an upstream rejection.
+      The OSM API did not begin sending a response within the wrapper's 120-second client
+      timeout.
     </dd>
   </dl>
   <p>
