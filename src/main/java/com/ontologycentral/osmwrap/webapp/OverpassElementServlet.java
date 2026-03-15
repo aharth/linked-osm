@@ -111,6 +111,7 @@ public class OverpassElementServlet extends HttpServlet {
 				Templates tmpl = (Templates) ctx.getAttribute(tmplKey);
 				Transformer t = tmpl.newTransformer();
 				t.setParameter("source-prefix", "/overpass");
+				t.setParameter("upstream-url", ApiConstants.OVERPASS_API_BASE + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8));
 				if ("relation".equals(elementType)) {
 					t.setParameter("element-id", id);
 				}

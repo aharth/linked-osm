@@ -18,13 +18,14 @@
   <xsl:strip-space elements="*"/>
 
   <xsl:param name="upstream-bytes" select="-1"/>
+  <xsl:param name="upstream-url" select="'https://nominatim.openstreetmap.org/'"/>
 
   <xsl:template match="searchresults">
     <rdf:RDF>
       <rdf:Description rdf:about="">
 	<dc:attribution><xsl:value-of select="@attribution"/></dc:attribution>
 	<dc:date><xsl:value-of select="@timestamp"/></dc:date>
-	<dc:publisher>Nominatim (https://nominatim.openstreetmap.org/) via Linked OSM (http://osmwrap.ontologycentral.com/)</dc:publisher>
+	<dc:publisher>Nominatim (https://nominatim.openstreetmap.org/) via Linked OSM (https://osmwrap.ontologycentral.com/)</dc:publisher>
 	<prov:wasGeneratedBy rdf:resource="#transformation"/>
 	<xsl:apply-templates/>
       </rdf:Description>
@@ -33,7 +34,8 @@
       <prov:Activity rdf:about="#transformation">
         <rdfs:label>Nominatim XML to RDF Search Transformation</rdfs:label>
         <prov:used>
-          <prov:Entity rdf:about="https://nominatim.openstreetmap.org/">
+          <prov:Entity>
+            <xsl:attribute name="rdf:about"><xsl:value-of select="$upstream-url"/></xsl:attribute>
             <xsl:if test="$upstream-bytes >= 0">
               <dcat:byteSize rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal"><xsl:value-of select="$upstream-bytes"/></dcat:byteSize>
             </xsl:if>
@@ -46,7 +48,7 @@
       <!-- PROV: Agent (osmwrap service) -->
       <prov:SoftwareAgent rdf:about="/#osmwrap">
         <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
-        <foaf:homepage rdf:resource="http://osmwrap.ontologycentral.com/"/>
+        <foaf:homepage rdf:resource="https://osmwrap.ontologycentral.com/"/>
         <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
       </prov:SoftwareAgent>
     </rdf:RDF>

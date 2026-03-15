@@ -12,6 +12,7 @@
   <xsl:param name="upstream-bytes" select="-1"/>
   <xsl:param name="element-id" select="''"/>
   <xsl:param name="source-prefix" select="'/osm'"/>
+  <xsl:param name="upstream-url" select="''"/>
 
   <xsl:key name="nodeById" match="node" use="@id"/>
 
@@ -40,35 +41,28 @@
 
     <!-- Document description -->
     <xsl:text>&lt;&gt; rdfs:comment "No guarantee of correctness! USE AT YOUR OWN RISK!" ;&#10;</xsl:text>
-    <xsl:text>    rdfs:comment "</xsl:text><xsl:value-of select="local:ttl(string(@generator))"/><xsl:text>" ;&#10;</xsl:text>
-    <xsl:text>    rdfs:comment "</xsl:text><xsl:value-of select="local:ttl(string(@copyright))"/><xsl:text>" ;&#10;</xsl:text>
-    <xsl:text>    dc:publisher "OpenStreetMap Contributors (https://www.openstreetmap.org/) via Linked OSM (http://osmwrap.ontologycentral.com/)" ;&#10;</xsl:text>
-    <xsl:text>    dc:attribution "</xsl:text><xsl:value-of select="local:ttl(string(@attribution))"/><xsl:text>" ;&#10;</xsl:text>
-    <xsl:text>    dc:license "</xsl:text><xsl:value-of select="local:ttl(string(@license))"/><xsl:text>" ;&#10;</xsl:text>
-    <xsl:text>    dc:date "</xsl:text><xsl:value-of select="relation[@id = $element-id]/@timestamp"/><xsl:text>" ;&#10;</xsl:text>
+    <xsl:if test="normalize-space(@generator) != ''">
+      <xsl:text>    rdfs:comment "</xsl:text><xsl:value-of select="local:ttl(string(@generator))"/><xsl:text>" ;&#10;</xsl:text>
+    </xsl:if>
+    <xsl:text>    dc:publisher "OpenStreetMap Contributors (https://www.openstreetmap.org/) via Linked OSM (https://osmwrap.ontologycentral.com/)" ;&#10;</xsl:text>
+    <xsl:text>    dc:attribution "\u00a9 OpenStreetMap contributors" ;&#10;</xsl:text>
+    <xsl:text>    dc:license &lt;https://opendatacommons.org/licenses/odbl/&gt; ;&#10;</xsl:text>
     <xsl:text>    rdfs:seeAlso &lt;https://www.openstreetmap.org/copyright&gt; ;&#10;</xsl:text>
     <xsl:text>    rdfs:seeAlso &lt;https://wiki.openstreetmap.org/wiki/Legal_FAQ&gt; ;&#10;</xsl:text>
-    <xsl:text>    prov:wasGeneratedBy &lt;#transformation&gt; .&#10;</xsl:text>
-    <xsl:text>&#10;</xsl:text>
-
-    <!-- PROV: Transformation activity -->
-    <xsl:text>&lt;#transformation&gt; a prov:Activity ;&#10;</xsl:text>
-    <xsl:text>    rdfs:label "OSM XML to RDF Relation Transformation" ;&#10;</xsl:text>
-    <xsl:text>    prov:used &lt;</xsl:text><xsl:value-of select="$source-prefix"/><xsl:text>/relation/</xsl:text><xsl:value-of select="$element-id"/><xsl:text>&gt; ;&#10;</xsl:text>
-    <xsl:text>    prov:wasAssociatedWith &lt;/#osmwrap&gt; ;&#10;</xsl:text>
-    <xsl:text>    dc:date "</xsl:text><xsl:value-of select="current-dateTime()"/><xsl:text>"^^xsd:dateTime .&#10;</xsl:text>
-    <xsl:text>&#10;</xsl:text>
-
-    <!-- Upstream byte count -->
-    <xsl:if test="$upstream-bytes >= 0">
-      <xsl:text>&lt;</xsl:text><xsl:value-of select="$source-prefix"/><xsl:text>/relation/</xsl:text><xsl:value-of select="$element-id"/><xsl:text>&gt; dcat:byteSize "</xsl:text><xsl:value-of select="$upstream-bytes"/><xsl:text>"^^xsd:decimal .&#10;</xsl:text>
-      <xsl:text>&#10;</xsl:text>
+    <xsl:if test="$upstream-url != ''">
+      <xsl:text>    prov:hadPrimarySource &lt;</xsl:text><xsl:value-of select="$upstream-url"/><xsl:text>&gt; ;&#10;</xsl:text>
     </xsl:if>
+    <xsl:if test="$upstream-bytes >= 0">
+      <xsl:text>    dcat:byteSize "</xsl:text><xsl:value-of select="$upstream-bytes"/><xsl:text>"^^xsd:decimal ;&#10;</xsl:text>
+    </xsl:if>
+    <xsl:text>    prov:generatedAtTime "</xsl:text><xsl:value-of select="current-dateTime()"/><xsl:text>"^^xsd:dateTime ;&#10;</xsl:text>
+    <xsl:text>    prov:wasAttributedTo &lt;/#osmwrap&gt; .&#10;</xsl:text>
+    <xsl:text>&#10;</xsl:text>
 
     <!-- PROV: Agent -->
     <xsl:text>&lt;/#osmwrap&gt; a prov:SoftwareAgent ;&#10;</xsl:text>
     <xsl:text>    rdfs:label "Linked OSM (osmwrap)" ;&#10;</xsl:text>
-    <xsl:text>    foaf:homepage &lt;http://osmwrap.ontologycentral.com/&gt; ;&#10;</xsl:text>
+    <xsl:text>    foaf:homepage &lt;https://osmwrap.ontologycentral.com/&gt; ;&#10;</xsl:text>
     <xsl:text>    dc:description "Service for converting OpenStreetMap data to RDF" .&#10;</xsl:text>
     <xsl:text>&#10;</xsl:text>
 
@@ -84,6 +78,7 @@
     <xsl:text>    dcterms:identifier "</xsl:text><xsl:value-of select="@id"/><xsl:text>" ;&#10;</xsl:text>
     <xsl:text>    foaf:page &lt;https://www.openstreetmap.org/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>&gt; ;&#10;</xsl:text>
     <xsl:text>    foaf:page &lt;</xsl:text><xsl:value-of select="$source-prefix"/><xsl:text>/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>.rdf&gt; ;&#10;</xsl:text>
+    <xsl:text>    foaf:page &lt;</xsl:text><xsl:value-of select="$source-prefix"/><xsl:text>/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>.ttl&gt; ;&#10;</xsl:text>
     <xsl:text>    foaf:page &lt;</xsl:text><xsl:value-of select="$source-prefix"/><xsl:text>/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>.json&gt;</xsl:text>
     <xsl:if test="$hasGeo">
       <xsl:text> ;&#10;    geom:geometry &lt;/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>#geo&gt;</xsl:text>

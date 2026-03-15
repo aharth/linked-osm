@@ -205,6 +205,7 @@ public class FeatureServlet extends HttpServlet {
 		try {
 			String xml;
 			long byteCount;
+			String upstreamUrl = archive;
 
 			if (ctrl.equals("/relation/")) {
 				// Two-step fetch: probe the simple relation first to count way members.
@@ -222,9 +223,9 @@ public class FeatureServlet extends HttpServlet {
 					return;
 				}
 				if (wayCount > 0) {
-					String fullUrl = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
-					_log.info("retrieving full: " + fullUrl);
-					Object[] fullResult = fetchXml(fullUrl, resp);
+					upstreamUrl = ApiConstants.OSM_API_BASE + ctrl + id + "/full";
+					_log.info("retrieving full: " + upstreamUrl);
+					Object[] fullResult = fetchXml(upstreamUrl, resp);
 					if (fullResult == null) return;
 					xml = (String) fullResult[0];
 					byteCount = (long) fullResult[1];
@@ -257,6 +258,7 @@ public class FeatureServlet extends HttpServlet {
 				Templates tmpl = (Templates) ctx.getAttribute(ctrl);
 				Transformer t = tmpl.newTransformer();
 				t.setParameter("source-prefix", "/osm");
+				t.setParameter("upstream-url", upstreamUrl);
 				if (byteCount >= 0) {
 					t.setParameter("upstream-bytes", byteCount);
 				}

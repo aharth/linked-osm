@@ -67,10 +67,10 @@ public class RdfFilter implements Filter {
 		if (host == null) host = httpRequest.getHeader("Host");
 		if (host == null) host = httpRequest.getServerName();
 		String queryString = httpRequest.getQueryString();
-		// Use site root as Jena base so relative URI references like /tag/name:en
-		// are relativised to tag/name:en (first segment "tag" has no colon) rather
-		// than name:en (first segment "name:en" has a colon, ambiguous with URI scheme).
-		String base = proto + "://" + host + "/";
+		// Use the document URL as Jena base so <> resolves to the document URI.
+		// The colon-in-first-segment ambiguity only applies to writing; we write
+		// RDF/XML without a base (absolute URIs only), so it does not apply here.
+		String base = proto + "://" + host + requestPath;
 
 		byte[] data = capture.toByteArray();
 
