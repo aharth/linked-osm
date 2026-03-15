@@ -52,12 +52,13 @@
     <xsl:if test="$upstream-url != ''">
       <xsl:text>    prov:hadPrimarySource &lt;</xsl:text><xsl:value-of select="$upstream-url"/><xsl:text>&gt; ;&#10;</xsl:text>
     </xsl:if>
-    <xsl:if test="$upstream-bytes >= 0">
-      <xsl:text>    dcat:byteSize "</xsl:text><xsl:value-of select="$upstream-bytes"/><xsl:text>"^^xsd:decimal ;&#10;</xsl:text>
-    </xsl:if>
     <xsl:text>    prov:generatedAtTime "</xsl:text><xsl:value-of select="current-dateTime()"/><xsl:text>"^^xsd:dateTime ;&#10;</xsl:text>
     <xsl:text>    prov:wasAttributedTo &lt;/#osmwrap&gt; .&#10;</xsl:text>
     <xsl:text>&#10;</xsl:text>
+    <xsl:if test="$upstream-url != '' and $upstream-bytes >= 0">
+      <xsl:text>&lt;</xsl:text><xsl:value-of select="$upstream-url"/><xsl:text>&gt; dcat:byteSize "</xsl:text><xsl:value-of select="$upstream-bytes"/><xsl:text>"^^xsd:decimal .&#10;</xsl:text>
+      <xsl:text>&#10;</xsl:text>
+    </xsl:if>
 
     <!-- PROV: Agent -->
     <xsl:text>&lt;/#osmwrap&gt; a prov:SoftwareAgent ;&#10;</xsl:text>
