@@ -61,13 +61,6 @@
         </rdf:Description>
       </xsl:if>
 
-      <!-- PROV: Agent (osmwrap service) -->
-      <prov:SoftwareAgent rdf:about="/#osmwrap">
-        <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
-        <foaf:homepage rdf:resource="https://osmwrap.ontologycentral.com/"/>
-        <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
-      </prov:SoftwareAgent>
-
     </rdf:RDF>
   </xsl:template>
 

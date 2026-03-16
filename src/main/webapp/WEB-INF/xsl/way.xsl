@@ -35,7 +35,7 @@
     <xsl:text>@prefix locn:    &lt;http://www.w3.org/ns/locn#&gt; .&#10;</xsl:text>
     <xsl:text>@prefix prov:    &lt;http://www.w3.org/ns/prov#&gt; .&#10;</xsl:text>
     <xsl:text>@prefix dcat:    &lt;http://www.w3.org/ns/dcat#&gt; .&#10;</xsl:text>
-    <xsl:text>@prefix osm:     &lt;https://osmwrap.ontologycentral.com/vocab#&gt; .&#10;</xsl:text>
+    <xsl:text>@prefix osm:     &lt;/vocab#&gt; .&#10;</xsl:text>
     <xsl:text>@prefix xsd:     &lt;http://www.w3.org/2001/XMLSchema#&gt; .&#10;</xsl:text>
     <xsl:text>&#10;</xsl:text>
 
@@ -59,13 +59,6 @@
       <xsl:text>&lt;</xsl:text><xsl:value-of select="$upstream-url"/><xsl:text>&gt; dcat:byteSize "</xsl:text><xsl:value-of select="$upstream-bytes"/><xsl:text>"^^xsd:decimal .&#10;</xsl:text>
       <xsl:text>&#10;</xsl:text>
     </xsl:if>
-
-    <!-- PROV: Agent -->
-    <xsl:text>&lt;/#osmwrap&gt; a prov:SoftwareAgent ;&#10;</xsl:text>
-    <xsl:text>    rdfs:label "Linked OSM (osmwrap)" ;&#10;</xsl:text>
-    <xsl:text>    foaf:homepage &lt;https://osmwrap.ontologycentral.com/&gt; ;&#10;</xsl:text>
-    <xsl:text>    dc:description "Service for converting OpenStreetMap data to RDF" .&#10;</xsl:text>
-    <xsl:text>&#10;</xsl:text>
 
     <xsl:apply-templates/>
   </xsl:template>
@@ -160,7 +153,7 @@
     <xsl:text> ;&#10;    rdfs:label "</xsl:text>
     <xsl:value-of select="local:ttl(@v)"/>
     <xsl:text>"</xsl:text>
-    <xsl:text> ;&#10;    &lt;https://osmwrap.ontologycentral.com/tag/name:en&gt; "</xsl:text>
+    <xsl:text> ;&#10;    &lt;/tag/name:en&gt; "</xsl:text>
     <xsl:value-of select="local:ttl(@v)"/>
     <xsl:text>"</xsl:text>
   </xsl:template>
@@ -204,7 +197,7 @@
   </xsl:template>
 
   <xsl:template match="tag">
-    <xsl:text> ;&#10;    &lt;https://osmwrap.ontologycentral.com/tag/</xsl:text>
+    <xsl:text> ;&#10;    &lt;/tag/</xsl:text>
     <xsl:value-of select="@k"/>
     <xsl:text>&gt; "</xsl:text>
     <xsl:value-of select="local:ttl(@v)"/>

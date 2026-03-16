@@ -4,6 +4,21 @@ xmlns="https://jakarta.ee/xml/ns/jakartaee"
 xmlns:web="https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
 xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		    https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd" version="6.0">
+	<context-param>
+		<param-name>base-scheme</param-name>
+		<param-value>https</param-value>
+	</context-param>
+
+	<filter>
+		<filter-name>multiviews</filter-name>
+		<filter-class>com.ontologycentral.osmwrap.webapp.MultiViewsFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>multiviews</filter-name>
+		<url-pattern>/*</url-pattern>
+		<dispatcher>REQUEST</dispatcher>
+	</filter-mapping>
+
 	<filter>
 		<filter-name>rdf</filter-name>
 		<filter-class>com.ontologycentral.osmwrap.webapp.RdfFilter</filter-class>

@@ -2,6 +2,7 @@
   "features": [
     {"type": "node",     "id": "1",         "label": "Monte Piselli"},
     {"type": "node",     "id": "1675605507","label": "Café Wanderer"},
+    {"type": "node",     "id": "11980635629","label": "Camera (Wanderfalke), Nuremberg"},
     {"type": "way",      "id": "100",        "label": "Roundabout"},
     {"type": "way",      "id": "32113829",   "label": "Palas building"},
     {"type": "relation", "id": "147",        "label": "Tigris River"},

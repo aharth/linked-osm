@@ -62,15 +62,21 @@ public class RdfFilter implements Filter {
 		httpResponse.setHeader("Vary", "Accept");
 
 		String proto = httpRequest.getHeader("X-Forwarded-Proto");
-		if (proto == null) proto = httpRequest.getScheme();
+		if (proto == null) {
+			// Allow deployer to force the scheme via a context-param (e.g. when running
+			// behind a reverse proxy that does not forward X-Forwarded-Proto).
+			String forced = httpRequest.getServletContext().getInitParameter("base-scheme");
+			proto = (forced != null) ? forced : httpRequest.getScheme();
+		}
 		String host = httpRequest.getHeader("X-Forwarded-Host");
 		if (host == null) host = httpRequest.getHeader("Host");
 		if (host == null) host = httpRequest.getServerName();
 		String queryString = httpRequest.getQueryString();
-		// Use the document URL as Jena base so <> resolves to the document URI.
-		// The colon-in-first-segment ambiguity only applies to writing; we write
-		// RDF/XML without a base (absolute URIs only), so it does not apply here.
+		// Document URL as Jena parse base so <> resolves to the document URI.
 		String base = proto + "://" + host + requestPath;
+		// Site root used as RDF/XML write base so path-absolute refs (/tag/..., /osm/...) are
+		// written as relative URIs with xml:base="https://example.com/".
+		String siteRoot = proto + "://" + host + "/";
 
 		byte[] data = capture.toByteArray();
 
@@ -95,6 +101,7 @@ public class RdfFilter implements Filter {
 					ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
 					RDFWriter.create()
 							.lang(Lang.RDFXML)
+							.base(siteRoot)
 							.source(model)
 							.output(rdfOut);
 					byte[] result = rdfOut.toByteArray();
@@ -160,6 +167,7 @@ public class RdfFilter implements Filter {
 					ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
 					RDFWriter.create()
 							.lang(Lang.RDFXML)
+							.base(siteRoot)
 							.source(model)
 							.output(rdfOut);
 					byte[] result = rdfOut.toByteArray();

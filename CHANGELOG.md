@@ -2,7 +2,14 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-03-16]
+- **Relative references throughout**: Turtle output (`node.xsl`, `way.xsl`, `relation.xsl`) uses path-absolute tag URIs (`</tag/KEY>`, `</vocab#>`) instead of absolute `https://osmwrap…` URIs; `RdfFilter` passes `.base(siteRoot)` to Jena `RDFWriter` so RDF/XML emits `xml:base` and relativizes subject URIs
+- **Reverse-proxy scheme fix**: `base-scheme` context-param in `web.xml` (value `https`) read by `RdfFilter` and `SparqlServlet` before falling back to `req.getScheme()`; ensures correct scheme when Tomcat sits behind Apache without `X-Forwarded-Proto`
+- **`test/smoke-rdf.sh`**: RDF smoke test using `rapper` (parse validity) and `roqet` (SPARQL queries); fetches each resource once into a temp file to avoid rate limits; checks no absolute osmwrap URIs in Turtle, `https://` scheme in RDF/XML, prov attribution, geometry, tags, coordinates via both local-file and `/sparql` endpoint queries
+
 ## [2026-03-15]
+- `MultiViewsFilter` added: content negotiation for extensionless URLs and `/`; TTL variants satisfy `application/rdf+xml` requests via on-demand Jena conversion; explicit `.rdf` URL requests derived from `.ttl` counterpart
+- `index.ttl` added as the sole RDF description of the service (`<#osmwrap> a prov:SoftwareAgent ; foaf:page <index.html>`); no static `index.rdf` needed
 - **PROV entity-centric pattern extended**: `search.xsl`, `poi.xsl`, `map.xsl` migrated from `prov:Activity` / `#transformation` to direct `prov:hadPrimarySource`, `prov:generatedAtTime`, `prov:wasAttributedTo` on `<>`; `dcat:byteSize` on upstream URI subject; `POIServlet`, `AroundServlet`, `OverpassFeaturesServlet` now pass `upstream-url`; `poi.xsl` and `map.xsl` attribution/license/publisher fixed to hardcoded correct values
 - **Overpass features filter**: `buildOverpassFeaturesQuery` accepts optional `filter` param (`key=value` → exact match, `key` → key-exists, blank → no filter); UI adds filter text input alongside type select
 - **`/tag/{key}={value}` removed**: tag value URIs return 404; used values now listed as `skos:example` literals on the key resource instead of `skos:narrower` URI references; `fetchTagInfo`, `convertTagValueToSKOS*`, `uriEncodeValue` removed

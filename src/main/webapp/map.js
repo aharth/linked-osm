@@ -467,8 +467,8 @@ function _setFetchState(mapId, newState, opts, si) {
     var mid = escHtml(mapId);
     if (newState === 'loading') {
         if (opts.statusEl) setStatusHtml(opts.statusEl,
-            'Loading\u2026 <button type="button" onclick="cancelLoad(\'' + mid + '\',' + si + ')">Cancel</button>');
-        if (linkEl) { linkEl.innerHTML = '<span class="spinner"></span>' + _formatLinksHtml(opts.url, null); linkEl.style.display = ''; }
+            '<span class="spinner"></span> Loading\u2026 <button type="button" onclick="cancelLoad(\'' + mid + '\',' + si + ')">Cancel</button>');
+        if (linkEl) { linkEl.innerHTML = _formatLinksHtml(opts.url, null); linkEl.style.display = ''; }
     } else if (newState === 'loaded') {
         var c = opts.count;
         if (opts.statusEl) setStatusHtml(opts.statusEl,

@@ -23,7 +23,7 @@
 	<rdfs:comment>No guarantee of correctness! USE AT YOUR OWN RISK!</rdfs:comment>
 	<rdfs:comment><xsl:value-of select="@generator"/></rdfs:comment>
 	<rdfs:comment><xsl:value-of select="@copyright"/></rdfs:comment>
-	<dc:publisher>OpenStreetMap Contributors (https://www.openstreetmap.org/) via Linked OSM (http://osmwrap.ontologycentral.com/)</dc:publisher>
+	<dc:publisher>OpenStreetMap Contributors (https://www.openstreetmap.org/) via Linked OSM (https://osmwrap.ontologycentral.com/)</dc:publisher>
 	<dc:attribution><xsl:value-of select="@attribution"/></dc:attribution>
 	<dc:license><xsl:value-of select="@license"/></dc:license>
 	<dc:date><xsl:value-of select="changeset/@created_at"/></dc:date>
@@ -46,13 +46,6 @@
         <prov:wasAssociatedWith rdf:resource="/#osmwrap"/>
         <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
       </prov:Activity>
-
-      <!-- PROV: Agent (osmwrap service) -->
-      <prov:SoftwareAgent rdf:about="/#osmwrap">
-        <rdfs:label>Linked OSM (osmwrap)</rdfs:label>
-        <foaf:homepage rdf:resource="http://osmwrap.ontologycentral.com/"/>
-        <dc:description>Service for converting OpenStreetMap data to RDF</dc:description>
-      </prov:SoftwareAgent>
 
       <xsl:apply-templates/>
     </rdf:RDF>

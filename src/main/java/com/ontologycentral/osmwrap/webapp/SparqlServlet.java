@@ -45,7 +45,10 @@ public class SparqlServlet extends HttpServlet {
 
         // Step 1 — Compute server base and parse (400 on syntax error)
         String scheme = req.getHeader("X-Forwarded-Proto");
-        if (scheme == null) scheme = req.getScheme();
+        if (scheme == null) {
+            String forced = req.getServletContext().getInitParameter("base-scheme");
+            scheme = (forced != null) ? forced : req.getScheme();
+        }
         String host = req.getHeader("X-Forwarded-Host");
         if (host == null) host = req.getHeader("Host");
         if (host == null) host = req.getServerName();
