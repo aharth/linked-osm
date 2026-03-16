@@ -3,6 +3,8 @@
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
 ## [2026-03-16]
+- **PROV restructured**: `prov:hadPrimarySource` on `<>` now points to the versioned OSM API URL (e.g. `.../node/{id}/{version}`), creating a clear chain `<>` → versioned source → `</changeset/c>` → `prov:wasAssociatedWith` agent; feature (`#id`) carries no PROV properties; timestamp and editor appear only on the changeset activity, not duplicated on the source entity
+- **`common.xsl`**: shared XSLT module extracted from `node.xsl`, `way.xsl`, `relation.xsl`; contains `local:ttl`, `ttl-prefixes`, `doc-header`, `versioned-source`, and `changeset-activity` named templates; included via `xsl:include`
 - **Relative references throughout**: Turtle output (`node.xsl`, `way.xsl`, `relation.xsl`) uses path-absolute tag URIs (`</tag/KEY>`, `</vocab#>`) instead of absolute `https://osmwrap…` URIs; `RdfFilter` passes `.base(siteRoot)` to Jena `RDFWriter` so RDF/XML emits `xml:base` and relativizes subject URIs
 - **Reverse-proxy scheme fix**: `base-scheme` context-param in `web.xml` (value `https`) read by `RdfFilter` and `SparqlServlet` before falling back to `req.getScheme()`; ensures correct scheme when Tomcat sits behind Apache without `X-Forwarded-Proto`
 - **`test/smoke-rdf.sh`**: RDF smoke test using `rapper` (parse validity) and `roqet` (SPARQL queries); fetches each resource once into a temp file to avoid rate limits; checks no absolute osmwrap URIs in Turtle, `https://` scheme in RDF/XML, prov attribution, geometry, tags, coordinates via both local-file and `/sparql` endpoint queries
