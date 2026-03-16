@@ -83,6 +83,8 @@ public class OverpassElementServlet extends HttpServlet {
 
 		_log.info("querying overpass for " + elementType + "/" + id);
 
+		resp.setHeader("X-Upstream-Source", archive + "?" + postData);
+
 		try {
 			HttpResponse<InputStream> response = HttpClientUtil.post(archive, postData);
 			int responseCode = response.statusCode();

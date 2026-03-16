@@ -316,9 +316,19 @@ function _formatLinksHtml(url, sourceUrl) {
     if (/^\/osm\/(map|node\/|way\/|relation\/)/.test(url)) {
         html += ' \u00b7 <a href="https://api.openstreetmap.org/api/0.6' + escHtml(url.replace(/^\/osm/, ''))
               + '" target="_blank">OSM XML</a>';
-    } else if (sourceUrl) {
-        var label = /nominatim/.test(sourceUrl) ? 'Source XML' : 'OSM XML';
-        html += ' \u00b7 <a href="' + escHtml(sourceUrl) + '" target="_blank">' + label + '</a>';
+    } else {
+        var ovpM = url.match(/^\/overpass\/(node|way|relation)\/(\d+)/);
+        if (ovpM) {
+            var ovpT = ovpM[1], ovpI = ovpM[2], ovpQ;
+            if (ovpT === 'node')     ovpQ = '[out:xml][timeout:60]; node(' + ovpI + '); out body;';
+            else if (ovpT === 'way') ovpQ = '[out:xml][timeout:60]; way(' + ovpI + '); out body; >; out skel qt;';
+            else                     ovpQ = '[out:xml][timeout:60]; relation(' + ovpI + '); out body; >>; out skel qt;';
+            html += ' \u00b7 <a href="https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(ovpQ)
+                  + '" target="_blank">Overpass XML</a>';
+        } else if (sourceUrl) {
+            var label = /nominatim/.test(sourceUrl) ? 'Source XML' : /overpass/.test(sourceUrl) ? 'Overpass XML' : 'OSM XML';
+            html += ' \u00b7 <a href="' + escHtml(sourceUrl) + '" target="_blank">' + label + '</a>';
+        }
     }
     html += ' \u00b7 <a href="' + escHtml(rdf) + '">RDF/XML</a>'
           + ' \u00b7 <a href="' + escHtml(_ttlUrl(url)) + '">Turtle</a>'
