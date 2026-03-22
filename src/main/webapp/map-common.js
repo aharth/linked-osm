@@ -41,7 +41,20 @@ function _expandCurie(k) {
 }
 
 function _renderNestedObject(obj, ctx) {
-    if (typeof obj !== 'object' || obj === null) return escHtml(String(obj));
+    if (typeof obj !== 'object' || obj === null) {
+        var v = String(obj);
+        if (v.match(/^https?:\/\//)) {
+            return '<a href="' + escHtml(v) + '" target="_blank">' + escHtml(v) + '</a>';
+        } else if (v.match(/^\//)) {
+            return '<a href="' + escHtml(v) + '">' + escHtml(v) + '</a>';
+        } else if (ctx && ctx.svc && typeof obj === 'string' && obj.match(/^urn:adv:oid:(.+)$/)) {
+            var oid = obj.match(/^urn:adv:oid:(.+)$/)[1];
+            return escHtml(obj) + ' <button type="button" onclick="setWfsByIdInput(\''
+                + escHtml(ctx.mapId) + '\',\'' + escHtml(String(ctx.fi)) + '\',\'' + escHtml(oid) + '\')">Set</button>';
+        }
+        return escHtml(v);
+    }
+    
     if (Array.isArray(obj)) {
         var items = obj.map(function(item) { return _renderNestedObject(item, ctx); });
         return items.join(', ');
@@ -49,12 +62,18 @@ function _renderNestedObject(obj, ctx) {
     var html = '<dl class="nested-props" style="margin-left: 1em; padding-left: 0.5em; border-left: 2px solid #eee;">';
     for (var k in obj) {
         var label = k;
+        var dt = '';
         if (k.match(/^https?:\/\//)) {
             label = k.includes('#') ? k.split('#').pop() : k.split('/').filter(Boolean).pop();
+            dt = '<a href="' + escHtml(k) + '" target="_blank">' + escHtml(label) + '</a>';
         } else if (k.match(/^\//)) {
             label = k.includes('#') ? k.split('#').pop() : k.split('/').filter(Boolean).pop();
+            dt = '<a href="' + escHtml(k) + '">' + escHtml(label) + '</a>';
+        } else {
+            var expanded = _expandCurie(k);
+            dt = expanded ? '<a href="' + escHtml(expanded) + '" target="_blank">' + escHtml(k) + '</a>' : escHtml(k);
         }
-        html += '<dt>' + escHtml(label) + '</dt>';
+        html += '<dt>' + dt + '</dt>';
         var v = obj[k];
         if (Array.isArray(v)) {
             v.forEach(function(item) { html += '<dd>' + _renderNestedObject(item, ctx) + '</dd>'; });
