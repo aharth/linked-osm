@@ -2,6 +2,19 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-06-11] Fix: way geometry in /overpass/features GeoJSON
+
+- `GeoJsonConverter.overpassFeaturesToGeoJson` emitted ZERO way features
+  from real Overpass `out geom` responses: way `<nd>` elements carry the
+  node `ref` BEFORE `lat`/`lon` (`<nd ref=".." lat=".." lon=".."/>`), and
+  the position-dependent regex `<nd\s+lat=...` never matched. The nd
+  coordinates are now pulled by attribute name (shared `parseNdCoords`
+  helper, also used for relation-member geometry, whose `<nd>` has no
+  ref). Regression test `GeoJsonConverterTest` uses a real trimmed
+  Overpass response (a Nürnberg DPD warehouse way).
+
+
+
 ## [2026-03-16]
 - **PROV restructured**: `prov:hadPrimarySource` on `<>` now points to the versioned OSM API URL (e.g. `.../node/{id}/{version}`), creating a clear chain `<>` → versioned source → `</changeset/c>` → `prov:wasAssociatedWith` agent; feature (`#id`) carries no PROV properties; timestamp and editor appear only on the changeset activity, not duplicated on the source entity
 - **`common.xsl`**: shared XSLT module extracted from `node.xsl`, `way.xsl`, `relation.xsl`; contains `local:ttl`, `ttl-prefixes`, `doc-header`, `versioned-source`, and `changeset-activity` named templates; included via `xsl:include`

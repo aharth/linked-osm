@@ -32,12 +32,19 @@ var _CURIE_PREFIXES = {
     'owl':  'http://www.w3.org/2002/07/owl#',
     'dct':  'http://purl.org/dc/terms/',
     'skos': 'http://www.w3.org/2004/02/skos/core#',
+    'locn': 'http://www.w3.org/ns/locn#',
+    'foaf': 'http://xmlns.com/foaf/0.1/',
 };
 
 function _expandCurie(k) {
     var m = k.match(/^([a-z]+):([^\/].*)$/);
     if (m && _CURIE_PREFIXES[m[1]]) return _CURIE_PREFIXES[m[1]] + m[2];
     return null;
+}
+
+function _isBnodeObj(obj) {
+    var ks = Object.keys(obj);
+    return !(ks.length === 1 && ks[0] === '@id');
 }
 
 function _renderNestedObject(obj, ctx) {
@@ -54,12 +61,22 @@ function _renderNestedObject(obj, ctx) {
         }
         return escHtml(v);
     }
-    
+
     if (Array.isArray(obj)) {
         var items = obj.map(function(item) { return _renderNestedObject(item, ctx); });
         return items.join(', ');
     }
-    var html = '<dl class="nested-props" style="margin-left: 1em; padding-left: 0.5em; border-left: 2px solid #eee;">';
+
+    // IRI reference: {"@id": "..."} — render as a plain link, no nested dl
+    if (!_isBnodeObj(obj)) {
+        var href = String(obj['@id']);
+        if (href.match(/^https?:\/\//)) return '<a href="' + escHtml(href) + '" target="_blank">' + escHtml(href) + '</a>';
+        if (href.match(/^\//)) return '<a href="' + escHtml(href) + '">' + escHtml(href) + '</a>';
+        return escHtml(href);
+    }
+
+    // Blank node
+    var html = '<dl class="bnode-props" style="margin-left: 1em;">';
     for (var k in obj) {
         var label = k;
         var dt = '';
@@ -88,6 +105,7 @@ function _renderNestedObject(obj, ctx) {
 function propsToHtml(props, ctx) {
     var html = '<dl>';
     for (var k in props) {
+        if (k === 'locn:geometry' || k === 'http://www.w3.org/ns/locn#geometry') continue;
         var rawV = props[k];
         var vals = Array.isArray(rawV) ? rawV : [rawV];
         var dt;
@@ -106,25 +124,36 @@ function propsToHtml(props, ctx) {
         html += '<dt>' + dt + '</dt>';
         vals.forEach(function(rawVal) {
             var v = rawVal !== null && rawVal !== undefined ? String(rawVal) : '';
-            var val;
             if (k === '_droppedGeometry') {
-                val = escHtml(v) + ' <span class="prop-note">(geometry type not rendered)</span>';
+                html += '<dd>' + escHtml(v) + ' <span class="prop-note">(geometry type not rendered)</span></dd>';
             } else if (ctx && ctx.svc && k !== 'identifier' && v.match(/^urn:adv:oid:(.+)$/)) {
                 var oid = v.match(/^urn:adv:oid:(.+)$/)[1];
-                val = escHtml(v) + ' <button type="button" onclick="setWfsByIdInput(\''
+                html += '<dd>' + escHtml(v) + ' <button type="button" onclick="setWfsByIdInput(\''
                     + escHtml(ctx.mapId) + '\',\''
                     + escHtml(String(ctx.fi)) + '\',\''
-                    + escHtml(oid) + '\')">Set</button>';
+                    + escHtml(oid) + '\')">Set</button></dd>';
             } else if (v.match(/^https?:\/\//)) {
-                val = '<a href="' + escHtml(v) + '" target="_blank">' + escHtml(v) + '</a>';
+                html += '<dd><a href="' + escHtml(v) + '" target="_blank">' + escHtml(v) + '</a></dd>';
             } else if (v.match(/^\//)) {
-                val = '<a href="' + escHtml(v) + '">' + escHtml(v) + '</a>';
+                html += '<dd><a href="' + escHtml(v) + '">' + escHtml(v) + '</a></dd>';
             } else if (typeof rawVal === 'object' && rawVal !== null) {
-                val = _renderNestedObject(rawVal, ctx);
+                if (!_isBnodeObj(rawVal)) {
+                    var _href = String(rawVal['@id']);
+                    if (ctx && ctx.svc && k !== 'identifier' && _href.match(/^urn:adv:oid:(.+)$/)) {
+                        var oid = _href.match(/^urn:adv:oid:(.+)$/)[1];
+                        html += '<dd>' + escHtml(_href) + ' <button type="button" onclick="setWfsByIdInput(\''
+                            + escHtml(ctx.mapId) + '\',\''
+                            + escHtml(String(ctx.fi)) + '\',\''
+                            + escHtml(oid) + '\')">Set</button></dd>';
+                    } else {
+                        html += '<dd>' + _renderNestedObject(rawVal, ctx) + '</dd>';
+                    }
+                } else {
+                    html += '<dd>' + _renderNestedObject(rawVal, ctx) + '</dd>';
+                }
             } else {
-                val = escHtml(v);
+                html += '<dd>' + (v === '' ? '&nbsp;' : escHtml(v)) + '</dd>';
             }
-            html += '<dd>' + (val === '' ? '&nbsp;' : val) + '</dd>';
         });
     }
     html += '</dl>';

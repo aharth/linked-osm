@@ -16,8 +16,10 @@ import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFormatter;
+import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Model;
-import org.apache.jena.sparql.util.DatasetUtils;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.riot.RDFDataMgr;
 
 @SuppressWarnings("serial")
 public class SparqlServlet extends HttpServlet {
@@ -93,15 +95,31 @@ public class SparqlServlet extends HttpServlet {
             }
         }
 
-        // Step 4 — Load graphs (500 on fetch failure)
-        Dataset dataset;
-        try {
-            dataset = DatasetUtils.createDataset(defaultGraphs, namedGraphs);
-        } catch (Exception e) {
-            _log.log(Level.SEVERE, e.getMessage(), e);
-            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                    "Failed to load graph data: " + e.getMessage());
-            return;
+        // Step 4 — Load graphs individually so failures name the offending URI
+        Dataset dataset = DatasetFactory.createGeneral();
+        for (String uri : defaultGraphs) {
+            try {
+                Model m = ModelFactory.createDefaultModel();
+                RDFDataMgr.read(m, uri);
+                dataset.getDefaultModel().add(m);
+            } catch (Exception e) {
+                _log.log(Level.WARNING, "Failed to load <" + uri + ">: " + e.getMessage(), e);
+                resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                        "Failed to load graph <" + uri + ">: " + graphLoadReason(e));
+                return;
+            }
+        }
+        for (String uri : namedGraphs) {
+            try {
+                Model m = ModelFactory.createDefaultModel();
+                RDFDataMgr.read(m, uri);
+                dataset.addNamedModel(uri, m);
+            } catch (Exception e) {
+                _log.log(Level.WARNING, "Failed to load <" + uri + ">: " + e.getMessage(), e);
+                resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                        "Failed to load graph <" + uri + ">: " + graphLoadReason(e));
+                return;
+            }
         }
 
         // Step 5 — Strip FROM clauses, re-parse, execute (500 on failure)
@@ -153,6 +171,16 @@ public class SparqlServlet extends HttpServlet {
             resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
                     "Query execution failed: " + e.getMessage());
         }
+    }
+
+    private static String graphLoadReason(Exception e) {
+        String msg = e.getMessage();
+        if (msg == null) return "fetch failed";
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b(\\d{3})\\b").matcher(msg);
+        if (m.find()) return "HTTP " + m.group(1);
+        if (msg.toLowerCase().contains("not found")) return "HTTP 404";
+        if (msg.toLowerCase().contains("connect")) return "connection failed";
+        return "fetch failed";
     }
 
     private String getOutputFormat(String acceptHeader, String formatParam) {

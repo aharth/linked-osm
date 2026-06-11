@@ -176,6 +176,32 @@ public final class GeoJsonConverter {
 	}
 
 	/**
+	 * {@code <nd>} children carry inline lat/lon with {@code out geom}, but the
+	 * attribute order differs by container: way geometry keeps the node ref first
+	 * ({@code <nd ref=".." lat=".." lon=".."/>}) while relation-member geometry
+	 * omits it ({@code <nd lat=".." lon=".."/>}). Match the whole tag and pull
+	 * the attributes by name instead of relying on position.
+	 */
+	private static final Pattern ND_PATTERN = Pattern.compile("<nd\\b([^>]*?)/?>");
+
+	/** Inline {@code <nd>} coordinates of a way/member body as [lon, lat] pairs. */
+	private static List<double[]> parseNdCoords(String body) {
+		List<double[]> coords = new ArrayList<>();
+		Matcher ndm = ND_PATTERN.matcher(body);
+		while (ndm.find()) {
+			String lat = extractAttr(ndm.group(1), "lat");
+			String lon = extractAttr(ndm.group(1), "lon");
+			if (lat == null || lon == null) continue;
+			try {
+				coords.add(new double[]{Double.parseDouble(lon), Double.parseDouble(lat)});
+			} catch (NumberFormatException e) {
+				// skip
+			}
+		}
+		return coords;
+	}
+
+	/**
 	 * Convert Overpass XML response with {@code out geom} to a GeoJSON FeatureCollection.
 	 * Handles nodes (Point), ways (LineString/Polygon), and relations
 	 * (Polygon/MultiPolygon for multipolygons, MultiLineString for routes).
@@ -227,7 +253,6 @@ public final class GeoJsonConverter {
 		}
 
 		// Ways (inline nd lat/lon from out geom)
-		Pattern ndLatLon = Pattern.compile("<nd\\s+lat=['\"]([^'\"]+)['\"]\\s+lon=['\"]([^'\"]+)['\"]");
 		Pattern wayPattern = Pattern.compile("<way\\s([^>]*?)>(.*?)</way>", Pattern.DOTALL);
 		Matcher wayMatcher = wayPattern.matcher(xml);
 		while (wayMatcher.find()) {
@@ -235,17 +260,7 @@ public final class GeoJsonConverter {
 			String wayBody = wayMatcher.group(2);
 			String wayId = extractAttr(wayAttrs, "id");
 
-			List<double[]> coords = new ArrayList<>();
-			Matcher ndm = ndLatLon.matcher(wayBody);
-			while (ndm.find()) {
-				try {
-					double lat = Double.parseDouble(ndm.group(1));
-					double lon = Double.parseDouble(ndm.group(2));
-					coords.add(new double[]{lon, lat});
-				} catch (NumberFormatException e) {
-					// skip
-				}
-			}
+			List<double[]> coords = parseNdCoords(wayBody);
 
 			if (coords.size() < 2) continue;
 
@@ -300,17 +315,7 @@ public final class GeoJsonConverter {
 			while (mm.find()) {
 				String role = mm.group(1);
 				String memberBody = mm.group(2);
-				List<double[]> seg = new ArrayList<>();
-				Matcher ndm = ndLatLon.matcher(memberBody);
-				while (ndm.find()) {
-					try {
-						double lat = Double.parseDouble(ndm.group(1));
-						double lon = Double.parseDouble(ndm.group(2));
-						seg.add(new double[]{lon, lat});
-					} catch (NumberFormatException e) {
-						// skip
-					}
-				}
+				List<double[]> seg = parseNdCoords(memberBody);
 				if (seg.size() < 2) continue;
 				if ("outer".equals(role)) outerSegments.add(seg);
 				else if ("inner".equals(role)) innerSegments.add(seg);
