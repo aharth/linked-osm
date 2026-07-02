@@ -48,6 +48,7 @@ public class ErrorServlet extends HttpServlet {
 			case 404: return "Not Found";
 			case 406: return "Not Acceptable";
 			case 413: return "Content Too Large";
+			case 429: return "Too Many Requests";
 			case 500: return "Internal Server Error";
 			case 502: return "Bad Gateway";
 			case 503: return "Service Unavailable";

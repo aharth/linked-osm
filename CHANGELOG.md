@@ -2,6 +2,49 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-07-02] Rate limiting
+
+### Added
+
+- **`RateLimitFilter`** (Bucket4j): 50 requests per 10 minutes per client IP on all
+  upstream-hitting servlets (osm, geo, nominatim/search, overpass, changeset, tag,
+  sparql); static pages and `/routes` are unthrottled. Client IP from the first
+  `X-Forwarded-For` entry, falling back to `getRemoteAddr()`. Exempt subnets:
+  FAU (131.188.0.0/16, 2001:638:a000::/48), Fraunhofer IIS (192.44.12.0/24), and
+  local ranges (192.168.0.0/16, fc00::/7, fe80::/10). Requests with a valid API key
+  in `Authorization: Bearer <key>` bypass the limit — keys are comma-separated in the
+  `OSMWRAP_API_KEYS` env var (fallback: `api-keys` context-param), compared in
+  constant time; only the header is accepted, never a query parameter. Over-limit
+  requests get 429 via `ErrorServlet`. Documented in the FAQ (`#ratelimit`).
+  Mirrors linked-inspire / linked-eurostat. `RateLimitFilterTest` covers the subnet
+  exemptions, key parsing, and Bearer-token extraction (8 tests).
+
+## [2026-07-01] `/routes` interface manifest
+
+### Added
+
+- **`RoutesServlet`** at `/routes` (and `/routes.json`): a machine-readable manifest
+  of the *deployed* endpoints, each with the representation `formats` it serves and
+  the query `params` it accepts — introspected from the servlet context's own
+  mappings, so it reflects exactly what is live with nothing hand-maintained to
+  drift. Route names keep their path (`nominatim/search`, `overpass/poi`, …).
+  `formats` come from the url-pattern suffixes; `params` are declared in
+  `ROUTE_PARAMS`, mirroring each servlet's `getParameter` reads (`nominatim/search`
+  → `q,limit`; `overpass/around` → `lat,lon,radius,limit`; `overpass/features` →
+  `bbox,filter,type`; `overpass/poi` → `bbox,filter,limit`; `sparql` →
+  `query,format`; the path-addressed record routes `osm/node`, `overpass/way`,
+  `tag`, … take none). Mirrors the sibling wrappers
+  (linked-mastr/nuts/lau/lod2-by/netztransparenz/wetterdienst/energieatlas/
+  regionalstatistik). CORS-open. `RoutesServletTest` covers the url-pattern →
+  logical-route reduction (3 tests).
+
+This is the "option-C" source of truth for the Granergize webapp's compile-time
+route-contract check (`gen:routes:osm`) and Data-sources health/contract panel.
+
+## [2026-06-15] CORS
+
+- Add a permissive `CorsFilter` (allows `Accept, Content-Type, Authorization, DPoP`) so a Solid SPA can fetch resources cross-origin; an `OPTIONS` preflight is answered `204`.
+
 ## [2026-06-11] Fix: way geometry in /overpass/features GeoJSON
 
 - `GeoJsonConverter.overpassFeaturesToGeoJson` emitted ZERO way features

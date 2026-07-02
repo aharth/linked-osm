@@ -80,6 +80,12 @@
       <artifactId>commons-codec</artifactId>
       <version>1.17.1</version>
     </dependency>
+    <!-- Token-bucket rate limiting in RateLimitFilter -->
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j-core</artifactId>
+      <version>8.10.1</version>
+    </dependency>
   </dependencies>
 
   <build>

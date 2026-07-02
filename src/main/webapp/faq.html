@@ -234,6 +234,26 @@
     and upstream service usage.
   </p>
 
+  <a name="ratelimit"></a>
+  <h2>Why do I see 429 Too Many Requests errors?</h2>
+
+  <p>
+    To protect the upstream OSM, Nominatim, and Overpass services from excessive load,
+    rate limiting is in place: each IP address may make 50 requests per 10 minutes.
+    The allowance refills continuously, so after hitting the limit you regain roughly
+    one request every 12 seconds. Requests over the limit receive HTTP status 429.
+  </p>
+
+  <p>
+    Registered heavy users can bypass the limit with an API key, sent as an HTTP header:
+  </p>
+
+  <pre>Authorization: Bearer &lt;your-api-key&gt;</pre>
+
+  <p>
+    Contact the operator (see below) to request a key.
+  </p>
+
   <hr/>
   <a href="http://ontologycentral.com/">OntologyCentral</a>, 2009-2026.
 </body>
