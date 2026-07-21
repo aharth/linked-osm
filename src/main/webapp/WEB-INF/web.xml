@@ -11,6 +11,13 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<param-value>https</param-value>
 	</context-param>
 
+	<!-- rate-limit exemption keys (RateLimitFilter): the env var
+	     OSMWRAP_API_KEYS overrides this baked-in fallback -->
+	<context-param>
+		<param-name>api-keys</param-name>
+		<param-value>f59caf2465a5344be5eebdf7a8aa5b5fc0310363d4473204</param-value>
+	</context-param>
+
 	<filter>
 		<filter-name>cors</filter-name>
 		<filter-class>com.ontologycentral.osmwrap.webapp.CorsFilter</filter-class>

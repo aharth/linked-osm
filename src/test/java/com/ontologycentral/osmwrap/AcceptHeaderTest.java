@@ -207,4 +207,15 @@ public class AcceptHeaderTest {
         List<AcceptHeader.AcceptType> list = AcceptHeader.parse(null);
         assertFalse(AcceptHeader.prefers(list, "application", "rdf+xml", "text", "turtle"));
     }
+
+    @Test
+    public void malformedQFallsBackToOneInsteadOfThrowing() {
+        // Regression: an unguarded Double.parseDouble turned a garbage Accept
+        // header into a 500 (guard backported from linked-lod2-by, 2026-07-22).
+        List<AcceptHeader.AcceptType> l =
+                AcceptHeader.parse("text/html;q=oops, text/turtle;q=0.9");
+        assertEquals(2, l.size());
+        assertEquals(1.0, AcceptHeader.maxQ(l, "text", "html"), 1e-9);
+        assertEquals(0.9, AcceptHeader.maxQ(l, "text", "turtle"), 1e-9);
+    }
 }

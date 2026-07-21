@@ -8,6 +8,7 @@
    xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#"
    xmlns:prov="http://www.w3.org/ns/prov#"
    xmlns:dcat="http://www.w3.org/ns/dcat#"
+   xmlns:locn="http://www.w3.org/ns/locn#"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    version="2.0">
   
@@ -61,7 +62,44 @@
         </rdf:Description>
       </xsl:if>
 
+      <!-- Feature bodies for answers fetched with `out geom` (the
+           /overpass/features query): tags as dc:subject links to the /tag
+           SKOS concepts, geometry as a WKT literal (CRS84 lon/lat).
+           Untagged elements stay reference-only; relations get tags but no
+           geometry (multipolygon assembly is not the XSLT's job). -->
+      <xsl:for-each select="node[tag]">
+        <rdf:Description rdf:about="/node/{@id}#id">
+          <xsl:call-template name="feature-tags"/>
+          <xsl:if test="@lat">
+            <locn:geometry rdf:datatype="http://www.opengis.net/ont/geosparql#wktLiteral"><xsl:value-of select="concat('POINT(', @lon, ' ', @lat, ')')"/></locn:geometry>
+          </xsl:if>
+        </rdf:Description>
+      </xsl:for-each>
+      <xsl:for-each select="way[tag]">
+        <rdf:Description rdf:about="/way/{@id}#id">
+          <xsl:call-template name="feature-tags"/>
+          <xsl:if test="nd/@lat">
+            <xsl:variable name="pts" select="string-join(for $n in nd return concat($n/@lon, ' ', $n/@lat), ', ')"/>
+            <locn:geometry rdf:datatype="http://www.opengis.net/ont/geosparql#wktLiteral"><xsl:choose>
+              <xsl:when test="nd[1]/@ref = nd[last()]/@ref"><xsl:value-of select="concat('POLYGON((', $pts, '))')"/></xsl:when>
+              <xsl:otherwise><xsl:value-of select="concat('LINESTRING(', $pts, ')')"/></xsl:otherwise>
+            </xsl:choose></locn:geometry>
+          </xsl:if>
+        </rdf:Description>
+      </xsl:for-each>
+      <xsl:for-each select="relation[tag]">
+        <rdf:Description rdf:about="/relation/{@id}#id">
+          <xsl:call-template name="feature-tags"/>
+        </rdf:Description>
+      </xsl:for-each>
+
     </rdf:RDF>
+  </xsl:template>
+
+  <xsl:template name="feature-tags">
+    <xsl:for-each select="tag">
+      <dc:subject rdf:resource="/tag/{encode-for-uri(@k)}={encode-for-uri(@v)}"/>
+    </xsl:for-each>
   </xsl:template>
 
 </xsl:stylesheet>

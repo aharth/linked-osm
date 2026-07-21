@@ -19,7 +19,14 @@ public class AcceptHeader {
                 String[] pieces = part.split(";\\s*q\\s*=");
                 String[] types  = pieces[0].trim().split("/");
                 if (types.length != 2) return null;
-                double q = pieces.length > 1 ? Double.parseDouble(pieces[1].trim()) : 1.0;
+                // Malformed q ("q=oops") falls back to 1.0 instead of throwing mid-stream
+                // (an unguarded parseDouble turns a garbage Accept header into a 500).
+                double q;
+                try {
+                    q = pieces.length > 1 ? Double.parseDouble(pieces[1].trim()) : 1.0;
+                } catch (NumberFormatException nfe) {
+                    q = 1.0;
+                }
                 return new AcceptType(types[0].trim(), types[1].trim(), q);
             })
             .filter(Objects::nonNull)

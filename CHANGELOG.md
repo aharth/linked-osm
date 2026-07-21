@@ -2,6 +2,14 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-07-22] Malformed Accept q-value guard (backport from linked-lod2-by)
+
+- **`AcceptHeader.parse`**: a garbage q-value (`text/html;q=oops`) threw
+  `NumberFormatException` mid-stream and turned into a 500 on every
+  Accept-parsing endpoint; now falls back to q=1.0. Regression test added to
+  `AcceptHeaderTest`. Applied identically in linked-inspire, linked-adv and
+  linked-pdok (shared-by-copy).
+
 ## [2026-07-02] Rate limiting
 
 ### Added
