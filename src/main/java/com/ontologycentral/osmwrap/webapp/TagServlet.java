@@ -28,7 +28,8 @@ public class TagServlet extends HttpServlet {
 
 		String pathInfo = req.getPathInfo();
 		if (pathInfo == null) {
-			resp.sendError(404, "No tag specified");
+			// bare /tag: the index of all tag keys IS the list of choices
+			resp.sendRedirect("/tag/index");
 			return;
 		}
 
@@ -57,7 +58,8 @@ public class TagServlet extends HttpServlet {
 		}
 
 		if (key == null || key.isEmpty()) {
-			resp.sendError(404, "No tag key specified");
+			// bare /tag/: the index of all tag keys IS the list of choices
+			resp.sendRedirect("/tag/index");
 			return;
 		}
 

@@ -31,6 +31,18 @@ public class Listener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent event) {
 		ServletContext ctx = event.getServletContext();
 
+		// Register GeoSPARQL geof: function suite (standard 1.0 topology +
+		// metricArea/metricLength/metricDistance/centroid + fn:dimension).
+		// No spatial index — SPARQL queries run against in-memory
+		// per-request datasets. Same setup as the other linked-* wrappers.
+		try {
+			org.apache.jena.geosparql.configuration.GeoSPARQLConfig.setupNoIndex();
+			GeoFunctions.register();
+			ctx.log("Linked OSM: GeoSPARQL functions registered (1.0 + metricArea/metricLength/metricDistance/centroid)");
+		} catch (Exception e) {
+			ctx.log("Linked OSM: GeoSPARQL setup failed: " + e.getMessage());
+		}
+
 		javax.xml.transform.TransformerFactory tf =
 		      javax.xml.transform.TransformerFactory.newInstance("net.sf.saxon.TransformerFactoryImpl",
 		    		  Thread.currentThread().getContextClassLoader());

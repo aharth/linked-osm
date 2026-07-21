@@ -234,6 +234,26 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<url-pattern>/sparql</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
+		<servlet-name>sparql</servlet-name>
+		<url-pattern>/sparql.json</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>sparql</servlet-name>
+		<url-pattern>/sparql.xml</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>sparql</servlet-name>
+		<url-pattern>/sparql.tsv</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>sparql</servlet-name>
+		<url-pattern>/sparql.ttl</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>sparql</servlet-name>
+		<url-pattern>/sparql.rdf</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
 		<servlet-name>error</servlet-name>
 		<url-pattern>/error</url-pattern>
 	</servlet-mapping>

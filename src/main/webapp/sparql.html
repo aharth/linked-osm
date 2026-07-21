@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SPARQL &mdash; Linked OSM</title>
+  <link rel="stylesheet" href="/map.css">
+</head>
+<body>
+  <p><a href="/">Home</a></p>
+  <h1>SPARQL</h1>
+  <p>Execute SPARQL queries over OSM Linked Data loaded via <code>FROM</code> and <code>FROM NAMED</code> clauses.
+  Graph URIs must resolve to this wrapper's own endpoints (e.g. <code>FROM &lt;/map.rdf?bbox=&hellip;&gt;</code>);
+  external graph URIs are rejected. Result format by URL suffix
+  (<code>/sparql.json</code>, <code>.xml</code>, <code>.tsv</code>; <code>.ttl</code>/<code>.rdf</code> for CONSTRUCT/DESCRIBE)
+  or Accept header.</p>
+  <form method="GET" action="sparql">
+    <div>
+      Examples:
+      <select id="example-select">
+        <option value="">&mdash; select &mdash;</option>
+        <option value="q1">Count per class</option>
+        <option value="q2">Named features</option>
+        <option value="q3">Features with coordinates</option>
+        <option value="q4">Contributors</option>
+        <option value="q5">CONSTRUCT geometry subgraph</option>
+      </select>
+    </div>
+    <div>
+    <textarea cols="100" rows="20" name="query">PREFIX rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
+
+SELECT ?class (COUNT(?s) AS ?count)
+FROM &lt;/map.rdf?bbox=11.075,49.457,11.077,49.459&gt;
+WHERE { ?s a ?class }
+GROUP BY ?class
+ORDER BY DESC(?count)</textarea>
+    </div>
+    <div>
+      <input type="reset"> <input type="submit">
+    </div>
+  </form>
+  <script>
+  var EXAMPLES = {
+    q1: "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n\nSELECT ?class (COUNT(?s) AS ?count)\nFROM </map.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE { ?s a ?class }\nGROUP BY ?class\nORDER BY DESC(?count)",
+    q2: "PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX dc:   <http://purl.org/dc/elements/1.1/>\n\nSELECT ?s ?name\nFROM </map.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE {\n  ?s a <http://geovocab.org/spatial#Feature> ;\n     dc:title ?name .\n}\nORDER BY ?name",
+    q3: "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>\nPREFIX dc:  <http://purl.org/dc/elements/1.1/>\n\nSELECT ?s ?lat ?lon ?name\nFROM </map.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE {\n  ?s geo:lat ?lat ;\n     geo:long ?lon .\n  OPTIONAL { ?s dc:title ?name }\n}\nORDER BY ?name",
+    q4: "PREFIX prov: <http://www.w3.org/ns/prov#>\nPREFIX foaf: <http://xmlns.com/foaf/0.1/>\n\nSELECT ?user (COUNT(?s) AS ?edits)\nFROM </map.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE {\n  ?s prov:wasAttributedTo ?agent .\n  ?agent foaf:nick ?user .\n}\nGROUP BY ?user\nORDER BY DESC(?edits)",
+    q5: "PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>\nPREFIX dc:  <http://purl.org/dc/elements/1.1/>\n\nCONSTRUCT { ?s geo:lat ?lat ; geo:long ?lon ; dc:title ?name }\nFROM </map.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE {\n  ?s geo:lat ?lat ;\n     geo:long ?lon .\n  OPTIONAL { ?s dc:title ?name }\n}"
+  };
+  document.getElementById('example-select').addEventListener('change', function() {
+    if (!this.value) return;
+    var ta = document.querySelector('textarea[name="query"]');
+    var m = ta.value.match(/FROM\s+<([^>]*)>/i);
+    var currentFrom = m ? m[1] : '/map.rdf?bbox=11.075,49.457,11.077,49.459';
+    ta.value = EXAMPLES[this.value].replace(/FROM <[^>]*>/, 'FROM <' + currentFrom + '>');
+  });
+  window.addEventListener('DOMContentLoaded', function() {
+    var hash = window.location.hash;
+    if (!hash) return;
+    var hm = hash.match(/[#&]from=([^&]+)/);
+    if (!hm) return;
+    var from = decodeURIComponent(hm[1]);
+    var ta = document.querySelector('textarea[name="query"]');
+    if (!ta) return;
+    ta.value = ta.value.replace(/FROM\s+<[^>]+>/, 'FROM <' + from + '>');
+  });
+  </script>
+</body>
+</html>
