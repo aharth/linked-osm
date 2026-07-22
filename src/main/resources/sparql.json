@@ -1,0 +1,34 @@
+{
+  "examples": [
+    {
+      "source": "Overpass features (bbox document)",
+      "name": "Tags in a bounding box — SELECT, counted",
+      "query": "PREFIX dc: <http://purl.org/dc/elements/1.1/>\n\nSELECT ?tag (COUNT(?s) AS ?features)\nFROM </overpass/features.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE {\n  ?s dc:subject ?tag .\n}\nGROUP BY ?tag\nORDER BY DESC(?features)"
+    },
+    {
+      "source": "Overpass features (bbox document)",
+      "name": "Features with geometry — SELECT",
+      "query": "PREFIX locn: <http://www.w3.org/ns/locn#>\n\nSELECT ?s ?wkt\nFROM </overpass/features.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE {\n  ?s locn:geometry ?wkt .\n}\nLIMIT 20"
+    },
+    {
+      "source": "Overpass features (bbox document)",
+      "name": "Building footprint areas — geof:metricArea",
+      "query": "PREFIX dc:   <http://purl.org/dc/elements/1.1/>\nPREFIX locn: <http://www.w3.org/ns/locn#>\nPREFIX geof: <http://www.opengis.net/def/function/geosparql/>\n\n# Ways whose first and last node coincide are emitted as POLYGON, so a\n# geodesic area is defined for them.\nSELECT ?s (ROUND(geof:metricArea(?wkt)) AS ?m2)\nFROM </overpass/features.rdf?bbox=11.075,49.457,11.077,49.459&filter=building>\nWHERE {\n  ?s locn:geometry ?wkt .\n  FILTER(STRSTARTS(STR(?wkt), \"POLYGON\"))\n}\nORDER BY DESC(?m2)\nLIMIT 10"
+    },
+    {
+      "source": "Overpass features (bbox document)",
+      "name": "Geometry dimension per feature — fn:dimension",
+      "query": "PREFIX locn: <http://www.w3.org/ns/locn#>\nPREFIX fn:   <https://osmwrap.ontologycentral.com/vocab/fn#>\n\n# 0 = point (node), 1 = curve (open way), 2 = surface (closed way).\nSELECT ?dim (COUNT(?s) AS ?features)\nFROM </overpass/features.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE {\n  ?s locn:geometry ?wkt .\n  BIND(fn:dimension(?wkt) AS ?dim)\n}\nGROUP BY ?dim\nORDER BY ?dim"
+    },
+    {
+      "source": "Overpass features (bbox document)",
+      "name": "Street lengths — geof:metricLength",
+      "query": "PREFIX locn: <http://www.w3.org/ns/locn#>\nPREFIX geof: <http://www.opengis.net/def/function/geosparql/>\nPREFIX fn:   <https://osmwrap.ontologycentral.com/vocab/fn#>\n\nSELECT ?s (ROUND(geof:metricLength(?wkt)) AS ?metres)\nFROM </overpass/features.rdf?bbox=11.075,49.457,11.077,49.459&filter=highway>\nWHERE {\n  ?s locn:geometry ?wkt .\n  FILTER(fn:dimension(?wkt) = 1)\n}\nORDER BY DESC(?metres)\nLIMIT 10"
+    },
+    {
+      "source": "Overpass features (bbox document)",
+      "name": "Geometry subgraph — CONSTRUCT",
+      "query": "PREFIX dc:   <http://purl.org/dc/elements/1.1/>\nPREFIX locn: <http://www.w3.org/ns/locn#>\n\nCONSTRUCT { ?s locn:geometry ?wkt ; dc:subject ?tag }\nFROM </overpass/features.rdf?bbox=11.075,49.457,11.077,49.459>\nWHERE {\n  ?s locn:geometry ?wkt ;\n     dc:subject ?tag .\n}"
+    }
+  ]
+}

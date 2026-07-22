@@ -28,8 +28,30 @@ public class Listener implements ServletContextListener {
 	public static final String POI = "poi";
 	public static final String CHANGESET = "changeset";
 
+	/** SPARQL page example queries, read from the bundled sparql.json.
+	 *  Mirrors ServiceRegistry.getSparqlExamples() in linked-inspire /
+	 *  linked-gisco / linked-pdok / linked-adv; this wrapper has no service
+	 *  registry, so the array hangs off the servlet context directly. */
+	public static final String SPARQL_EXAMPLES = "sparql-examples";
+
 	public void contextInitialized(ServletContextEvent event) {
 		ServletContext ctx = event.getServletContext();
+
+		// SPARQL page examples. Absent or malformed -> the page shows an empty
+		// dropdown and an empty textarea; never a startup failure.
+		try (java.io.InputStream in = getClass().getResourceAsStream("/sparql.json")) {
+			if (in == null) {
+				_log.log(Level.WARNING, "sparql.json not on the classpath - SPARQL page will show no examples");
+			} else {
+				jakarta.json.JsonObject o = jakarta.json.Json.createReader(in).readObject();
+				if (o.containsKey("examples")) {
+					ctx.setAttribute(SPARQL_EXAMPLES, o.getJsonArray("examples"));
+					ctx.log("Linked OSM: " + o.getJsonArray("examples").size() + " SPARQL examples loaded");
+				}
+			}
+		} catch (Exception e) {
+			_log.log(Level.WARNING, "sparql.json unreadable: " + e.getMessage(), e);
+		}
 
 		// Register GeoSPARQL geof: function suite (standard 1.0 topology +
 		// metricArea/metricLength/metricDistance/centroid + fn:dimension).

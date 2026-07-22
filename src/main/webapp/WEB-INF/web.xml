@@ -116,6 +116,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-class>com.ontologycentral.osmwrap.webapp.SparqlServlet</servlet-class>
 	</servlet>
 	<servlet>
+		<servlet-name>sparql-page</servlet-name>
+		<jsp-file>/WEB-INF/sparql.jsp</jsp-file>
+	</servlet>
+	<servlet>
 		<servlet-name>error</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.ErrorServlet</servlet-class>
 	</servlet>
@@ -259,6 +263,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>sparql</servlet-name>
 		<url-pattern>/sparql.rdf</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>sparql-page</servlet-name>
+		<url-pattern>/sparql.html</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>error</servlet-name>

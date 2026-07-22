@@ -2,6 +2,44 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-07-22] SPARQL page brought up to the family standard
+
+- **Static `sparql.html` → `WEB-INF/sparql.jsp` + `src/main/resources/sparql.json`**,
+  matching the sibling wrappers. Same URL (`/sparql.html`), so `SparqlServlet`'s
+  redirect and `rdfs:seeAlso` are unchanged. Adds examples grouped by `source`,
+  the `#query=` deep link and the GET-URL builder for `curl`. `Listener` gained
+  `SPARQL_EXAMPLES` (no `ServiceRegistry` here); a missing or malformed file
+  degrades to an empty dropdown, never a startup failure.
+- **The five old examples were all broken; rewritten.** They queried
+  `FROM </map.rdf?bbox=…>` — not a mapped endpoint, the bbox document is
+  `/overpass/features` — and matched predicates the wrapper never emits
+  (`geo:lat`/`geo:long`, `dc:title`, `rdf:type`, `foaf:nick`). `map.xsl` emits
+  `dc:subject` links to the `/tag/{k}={v}` concepts and `locn:geometry` as a
+  `geo:wktLiteral`. Six replacements use that vocabulary and add the GeoSPARQL
+  demos the page lacked (`geof:metricArea`, `geof:metricLength`, `fn:dimension`).
+- Kept from the old page: loading an example preserves the current `FROM`, and
+  the `#from=` deep link that swaps only the `FROM`.
+- **New "FROM — selecting the data" section** (ported from linked-adv, rewritten
+  for the real routes: `/overpass/{features,poi,around}.rdf`,
+  `/overpass/{node,way,relation}/{id}.rdf`, `/nominatim/search.rdf`, `/changeset/{id}`).
+
+## [2026-07-22] index.ttl is host-free
+
+- **Dropped `@base <https://osmwrap.ontologycentral.com/>` from `index.ttl`, and
+  changed `<#osmwrap>` to `</#osmwrap>`.** The architecture invariant is that
+  served RDF bakes in no host. Unlike the sibling wrappers, the bare fragment
+  here was base-SENSITIVE: with the `@base` gone it would have resolved against
+  the retrieval URI and moved the agent to `<index.ttl#osmwrap>`. The
+  absolute-path form is host-free and preserves the exact IRI, which is also the
+  one the stylesheets emit (`common.xsl`, `search.xsl`, `map.xsl`, `poi.xsl`,
+  `changeset.xsl` all write `/#osmwrap`). Verified byte-identical N-Triples when
+  retrieved as `/index.ttl`, `/index` or `/`.
+  Applied alongside linked-inspire, linked-gisco and linked-pdok.
+- **KNOWN INCONSISTENCY, not fixed here**: `ProvUtil.java:142` attributes
+  documents to `{root}/index#osmwrap` while index.ttl and all five stylesheets
+  use `{root}/#osmwrap` — two different agent IRIs in one deployment. Picking a
+  winner means touching either the Java or the five XSLs; left for a decision.
+
 ## [2026-07-22] Malformed Accept q-value guard (backport from linked-lod2-by)
 
 - **`AcceptHeader.parse`**: a garbage q-value (`text/html;q=oops`) threw
