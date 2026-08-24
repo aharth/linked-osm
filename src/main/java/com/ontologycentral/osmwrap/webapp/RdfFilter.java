@@ -23,269 +23,269 @@ import org.apache.jena.riot.RDFParser;
 import org.apache.jena.riot.RDFWriter;
 
 public class RdfFilter implements Filter {
-	private static final Logger _log = Logger.getLogger(RdfFilter.class.getName());
+    private static final Logger _log = Logger.getLogger(RdfFilter.class.getName());
 
-	@Override
-	public void doFilter(
-			jakarta.servlet.ServletRequest request,
-			jakarta.servlet.ServletResponse response,
-			FilterChain chain)
-			throws IOException, ServletException {
+    @Override
+    public void doFilter(
+            jakarta.servlet.ServletRequest request,
+            jakarta.servlet.ServletResponse response,
+            FilterChain chain)
+            throws IOException, ServletException {
 
-		HttpServletRequest httpRequest = (HttpServletRequest) request;
-		HttpServletResponse httpResponse = (HttpServletResponse) response;
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-		ByteArrayOutputStream capture = new ByteArrayOutputStream();
-		CaptureResponseWrapper wrapper = new CaptureResponseWrapper(httpResponse, capture);
+        ByteArrayOutputStream capture = new ByteArrayOutputStream();
+        CaptureResponseWrapper wrapper = new CaptureResponseWrapper(httpResponse, capture);
 
-		chain.doFilter(request, wrapper);
+        chain.doFilter(request, wrapper);
 
-		wrapper.flushBuffer();
+        wrapper.flushBuffer();
 
-		String contentType = wrapper.getContentType();
+        String contentType = wrapper.getContentType();
 
-		String acceptHeader = httpRequest.getHeader("Accept");
-		List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(acceptHeader);
+        String acceptHeader = httpRequest.getHeader("Accept");
+        List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(acceptHeader);
 
-		String requestPath = httpRequest.getRequestURI()
-				.substring(httpRequest.getContextPath().length());
-		int qpos = requestPath.indexOf('?');
-		if (qpos >= 0) requestPath = requestPath.substring(0, qpos);
-		String lastSegment = requestPath.substring(requestPath.lastIndexOf('/') + 1);
+        String requestPath = httpRequest.getRequestURI()
+                .substring(httpRequest.getContextPath().length());
+        int qpos = requestPath.indexOf('?');
+        if (qpos >= 0) requestPath = requestPath.substring(0, qpos);
+        String lastSegment = requestPath.substring(requestPath.lastIndexOf('/') + 1);
 
-		boolean forceTurtle = lastSegment.endsWith(".ttl");
-		boolean forceRdfXml = lastSegment.endsWith(".rdf");
-		boolean hasExtension = lastSegment.contains(".");
-		boolean serveTurtle = (forceTurtle || !AcceptHeader.prefers(accepted,
-				"application", "rdf+xml", "text", "turtle")) && !forceRdfXml;
+        boolean forceTurtle = lastSegment.endsWith(".ttl");
+        boolean forceRdfXml = lastSegment.endsWith(".rdf");
+        boolean hasExtension = lastSegment.contains(".");
+        boolean serveTurtle = (forceTurtle || !AcceptHeader.prefers(accepted,
+                "application", "rdf+xml", "text", "turtle")) && !forceRdfXml;
 
-		httpResponse.setHeader("Vary", "Accept");
+        httpResponse.setHeader("Vary", "Accept");
 
-		String proto = httpRequest.getHeader("X-Forwarded-Proto");
-		if (proto == null) {
-			// Allow deployer to force the scheme via a context-param (e.g. when running
-			// behind a reverse proxy that does not forward X-Forwarded-Proto).
-			String forced = httpRequest.getServletContext().getInitParameter("base-scheme");
-			proto = (forced != null) ? forced : httpRequest.getScheme();
-		}
-		String host = httpRequest.getHeader("X-Forwarded-Host");
-		if (host == null) host = httpRequest.getHeader("Host");
-		if (host == null) host = httpRequest.getServerName();
-		String queryString = httpRequest.getQueryString();
-		// Document URL as Jena parse base so <> resolves to the document URI.
-		String base = proto + "://" + host + requestPath;
-		// Site root used as RDF/XML write base so path-absolute refs (/tag/..., /osm/...) are
-		// written as relative URIs with xml:base="https://example.com/".
-		String siteRoot = proto + "://" + host + "/";
+        String proto = httpRequest.getHeader("X-Forwarded-Proto");
+        if (proto == null) {
+            // Allow deployer to force the scheme via a context-param (e.g. when running
+            // behind a reverse proxy that does not forward X-Forwarded-Proto).
+            String forced = httpRequest.getServletContext().getInitParameter("base-scheme");
+            proto = (forced != null) ? forced : httpRequest.getScheme();
+        }
+        String host = httpRequest.getHeader("X-Forwarded-Host");
+        if (host == null) host = httpRequest.getHeader("Host");
+        if (host == null) host = httpRequest.getServerName();
+        String queryString = httpRequest.getQueryString();
+        // Document URL as Jena parse base so <> resolves to the document URI.
+        String base = proto + "://" + host + requestPath;
+        // Site root used as RDF/XML write base so path-absolute refs (/tag/..., /osm/...) are
+        // written as relative URIs with xml:base="https://example.com/".
+        String siteRoot = proto + "://" + host + "/";
 
-		byte[] data = capture.toByteArray();
+        byte[] data = capture.toByteArray();
 
-		if (contentType != null && contentType.contains("text/turtle")) {
-			// XSLT-generated Turtle: pass through or convert to RDF/XML
-			if (serveTurtle) {
-				if (!hasExtension) {
-					httpResponse.setHeader("Content-Location", requestPath + ".ttl");
-				}
-				httpResponse.setContentType("text/turtle");
-				httpResponse.setContentLength(data.length);
-				httpResponse.getOutputStream().write(data);
-			} else {
-				try {
-					Model model = ModelFactory.createDefaultModel();
-					RDFParser.create()
-							.source(new java.io.ByteArrayInputStream(data))
-							.lang(Lang.TURTLE)
-							.base(base)
-							.checking(false)
-							.parse(model);
-					ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
-					RDFWriter.create()
-							.lang(Lang.RDFXML)
-							.base(siteRoot)
-							.source(model)
-							.output(rdfOut);
-					byte[] result = rdfOut.toByteArray();
-					if (!hasExtension) {
-						httpResponse.setHeader("Content-Location", requestPath + ".rdf");
-					}
-					httpResponse.setContentType("application/rdf+xml");
-					httpResponse.setContentLength(result.length);
-					httpResponse.getOutputStream().write(result);
-				} catch (Exception e) {
-					_log.warning("Turtle parse error: " + e.getMessage());
-					httpResponse.sendError(500, "Turtle parse error: " + e.getMessage());
-					return;
-				}
-			}
-		} else if (serveTurtle && contentType != null && contentType.contains("application/rdf+xml")) {
-			// Other servlets still output RDF/XML: convert to Turtle
-			try {
-				Model model = ModelFactory.createDefaultModel();
-				RDFParser.create()
-						.source(new java.io.ByteArrayInputStream(data))
-						.lang(Lang.RDFXML)
-						.base(base)
-						.parse(model);
-				ByteArrayOutputStream out = new ByteArrayOutputStream();
-				RDFWriter.create()
-						.source(model)
-						.lang(Lang.TURTLE)
-						.base(base)
-						.output(out);
-				String turtle = out.toString("UTF-8");
-				byte[] result = turtle.getBytes("UTF-8");
-				if (!hasExtension) {
-					httpResponse.setHeader("Content-Location", requestPath + ".ttl");
-				}
-				httpResponse.setContentType("text/turtle");
-				httpResponse.setContentLength(result.length);
-				httpResponse.getOutputStream().write(result);
-			} catch (Exception e) {
-				_log.warning("RDF parse error: " + e.getMessage());
-				httpResponse.sendError(500, "RDF parse error: " + e.getMessage());
-				return;
-			}
-		} else {
-			if (!hasExtension && contentType != null) {
-				String ext = null;
-				if (contentType.contains("application/rdf+xml"))             ext = ".rdf";
-				else if (contentType.contains("application/geo+json")
-						|| contentType.contains("application/json"))         ext = ".json";
-				else if (contentType.contains("application/gml+xml"))        ext = ".gml";
-				if (ext != null) {
-					httpResponse.setHeader("Content-Location", requestPath + ext);
-				}
-			}
-			if (contentType != null && contentType.contains("application/rdf+xml")) {
-				try {
-					Model model = ModelFactory.createDefaultModel();
-					RDFParser.create()
-							.source(new java.io.ByteArrayInputStream(data))
-							.lang(Lang.RDFXML)
-							.base(base)
-							.parse(model);
-					ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
-					RDFWriter.create()
-							.lang(Lang.RDFXML)
-							.base(siteRoot)
-							.source(model)
-							.output(rdfOut);
-					byte[] result = rdfOut.toByteArray();
-					httpResponse.setContentType("application/rdf+xml");
-					httpResponse.setContentLength(result.length);
-					httpResponse.getOutputStream().write(result);
-				} catch (Exception e) {
-					_log.warning("RDF/XML re-serialisation failed: " + e.getMessage());
-					httpResponse.setContentType(contentType);
-					httpResponse.setContentLength(data.length);
-					httpResponse.getOutputStream().write(data);
-				}
-			} else {
-				if (contentType != null) {
-					httpResponse.setContentType(contentType);
-				}
-				httpResponse.setContentLength(data.length);
-				httpResponse.getOutputStream().write(data);
-			}
-		}
-	}
+        if (contentType != null && contentType.contains("text/turtle")) {
+            // XSLT-generated Turtle: pass through or convert to RDF/XML
+            if (serveTurtle) {
+                if (!hasExtension) {
+                    httpResponse.setHeader("Content-Location", requestPath + ".ttl");
+                }
+                httpResponse.setContentType("text/turtle");
+                httpResponse.setContentLength(data.length);
+                httpResponse.getOutputStream().write(data);
+            } else {
+                try {
+                    Model model = ModelFactory.createDefaultModel();
+                    RDFParser.create()
+                            .source(new java.io.ByteArrayInputStream(data))
+                            .lang(Lang.TURTLE)
+                            .base(base)
+                            .checking(false)
+                            .parse(model);
+                    ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
+                    RDFWriter.create()
+                            .lang(Lang.RDFXML)
+                            .base(siteRoot)
+                            .source(model)
+                            .output(rdfOut);
+                    byte[] result = rdfOut.toByteArray();
+                    if (!hasExtension) {
+                        httpResponse.setHeader("Content-Location", requestPath + ".rdf");
+                    }
+                    httpResponse.setContentType("application/rdf+xml");
+                    httpResponse.setContentLength(result.length);
+                    httpResponse.getOutputStream().write(result);
+                } catch (Exception e) {
+                    _log.warning("Turtle parse error: " + e.getMessage());
+                    httpResponse.sendError(500, "Turtle parse error: " + e.getMessage());
+                    return;
+                }
+            }
+        } else if (serveTurtle && contentType != null && contentType.contains("application/rdf+xml")) {
+            // Other servlets still output RDF/XML: convert to Turtle
+            try {
+                Model model = ModelFactory.createDefaultModel();
+                RDFParser.create()
+                        .source(new java.io.ByteArrayInputStream(data))
+                        .lang(Lang.RDFXML)
+                        .base(base)
+                        .parse(model);
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                RDFWriter.create()
+                        .source(model)
+                        .lang(Lang.TURTLE)
+                        .base(base)
+                        .output(out);
+                String turtle = out.toString("UTF-8");
+                byte[] result = turtle.getBytes("UTF-8");
+                if (!hasExtension) {
+                    httpResponse.setHeader("Content-Location", requestPath + ".ttl");
+                }
+                httpResponse.setContentType("text/turtle");
+                httpResponse.setContentLength(result.length);
+                httpResponse.getOutputStream().write(result);
+            } catch (Exception e) {
+                _log.warning("RDF parse error: " + e.getMessage());
+                httpResponse.sendError(500, "RDF parse error: " + e.getMessage());
+                return;
+            }
+        } else {
+            if (!hasExtension && contentType != null) {
+                String ext = null;
+                if (contentType.contains("application/rdf+xml"))             ext = ".rdf";
+                else if (contentType.contains("application/geo+json")
+                        || contentType.contains("application/json"))         ext = ".json";
+                else if (contentType.contains("application/gml+xml"))        ext = ".gml";
+                if (ext != null) {
+                    httpResponse.setHeader("Content-Location", requestPath + ext);
+                }
+            }
+            if (contentType != null && contentType.contains("application/rdf+xml")) {
+                try {
+                    Model model = ModelFactory.createDefaultModel();
+                    RDFParser.create()
+                            .source(new java.io.ByteArrayInputStream(data))
+                            .lang(Lang.RDFXML)
+                            .base(base)
+                            .parse(model);
+                    ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
+                    RDFWriter.create()
+                            .lang(Lang.RDFXML)
+                            .base(siteRoot)
+                            .source(model)
+                            .output(rdfOut);
+                    byte[] result = rdfOut.toByteArray();
+                    httpResponse.setContentType("application/rdf+xml");
+                    httpResponse.setContentLength(result.length);
+                    httpResponse.getOutputStream().write(result);
+                } catch (Exception e) {
+                    _log.warning("RDF/XML re-serialisation failed: " + e.getMessage());
+                    httpResponse.setContentType(contentType);
+                    httpResponse.setContentLength(data.length);
+                    httpResponse.getOutputStream().write(data);
+                }
+            } else {
+                if (contentType != null) {
+                    httpResponse.setContentType(contentType);
+                }
+                httpResponse.setContentLength(data.length);
+                httpResponse.getOutputStream().write(data);
+            }
+        }
+    }
 
-	private static class CaptureResponseWrapper extends HttpServletResponseWrapper {
-		private final ByteArrayOutputStream capture;
-		private ServletOutputStream outputStream;
-		private PrintWriter writer;
-		private String contentType;
-		private int status = 200;
+    private static class CaptureResponseWrapper extends HttpServletResponseWrapper {
+        private final ByteArrayOutputStream capture;
+        private ServletOutputStream outputStream;
+        private PrintWriter writer;
+        private String contentType;
+        private int status = 200;
 
-		CaptureResponseWrapper(HttpServletResponse response, ByteArrayOutputStream capture) {
-			super(response);
-			this.capture = capture;
-		}
+        CaptureResponseWrapper(HttpServletResponse response, ByteArrayOutputStream capture) {
+            super(response);
+            this.capture = capture;
+        }
 
-		@Override
-		public void setContentType(String type) {
-			this.contentType = type;
-		}
+        @Override
+        public void setContentType(String type) {
+            this.contentType = type;
+        }
 
-		@Override
-		public String getContentType() {
-			return contentType;
-		}
+        @Override
+        public String getContentType() {
+            return contentType;
+        }
 
-		@Override
-		public void setStatus(int sc) {
-			this.status = sc;
-			super.setStatus(sc);
-		}
+        @Override
+        public void setStatus(int sc) {
+            this.status = sc;
+            super.setStatus(sc);
+        }
 
-		@Override
-		public void sendError(int sc, String msg) throws IOException {
-			this.status = sc;
-			super.sendError(sc, msg);
-		}
+        @Override
+        public void sendError(int sc, String msg) throws IOException {
+            this.status = sc;
+            super.sendError(sc, msg);
+        }
 
-		@Override
-		public void sendError(int sc) throws IOException {
-			this.status = sc;
-			super.sendError(sc);
-		}
+        @Override
+        public void sendError(int sc) throws IOException {
+            this.status = sc;
+            super.sendError(sc);
+        }
 
-		@Override
-		public int getStatus() {
-			return status;
-		}
+        @Override
+        public int getStatus() {
+            return status;
+        }
 
-		@Override
-		public ServletOutputStream getOutputStream() throws IOException {
-			if (outputStream == null) {
-				outputStream = new ServletOutputStream() {
-					@Override
-					public void write(int b) throws IOException {
-						capture.write(b);
-					}
+        @Override
+        public ServletOutputStream getOutputStream() throws IOException {
+            if (outputStream == null) {
+                outputStream = new ServletOutputStream() {
+                    @Override
+                    public void write(int b) throws IOException {
+                        capture.write(b);
+                    }
 
-					@Override
-					public void write(byte[] b, int off, int len) throws IOException {
-						capture.write(b, off, len);
-					}
+                    @Override
+                    public void write(byte[] b, int off, int len) throws IOException {
+                        capture.write(b, off, len);
+                    }
 
-					@Override
-					public boolean isReady() {
-						return true;
-					}
+                    @Override
+                    public boolean isReady() {
+                        return true;
+                    }
 
-					@Override
-					public void setWriteListener(WriteListener listener) {
-					}
-				};
-			}
-			return outputStream;
-		}
+                    @Override
+                    public void setWriteListener(WriteListener listener) {
+                    }
+                };
+            }
+            return outputStream;
+        }
 
-		@Override
-		public PrintWriter getWriter() throws IOException {
-			if (writer == null) {
-				writer = new PrintWriter(new java.io.OutputStreamWriter(capture, getCharacterEncoding()));
-			}
-			return writer;
-		}
+        @Override
+        public PrintWriter getWriter() throws IOException {
+            if (writer == null) {
+                writer = new PrintWriter(new java.io.OutputStreamWriter(capture, getCharacterEncoding()));
+            }
+            return writer;
+        }
 
-		@Override
-		public void flushBuffer() throws IOException {
-			if (writer != null) {
-				writer.flush();
-			}
-			if (outputStream != null) {
-				outputStream.flush();
-			}
-		}
+        @Override
+        public void flushBuffer() throws IOException {
+            if (writer != null) {
+                writer.flush();
+            }
+            if (outputStream != null) {
+                outputStream.flush();
+            }
+        }
 
-		@Override
-		public void setContentLength(int len) {
-		}
+        @Override
+        public void setContentLength(int len) {
+        }
 
-		@Override
-		public void setContentLengthLong(long len) {
-		}
-	}
+        @Override
+        public void setContentLengthLong(long len) {
+        }
+    }
 }
