@@ -13,7 +13,7 @@
     <maven.compiler.target>17</maven.compiler.target>
     <!-- Version management -->
     <project.version.string>${project.artifactId}/${project.version}</project.version.string>
-    <project.user.agent>${project.artifactId}/${project.version} (+https://github.com/aharth/linked-osm)</project.user.agent>
+    <project.user.agent>${project.artifactId}/${project.version} (+https://osmwrap.ontologycentral.com/bot.html)</project.user.agent>
   </properties>
 
   <dependencies>

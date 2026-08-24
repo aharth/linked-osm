@@ -2,6 +2,43 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-08-24] Java sources indent with spaces, like the rest of the family
+
+- **17 files reindented from tabs to four spaces**, matching the 25 files in this
+  project that already used spaces and every sibling wrapper. The project was
+  mixed: `GeoJsonConverter`, `TaginfoConverter` and most of the servlets used
+  tabs while `SparqlServlet`, `UrlBuilder` and the shared-by-copy classes used
+  spaces, so a reader met both conventions in one package.
+- **Whitespace only.** `git diff -w` reports no change in any of the 17 files, and
+  the suite still passes 80 tests. Leading tabs became four spaces each, which
+  preserves the 38 lines that use tabs-for-indent then spaces-for-alignment: the
+  alignment spaces sit after the indent either way.
+- Text blocks were checked before converting — `GeoJsonConverterTest` contains
+  one, where indentation is semantically significant — and its assertions confirm
+  the content is unchanged.
+- Only `.java` was touched. The XSLT files and `web.xml` still use tabs.
+
+## [2026-07-23] User-Agent points at the bot page, not GitHub
+
+- **`project.user.agent` (`pom.xml`) and the `BuildInfo` fallback now advertise
+  `https://osmwrap.ontologycentral.com/bot.html`** instead of the GitHub
+  repository — osmwrap keeps its own bot page, and that page, not the source
+  repo, is what an admin who sees the user-agent in an access log needs.
+
+## [2026-07-22] Stop coining predicates: dcat:bbox replaces vocab/bbox#
+
+- **`dct:spatial` now uses the W3C DCAT-AP encoding** —
+  `[ a dct:Location ; dcat:bbox "POLYGON((W S, E S, E N, W N, W S))"^^geo:wktLiteral ]`
+  — replacing the wrapper-coined `bbox:BoundingBox` / `bbox:southWest` /
+  `bbox:northEast`. A coined predicate is an absolute IRI in the graph, and
+  RDF/XML must write predicates as QNames whose namespace cannot be relative, so
+  each one baked this deployment's host into every answer. `vocab/bbox.rdf` is
+  deleted; the wrapper now coins no predicate at all.
+  Verified on both emitters: the Jena path via a reflection harness, the XSLT via
+  Saxon. (`dcat:bbox` not `geo:hasBoundingBox`: the bundled Jena ontology is
+  GeoSPARQL 1.0.1, which predates that term.) Applied across linked-inspire,
+  linked-gisco, linked-pdok, linked-adv and linked-osm.
+
 ## [2026-07-22] SPARQL page brought up to the family standard
 
 - **Static `sparql.html` → `WEB-INF/sparql.jsp` + `src/main/resources/sparql.json`**,
@@ -22,6 +59,21 @@ All notable changes to the OpenStreetMap Linked Data Wrapper project will be doc
 - **New "FROM — selecting the data" section** (ported from linked-adv, rewritten
   for the real routes: `/overpass/{features,poi,around}.rdf`,
   `/overpass/{node,way,relation}/{id}.rdf`, `/nominatim/search.rdf`, `/changeset/{id}`).
+- **One agent IRI, family-consistent.** `<index#osmwrap>` everywhere, matching
+  `ProvUtil` and every sibling (`index#inspirewrap` / `#advwrap` / `#pdokwrap` /
+  `#giscowrap`). index.ttl and the five stylesheets used `{root}/#osmwrap`,
+  which disagreed with ProvUtil's `{root}/index#osmwrap` — two identities for one
+  agent. 12 occurrences now agree; verified base-independent (`/index.ttl`,
+  `/index`, `/`).
+- **KNOWN, not fixed — SPARQL FROM is broken on the deployment.** The reverse
+  proxy does not send `X-Forwarded-Prefix`, so `ProvUtil.effectiveOrigin` falls
+  back to the servlet context path and `SparqlServlet`'s `serverBase` becomes
+  `…/linked-osm-1.0.0-SNAPSHOT/`. An absolute-path `FROM </overpass/…>` (the
+  correct public form) is then rejected as "external"; a relative `FROM
+  <overpass/…>` resolves to a doubled path and 404s. No FROM form works. Fix is
+  either a proxy config (send the prefix) or `effectiveOrigin`; not a code change
+  made here. The new examples were verified instead by running them with `arq`
+  over the live `/overpass/features.rdf` document.
 
 ## [2026-07-22] index.ttl is host-free
 
@@ -263,3 +315,4 @@ route-contract check (`gen:routes:osm`) and Data-sources health/contract panel.
 - Initial version with core OSM API integration
 - Node, Way, Relation, and Search functionality
 - XSLT transformations to RDF/XML using NeoGeo vocabulary
+

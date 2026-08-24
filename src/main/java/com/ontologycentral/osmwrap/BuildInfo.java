@@ -42,7 +42,7 @@ public class BuildInfo {
      * Get the User-Agent string
      */
     public static String getUserAgent() {
-        return PROPERTIES.getProperty("project.user.agent", "linked-osm/unknown (+https://github.com/aharth/linked-osm)");
+        return PROPERTIES.getProperty("project.user.agent", "linked-osm/unknown (+https://osmwrap.ontologycentral.com/bot.html)");
     }
 
     /**

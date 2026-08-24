@@ -43,7 +43,7 @@
             </xsl:if>
           </prov:Entity>
         </prov:used>
-        <prov:wasAssociatedWith rdf:resource="/#osmwrap"/>
+        <prov:wasAssociatedWith rdf:resource="/index#osmwrap"/>
         <dc:date rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></dc:date>
       </prov:Activity>
 

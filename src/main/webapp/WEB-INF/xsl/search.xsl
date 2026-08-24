@@ -30,7 +30,7 @@
 	  <xsl:attribute name="rdf:resource"><xsl:value-of select="$upstream-url"/></xsl:attribute>
 	</prov:hadPrimarySource>
 	<prov:generatedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></prov:generatedAtTime>
-	<prov:wasAttributedTo rdf:resource="/#osmwrap"/>
+	<prov:wasAttributedTo rdf:resource="/index#osmwrap"/>
 	<xsl:apply-templates/>
       </rdf:Description>
 

@@ -81,6 +81,41 @@ public final class HttpClientUtil {
     }
 
     /**
+     * POST the same form data to each URL in order and return the first
+     * 200 answer. Non-200 answers and transport errors fall through to the
+     * next URL (a different hostname forces a fresh connection, sidestepping
+     * a pooled connection pinned to a broken round-robin backend). When
+     * every endpoint fails, the last non-200 response is returned or the
+     * last exception thrown.
+     *
+     * @param urls the endpoint URLs, in fallback order
+     * @param formData the URL-encoded form body
+     * @return the first 200 response, else the last response received
+     * @throws IOException when every endpoint fails at the transport level
+     */
+    public static HttpResponse<InputStream> postWithFallback(final String[] urls,
+            final String formData) throws IOException {
+        IOException lastEx = null;
+        HttpResponse<InputStream> lastResp = null;
+        for (String url : urls) {
+            try {
+                HttpResponse<InputStream> resp = post(url, formData);
+                if (resp.statusCode() == 200) {
+                    return resp;
+                }
+                lastResp = resp;
+                lastEx = null;
+            } catch (IOException e) {
+                lastEx = e;
+            }
+        }
+        if (lastResp != null) {
+            return lastResp;
+        }
+        throw lastEx != null ? lastEx : new IOException("no endpoints configured");
+    }
+
+    /**
      * Read an InputStream completely and return its content as a UTF-8 String.
      *
      * @param is the InputStream to read

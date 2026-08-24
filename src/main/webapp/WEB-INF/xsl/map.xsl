@@ -32,7 +32,7 @@
 	  <prov:hadPrimarySource rdf:resource="{$upstream-url}"/>
 	</xsl:if>
 	<prov:generatedAtTime rdf:datatype="http://www.w3.org/2001/XMLSchema#dateTime"><xsl:value-of select="current-dateTime()"/></prov:generatedAtTime>
-	<prov:wasAttributedTo rdf:resource="/#osmwrap"/>
+	<prov:wasAttributedTo rdf:resource="/index#osmwrap"/>
 	<xsl:for-each select="node">
 	  <rdfs:seeAlso>
 	    <rdf:Description>

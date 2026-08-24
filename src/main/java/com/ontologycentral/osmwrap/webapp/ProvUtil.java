@@ -83,8 +83,8 @@ class ProvUtil {
      */
     /**
      * As {@link #addDocumentProv(Model, String, String)} but also attaches a
-     * {@code dct:spatial} blank node with a {@code locn:geometry} GML Envelope
-     * literal when {@code bbox} is non-null.
+     * {@code dct:spatial} blank node carrying a {@code dcat:bbox}
+     * GeoSPARQL wktLiteral when {@code bbox} is non-null.
      *
      * @param bbox bounding box as "W,S,E,N" in EPSG:4326, or null to omit
      */
@@ -104,22 +104,20 @@ class ProvUtil {
                 rootUrl = u.getScheme() + "://" + u.getHost()
                         + (u.getPort() > 0 ? ":" + u.getPort() : "");
             } catch (Exception ex) { rootUrl = ""; }
-            String bboxNs = rootUrl + "/vocab/bbox#";
-            String geoNs  = "http://www.w3.org/2003/01/geo/wgs84_pos#";
-            Property southWest = m.createProperty(bboxNs + "southWest");
-            Property northEast = m.createProperty(bboxNs + "northEast");
-            Property geoLat    = m.createProperty(geoNs + "lat");
-            Property geoLong   = m.createProperty(geoNs + "long");
-            Resource swPoint   = m.createResource();
-            swPoint.addProperty(geoLat,  m.createTypedLiteral(s, XSDDatatype.XSDdecimal));
-            swPoint.addProperty(geoLong, m.createTypedLiteral(w, XSDDatatype.XSDdecimal));
-            Resource nePoint   = m.createResource();
-            nePoint.addProperty(geoLat,  m.createTypedLiteral(n, XSDDatatype.XSDdecimal));
-            nePoint.addProperty(geoLong, m.createTypedLiteral(e, XSDDatatype.XSDdecimal));
-            Resource bboxNode  = m.createResource();
-            bboxNode.addProperty(RDF.type,   m.createResource(bboxNs + "BoundingBox"));
-            bboxNode.addProperty(southWest, swPoint);
-            bboxNode.addProperty(northEast, nePoint);
+            // dcat:bbox (W3C DCAT 2) with a GeoSPARQL wktLiteral -- the DCAT-AP
+            // encoding for spatial coverage. Replaces the wrapper-coined
+            // vocab/bbox# BoundingBox/southWest/northEast, which were the only
+            // predicates this wrapper minted itself: a predicate IRI is absolute
+            // in the graph (and RDF/XML must write it as a QName), so coining one
+            // baked this deployment's host into every answer.
+            String DCAT = "http://www.w3.org/ns/dcat#";
+            String GSP  = "http://www.opengis.net/ont/geosparql#";
+            String wkt  = "POLYGON((" + w + " " + s + ", " + e + " " + s + ", "
+                        + e + " " + n + ", " + w + " " + n + ", " + w + " " + s + "))";
+            Resource bboxNode = m.createResource();
+            bboxNode.addProperty(RDF.type, m.createResource("http://purl.org/dc/terms/Location"));
+            bboxNode.addProperty(m.createProperty(DCAT + "bbox"),
+                    m.createTypedLiteral(wkt, new org.apache.jena.datatypes.BaseDatatype(GSP + "wktLiteral")));
             m.createResource(docUrl).addProperty(
                     m.createProperty("http://purl.org/dc/terms/spatial"), bboxNode);
         } catch (NumberFormatException ex) {

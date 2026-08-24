@@ -2,10 +2,11 @@
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-# </#osmwrap>, not <#osmwrap>: the bare fragment was base-sensitive, so dropping
-# the @base would have moved the agent to <index.ttl#osmwrap>. The absolute-path
-# form is host-free AND keeps the exact IRI the XSL stylesheets already emit
-# (common.xsl, search.xsl, map.xsl, poi.xsl, changeset.xsl all write /#osmwrap).
-</#osmwrap> a prov:SoftwareAgent ;
+# <index#osmwrap>, matching ProvUtil and every sibling wrapper
+# (index#inspirewrap / #advwrap / #pdokwrap / #giscowrap). Was <#osmwrap>, which
+# disagreed with ProvUtil's {root}/index#osmwrap and was base-sensitive besides:
+# with no @base a bare fragment resolves against the retrieval URI. The five XSL
+# stylesheets were moved to /index#osmwrap in the same change.
+<index#osmwrap> a prov:SoftwareAgent ;
     rdfs:label "Linked OSM (osmwrap)" ;
     foaf:page <index.html> .
