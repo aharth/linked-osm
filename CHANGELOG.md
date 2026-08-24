@@ -18,6 +18,23 @@ All notable changes to the OpenStreetMap Linked Data Wrapper project will be doc
   the content is unchanged.
 - Only `.java` was touched. The XSLT files and `web.xml` still use tabs.
 
+## [2026-08-24] Loopback is exempt from the rate limiter
+
+- **A local smoke run no longer trips the limiter.** Every suite in this family
+  makes more than 50 requests, so a run against a local instance used to be
+  throttled halfway and report the throttling as breakage.
+- **Exempted by CONNECTION, not by claimed IP** — this is the part that matters.
+  The limiter keys on `X-Forwarded-For` when present, and that header is written
+  by whoever sends the request, so adding `127.0.0.1` to the IP exemption set
+  would have let anyone on the internet opt out of rate limiting with one line of
+  their own headers. `isLoopbackRequest` instead requires the connection's own
+  `getRemoteAddr()` to be loopback **and** no `X-Forwarded-For` or `X-Real-IP` to
+  be present at all. Behind the reverse proxy every request carries one, so public
+  traffic can never be exempted.
+- Loopback stays deliberately OUT of `isExempt`, which is tested against the
+  claimed client IP. Applied across all 13 wrappers; the rule is in
+  `../LINKED-WRAPPER-CHECKLIST.md`.
+
 ## [2026-07-23] User-Agent points at the bot page, not GitHub
 
 - **`project.user.agent` (`pom.xml`) and the `BuildInfo` fallback now advertise
@@ -315,4 +332,3 @@ route-contract check (`gen:routes:osm`) and Data-sources health/contract panel.
 - Initial version with core OSM API integration
 - Node, Way, Relation, and Search functionality
 - XSLT transformations to RDF/XML using NeoGeo vocabulary
-
