@@ -57,3 +57,10 @@ buildNumber.properties
 Thumbs.db
 
 ~
+env.sh
+*.pdf
+pom-smoke.xml
+node_modules/
+TODO.md
+DONE.md
+ISSUES.md

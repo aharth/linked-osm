@@ -14,6 +14,27 @@
     <!-- Version management -->
     <project.version.string>${project.artifactId}/${project.version}</project.version.string>
     <project.user.agent>${project.artifactId}/${project.version} (+https://osmwrap.ontologycentral.com/bot.html)</project.user.agent>
+
+    <!--
+      Rate-limit bypass keys, injected into web.xml at package time.
+
+      EMPTY HERE AND NEVER SET IN THIS FILE. The real value belongs in
+      ~/.m2/settings.xml, which is outside every repository:
+
+        <profiles><profile>
+          <id>ontologycentral</id>
+          <properties><api.keys>THE-TOKEN</api.keys></properties>
+        </profile></profiles>
+        <activeProfiles><activeProfile>ontologycentral</activeProfile></activeProfiles>
+
+      or one-off: mvn -Dapi.keys=THE-TOKEN package war:war
+
+      This value used to be committed here, and the same token is shared by
+      seven wrappers. A clone without the property builds a perfectly good WAR
+      that simply has no bypass key, so rate limiting applies to everyone -
+      which is the right default, because a committed token is a published one.
+    -->
+    <api.keys></api.keys>
   </properties>
 
   <dependencies>
@@ -115,6 +136,36 @@
     </resources>
 
     <plugins>
+      <plugin>
+        <!--
+          Exposes ${git.commit.id.describe} (abbrev commit id, or tag-distance-commit,
+          with a "-dirty" suffix when the working tree has uncommitted changes) for
+          resource filtering below — bound to "initialize" so the property exists
+          before process-resources/package runs. No git.properties file is
+          generated; the WAR only needs the one Maven property, not an extra
+          bundled file.
+        -->
+        <groupId>pl.project13.maven</groupId>
+        <artifactId>git-commit-id-plugin</artifactId>
+        <version>4.9.10</version>
+        <executions>
+          <execution>
+            <id>get-the-git-infos</id>
+            <phase>initialize</phase>
+            <goals>
+              <goal>revision</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <generateGitPropertiesFile>false</generateGitPropertiesFile>
+          <gitDescribe>
+            <always>true</always>
+            <dirty>-dirty</dirty>
+          </gitDescribe>
+        </configuration>
+      </plugin>
+
       <!-- Maven War Plugin for WAR packaging -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -132,7 +183,28 @@
           </execution>
         </executions>
         <configuration>
+          <!--
+            Resolves ${api.keys} in web.xml at package time, so the token rides
+            inside the WAR without entering git. Merged into THIS configuration
+            block on purpose: the plugin already had one, and a second one is
+            silently ignored by Maven - which is how the first attempt at this
+            change shipped a WAR still carrying the real token.
+          -->
+          <filteringDeploymentDescriptors>true</filteringDeploymentDescriptors>
           <webappDirectory>${project.build.directory}/${project.build.finalName}</webappDirectory>
+          <!-- index.ttl carries owl:versionInfo (${project.version}+${git.commit.id.describe}),
+               so it needs filtering; the rest of webapp/ deliberately doesn't (no other file
+               there contains a literal "${", and filtering the whole tree risks mangling one
+               that later does). -->
+          <webResources>
+            <resource>
+              <directory>src/main/webapp</directory>
+              <filtering>true</filtering>
+              <includes>
+                <include>index.ttl</include>
+              </includes>
+            </resource>
+          </webResources>
         </configuration>
       </plugin>
 

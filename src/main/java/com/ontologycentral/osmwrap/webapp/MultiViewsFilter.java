@@ -96,9 +96,16 @@ public class MultiViewsFilter implements Filter {
             return;
         }
 
-        // Pass through if a direct resource exists at this path
+        // Pass through if a direct FILE resource exists at this path. A same-named
+        // DIRECTORY (getResource() returns a URL ending in "/") must NOT pass
+        // through here: that would defer to the servlet container's own
+        // add-a-trailing-slash redirect, which is proxy-prefix-unaware and leaks
+        // the internal context path. Falling through instead lets the variant
+        // search below find e.g. vocab.ttl for /vocab, exactly as it already does
+        // index.ttl/index.jsp for /index.
         try {
-            if (ctx.getResource(path) != null) {
+            java.net.URL resourceUrl = ctx.getResource(path);
+            if (resourceUrl != null && !resourceUrl.toString().endsWith("/")) {
                 chain.doFilter(request, response);
                 return;
             }

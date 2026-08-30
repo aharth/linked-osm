@@ -2,6 +2,52 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-08-30] Rotated the leaked rate-limit token
+
+`web.xml`'s `api-keys` context-param carried the real rate-limit bypass
+token as a literal value — committed, in git history, and about to become a
+live exposure the moment this repository is made public. Replaced with
+`${api.keys}`, resolved at package time by the war plugin's
+`filteringDeploymentDescriptors` (already wired up in `pom.xml`) from
+`~/.m2/settings.xml`, which never enters the repository. The same token was
+shared by `linked-adv`, `linked-cdse`, `linked-gisco`, `linked-inspire`,
+`linked-pdok` and `linked-sdi`; it has been rotated everywhere.
+
+## [2026-08-30] `owl:versionInfo` on the wrapper software agent
+
+`/index` (`<index#osmwrap>`, the single `prov:SoftwareAgent` every served
+document's provenance points at) now carries `owl:versionInfo`, built from
+git rather than the POM: `${project.version}+${git.commit.id.describe}`,
+where the git descriptor is the abbreviated commit id (or
+tag-distance-commit once tags exist), with a `-dirty` suffix when built from
+an unclean tree. The POM version alone (`1.0.0-SNAPSHOT`) never changes
+between commits, so it couldn't tell two builds apart. Filtered in via
+`pl.project13.maven:git-commit-id-plugin` (`initialize` phase, merged into
+the existing `maven-war-plugin` `<configuration>` for the `webResources`
+scoping — this project's `war`-native packaging has no separate jar
+`<resources>` copy of `webapp/` to also filter) — the rest of
+`src/main/webapp` stays unfiltered. Ported from `linked-gisco`.
+
+## [2026-08-30] `MultiViewsFilter`: a same-named directory must not defer negotiation
+
+`MultiViewsFilter` (Apache `mod_negotiation` emulation for extensionless
+URLs, e.g. `/index` → `index.ttl`/`index.jsp`) had a guard,
+`if (ctx.getResource(path) != null) { chain.doFilter(...); return; }`,
+that also passes through for a same-named **directory** — `getResource()`
+returns a URL ending in `/` for those too, not just files. If this wrapper
+ever grows a `{base}.ttl` + `{base}/` pair (e.g. a `vocab.ttl` next to a
+`vocab/` directory of per-collection files), `/{base}` would defer straight
+to the servlet container's own add-a-trailing-slash redirect instead of
+negotiating `{base}.ttl` — and that redirect is reverse-proxy-prefix-unaware,
+so it leaks the internal Tomcat context path and 404s. Found live in
+`linked-gisco` (`/vocab` was exactly this case) and ported here
+preventively: the guard now passes through only for an actual file
+(`!url.toString().endsWith("/")`). No current collision in this wrapper's
+`webapp/` tree, so this closes a latent trap rather than fixing an active
+404 — verified via `mvn test -Dcheckstyle.skip=true` (this repo's checkstyle
+run currently fails on unrelated pre-existing style violations in
+`TaginfoConverter.java`/`UrlBuilder.java`, not in `MultiViewsFilter`).
+
 ## [2026-08-24] Java sources indent with spaces, like the rest of the family
 
 - **17 files reindented from tabs to four spaces**, matching the 25 files in this
@@ -33,7 +79,7 @@ All notable changes to the OpenStreetMap Linked Data Wrapper project will be doc
   traffic can never be exempted.
 - Loopback stays deliberately OUT of `isExempt`, which is tested against the
   claimed client IP. Applied across all 13 wrappers; the rule is in
-  `../LINKED-WRAPPER-CHECKLIST.md`.
+  `../linked-family/checklist.md`.
 
 ## [2026-07-23] User-Agent points at the bot page, not GitHub
 

@@ -1,6 +1,7 @@
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
 
 # <index#osmwrap>, matching ProvUtil and every sibling wrapper
 # (index#inspirewrap / #advwrap / #pdokwrap / #giscowrap). Was <#osmwrap>, which
@@ -9,4 +10,5 @@
 # stylesheets were moved to /index#osmwrap in the same change.
 <index#osmwrap> a prov:SoftwareAgent ;
     rdfs:label "Linked OSM (osmwrap)" ;
+    owl:versionInfo "${project.version}+${git.commit.id.describe}" ;
     foaf:page <index.html> .
