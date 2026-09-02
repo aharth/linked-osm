@@ -2,6 +2,19 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-02] `ErrorServlet`: RDF-negotiated error responses (PROV-O + W3C HTTP vocab)
+
+Ported from linked-adv/linked-pdok, which already had this: an RDF client
+(Accept: text/turtle, application/rdf+xml, or application/n-triples,
+preferred over HTML/JSON) hitting any error path now gets back a proper RDF
+document describing the failed HTTP transaction — a `http:Request`/
+`http:Response` pair per the W3C HTTP vocabulary, plus the same
+`prov:wasAttributedTo <index#osmwrap>`/`prov:generatedAtTime` attribution
+every other document in this wrapper carries — instead of always falling
+back to JSON regardless of what the client asked for. Written self-
+contained (inline Jena `RDFWriter` calls) since this repo has no shared
+`RdfFmt`-style helper the way linked-inspire/linked-sdi/linked-cdse do.
+
 ## [2026-08-30] Rotated the leaked rate-limit token
 
 `web.xml`'s `api-keys` context-param carried the real rate-limit bypass
