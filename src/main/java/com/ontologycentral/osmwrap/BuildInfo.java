@@ -42,7 +42,16 @@ public class BuildInfo {
      * Get the User-Agent string
      */
     public static String getUserAgent() {
-        return PROPERTIES.getProperty("project.user.agent", "linked-osm/unknown (+https://osmwrap.ontologycentral.com/bot.html)");
+        return PROPERTIES.getProperty("project.user.agent", "linked-osm/unknown (+https://github.com/aharth/linked-osm)");
+    }
+
+    /**
+     * Get the Tracestrack Overpass API key (paid plan), or "" if none is
+     * configured. Set via the {@code tracestrack.api.key} Maven property in
+     * {@code ~/.m2/settings.xml} - never committed.
+     */
+    public static String getTracestrackApiKey() {
+        return PROPERTIES.getProperty("project.tracestrack.key", "");
     }
 
     /**

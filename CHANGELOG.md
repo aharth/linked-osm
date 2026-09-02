@@ -2,6 +2,35 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-02] Route bearer-key holders to the paid Tracestrack Overpass API
+
+- `RateLimitFilter`'s existing bearer-token check (the same key that bypasses
+  rate limiting) now also decides which Overpass backend a request uses,
+  recorded as a request attribute and read by the new `OverpassRouting`
+  helper. A trusted request goes to the paid Tracestrack Overpass endpoint;
+  everyone else keeps using the free public mirrors in
+  `ApiConstants.OVERPASS_API_BASES`, unchanged.
+- Wired into all five Overpass-calling servlets: `POIServlet`, `AroundServlet`,
+  `GeometryOverpassServlet`, `OverpassElementServlet`, `OverpassFeaturesServlet`.
+- The Tracestrack key follows the same secret-handling convention already
+  established for `api.keys` (2026-08-26 rotation): a new `tracestrack.api.key`
+  Maven property, empty by default in `pom.xml`, real value only in
+  `~/.m2/settings.xml` - never an environment variable, never committed. An
+  unset key is a no-op fallback to the free mirrors, not a build failure.
+- Also dropped `RateLimitFilter`'s `OSMWRAP_API_KEYS` environment-variable
+  lookup entirely (user: "get rid of the unholy env variable code" - env vars
+  are a pain to set up per deploy compared to a one-time `settings.xml` edit).
+  Keys now come solely from the `api-keys` servlet context-param. **Not yet
+  ported to linked-inspire/linked-eurostat**, whose `RateLimitFilter` copies
+  still read their own env vars.
+
+## [2026-09-02] User-Agent points at GitHub again, not the bot page
+
+- Reverses the 2026-07-23 change: `project.user.agent` (`pom.xml`) and the
+  `BuildInfo` fallback now advertise `https://github.com/aharth/linked-osm`
+  again, matching `bot.html`'s (already-correct) example string. Deliberate
+  choice this time too — just the opposite one.
+
 ## [2026-09-02] `ErrorServlet`: RDF-negotiated error responses (PROV-O + W3C HTTP vocab)
 
 Ported from linked-adv/linked-pdok, which already had this: an RDF client

@@ -11,7 +11,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
-import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.GeoJsonConverter;
 import com.ontologycentral.osmwrap.HttpClientUtil;
 
@@ -78,7 +77,7 @@ public class OverpassElementServlet extends HttpServlet {
             query = "[out:xml][timeout:60]; relation(" + id + "); out body; >>; out skel qt;";
         }
 
-        String archive = ApiConstants.OVERPASS_API_BASE;
+        String archive = OverpassRouting.base(req);
         String postData = "data=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
         _log.info("querying overpass for " + elementType + "/" + id);
@@ -113,7 +112,7 @@ public class OverpassElementServlet extends HttpServlet {
                 Templates tmpl = (Templates) ctx.getAttribute(tmplKey);
                 Transformer t = tmpl.newTransformer();
                 t.setParameter("source-prefix", "/overpass");
-                t.setParameter("upstream-url", ApiConstants.OVERPASS_API_BASE + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8));
+                t.setParameter("upstream-url", archive + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8));
                 if ("relation".equals(elementType)) {
                     t.setParameter("element-id", id);
                 }

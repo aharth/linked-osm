@@ -10,7 +10,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
-import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.GeoJsonConverter;
 import com.ontologycentral.osmwrap.HttpClientUtil;
 import com.ontologycentral.osmwrap.UrlBuilder;
@@ -67,7 +66,7 @@ public class AroundServlet extends HttpServlet {
             return;
         }
 
-        String archive = ApiConstants.OVERPASS_API_BASE;
+        String archive = OverpassRouting.base(req);
 
         _log.info("retrieving " + archive);
 

@@ -10,7 +10,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
-import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.GeoJsonConverter;
 import com.ontologycentral.osmwrap.HttpClientUtil;
 import com.ontologycentral.osmwrap.UrlBuilder;
@@ -48,14 +47,14 @@ public class OverpassFeaturesServlet extends HttpServlet {
             return;
         }
 
-        String archive = ApiConstants.OVERPASS_API_BASE;
+        String archive = OverpassRouting.base(req);
 
         _log.info("retrieving " + archive);
 
         try {
             String postData = "data=" + URLEncoder.encode(overpassQuery, StandardCharsets.UTF_8);
             HttpResponse<InputStream> response =
-                    HttpClientUtil.postWithFallback(ApiConstants.OVERPASS_API_BASES, postData);
+                    HttpClientUtil.postWithFallback(OverpassRouting.bases(req), postData);
             archive = response.uri().toString();
 
             int responseCode = response.statusCode();

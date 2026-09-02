@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
-import com.ontologycentral.osmwrap.ApiConstants;
 import com.ontologycentral.osmwrap.HttpClientUtil;
 import com.ontologycentral.osmwrap.UrlBuilder;
 
@@ -79,7 +78,7 @@ public class GeometryOverpassServlet extends HttpServlet {
 
         // Build Overpass API query for geometry data
         String query = UrlBuilder.buildOverpassGeometryQuery(elementType, id);
-        String archive = ApiConstants.OVERPASS_API_BASE + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
+        String archive = OverpassRouting.base(req) + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
         _log.info("retrieving " + archive);
 

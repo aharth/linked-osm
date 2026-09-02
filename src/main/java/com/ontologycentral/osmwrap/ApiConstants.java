@@ -22,6 +22,13 @@ public final class ApiConstants {
         "https://overpass.kumi.systems/api/interpreter",
     };
 
+    /**
+     * Tracestrack's paid Overpass API, keyed per account. {@code %s} is
+     * replaced with the key from {@link BuildInfo#getTracestrackApiKey()}.
+     */
+    public static final String TRACESTRACK_OVERPASS_TEMPLATE =
+        "https://api.tracestrack.com/overpass/%s/interpreter";
+
     private ApiConstants() {
         // Utility class
     }

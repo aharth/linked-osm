@@ -13,7 +13,7 @@
     <maven.compiler.target>17</maven.compiler.target>
     <!-- Version management -->
     <project.version.string>${project.artifactId}/${project.version}</project.version.string>
-    <project.user.agent>${project.artifactId}/${project.version} (+https://osmwrap.ontologycentral.com/bot.html)</project.user.agent>
+    <project.user.agent>${project.artifactId}/${project.version} (+https://github.com/aharth/linked-osm)</project.user.agent>
 
     <!--
       Rate-limit bypass keys, injected into web.xml at package time.
@@ -35,6 +35,24 @@
       which is the right default, because a committed token is a published one.
     -->
     <api.keys></api.keys>
+
+    <!--
+      Tracestrack Overpass API key (paid plan) - same rule as api.keys above:
+      EMPTY HERE AND NEVER SET IN THIS FILE. Real value goes in the same
+      ~/.m2/settings.xml profile:
+
+        <properties>
+          <api.keys>THE-TOKEN</api.keys>
+          <tracestrack.api.key>THE-TRACESTRACK-KEY</tracestrack.api.key>
+        </properties>
+
+      or one-off: mvn -Dtracestrack.api.key=THE-TRACESTRACK-KEY package war:war
+
+      A clone without this property builds a WAR that simply falls back to the
+      free public Overpass mirrors for every caller, bearer-token holders
+      included - a missing paid key must never break a build.
+    -->
+    <tracestrack.api.key></tracestrack.api.key>
   </properties>
 
   <dependencies>

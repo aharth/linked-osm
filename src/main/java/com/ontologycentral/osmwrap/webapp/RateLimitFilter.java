@@ -32,9 +32,12 @@ import jakarta.servlet.http.HttpServletResponse;
  *   IPv4 192.168.0.0/16, IPv6 fc00::/7 and fe80::/10.
  *
  * <p>Requests carrying a valid API key in an {@code Authorization: Bearer <key>}
- * header are also exempt. Keys are configured as a comma-separated list in the
- * {@code OSMWRAP_API_KEYS} environment variable, falling back to the
- * {@code api-keys} servlet context parameter.
+ * header are also exempt. Keys are configured as a comma-separated list via the
+ * {@code api-keys} servlet context parameter, filtered into {@code web.xml} at
+ * package time from the {@code api.keys} Maven property (set in
+ * {@code ~/.m2/settings.xml}, never committed - see {@code pom.xml}). The same
+ * bearer-key check also routes Overpass-backed servlets to the paid Tracestrack
+ * endpoint instead of the free public mirrors - see {@link OverpassRouting}.
  */
 public class RateLimitFilter implements Filter {
 
@@ -75,7 +78,6 @@ public class RateLimitFilter implements Filter {
         }
     }
 
-    private static final String KEYS_ENV = "OSMWRAP_API_KEYS";
     private static final String KEYS_PARAM = "api-keys";
 
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
@@ -84,11 +86,7 @@ public class RateLimitFilter implements Filter {
 
     @Override
     public void init(FilterConfig cfg) {
-        String keys = System.getenv(KEYS_ENV);
-        if (keys == null || keys.isBlank()) {
-            keys = cfg.getServletContext().getInitParameter(KEYS_PARAM);
-        }
-        apiKeys = parseKeys(keys);
+        apiKeys = parseKeys(cfg.getServletContext().getInitParameter(KEYS_PARAM));
     }
 
     @Override
@@ -98,8 +96,10 @@ public class RateLimitFilter implements Filter {
         HttpServletResponse resp = (HttpServletResponse) response;
 
         String ip = clientIp(req);
+        boolean validKey = hasValidKey(req);
+        req.setAttribute(OverpassRouting.TRUSTED_ATTR, validKey);
 
-        if (!isExempt(ip) && !isLoopbackRequest(req) && !hasValidKey(req)) {
+        if (!isExempt(ip) && !isLoopbackRequest(req) && !validKey) {
             Bucket bucket = buckets.computeIfAbsent(ip, k ->
                     Bucket.builder()
                             .addLimit(Bandwidth.builder()
