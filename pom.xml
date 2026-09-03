@@ -53,6 +53,24 @@
       included - a missing paid key must never break a build.
     -->
     <tracestrack.api.key></tracestrack.api.key>
+
+    <!--
+      Protomaps hosted tile API key - same rule as tracestrack.api.key above:
+      EMPTY HERE AND NEVER SET IN THIS FILE. Real value goes in the same
+      ~/.m2/settings.xml profile:
+
+        <properties>
+          <api.keys>THE-TOKEN</api.keys>
+          <tracestrack.api.key>THE-TRACESTRACK-KEY</tracestrack.api.key>
+          <protomaps.api.key>THE-PROTOMAPS-KEY</protomaps.api.key>
+        </properties>
+
+      or one-off: mvn -Dprotomaps.api.key=THE-PROTOMAPS-KEY package war:war
+
+      A clone without this property builds a WAR where the Protomaps tile
+      proxy simply has no upstream to route to for anyone, trusted or not.
+    -->
+    <protomaps.api.key></protomaps.api.key>
   </properties>
 
   <dependencies>

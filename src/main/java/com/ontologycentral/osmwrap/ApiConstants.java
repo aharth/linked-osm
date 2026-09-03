@@ -29,6 +29,14 @@ public final class ApiConstants {
     public static final String TRACESTRACK_OVERPASS_TEMPLATE =
         "https://api.tracestrack.com/overpass/%s/interpreter";
 
+    /**
+     * Protomaps' hosted basemap tile API (vector, {@code .mvt}, maxzoom 15).
+     * {@code %1$d}, {@code %2$d}, {@code %3$d} are z/x/y; {@code %4$s} is the
+     * key from {@link BuildInfo#getProtomapsApiKey()}.
+     */
+    public static final String PROTOMAPS_TILE_TEMPLATE =
+        "https://api.protomaps.com/tiles/v4/%1$d/%2$d/%3$d.mvt?key=%4$s";
+
     private ApiConstants() {
         // Utility class
     }

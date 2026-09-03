@@ -2,14 +2,40 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
-## [2026-09-02] Route bearer-key holders to the paid Tracestrack Overpass API
+## [2026-09-03] Passthrough tile proxy to Protomaps' hosted vector tile API, trusted callers only
 
-- `RateLimitFilter`'s existing bearer-token check (the same key that bypasses
-  rate limiting) now also decides which Overpass backend a request uses,
-  recorded as a request attribute and read by the new `OverpassRouting`
-  helper. A trusted request goes to the paid Tracestrack Overpass endpoint;
-  everyone else keeps using the free public mirrors in
-  `ApiConstants.OVERPASS_API_BASES`, unchanged.
+- New `/tile/protomaps/{z}/{x}/{y}.mvt` (`ProtomapsTileServlet`) streams the
+  upstream `.mvt` bytes back as-is - no rendering, no rasterization, no
+  format negotiation. That rules it out as a source for the `/tile`
+  raster-cartography plan (`plans/tile-endpoint-osm-carto.md`), which needs
+  PNG output matching the sibling wrapper family's grid; this is scoped
+  narrower, just wiring the upstream.
+- Gated the same way as the Tracestrack Overpass routing: only requests
+  `RateLimitFilter` already marked trusted (valid bearer key, or a
+  whitelisted subnet/loopback) get an upstream URL from
+  `ProtomapsRouting.tileUrl()`; everyone else gets 403. Unlike Tracestrack
+  there is no free fallback - Protomaps' hosted API is entirely key-gated,
+  so an untrusted request or an unconfigured key has nothing to route to.
+- Protomaps key follows the same secret-handling convention as
+  `tracestrack.api.key`: new `protomaps.api.key` Maven property, empty by
+  default in `pom.xml`, real value only in `~/.m2/settings.xml` - never
+  committed, never an environment variable. An unset key means every
+  request gets 403, not a build failure.
+- Not yet a full sibling-family `/tile` endpoint (no `/status` layer
+  registry, no PNG rendering, no provenance `&f=ttl`) - see the plan doc for
+  what that would still need, and why Protomaps' vector-only, maxzoom-15
+  basemap product doesn't actually solve the raster-cartography use case
+  even with a key in hand.
+
+## [2026-09-02] Route bearer-key holders (and whitelisted IPs) to the paid Tracestrack Overpass API
+
+- `RateLimitFilter`'s existing rate-limit-exemption logic - a valid bearer
+  token, or a whitelisted subnet/loopback (FAU, Fraunhofer IIS, local ranges) -
+  now also decides which Overpass backend a request uses, recorded as a
+  request attribute and read by the new `OverpassRouting` helper. A trusted
+  request goes to the paid Tracestrack Overpass endpoint; everyone else keeps
+  using the free public mirrors in `ApiConstants.OVERPASS_API_BASES`,
+  unchanged.
 - Wired into all five Overpass-calling servlets: `POIServlet`, `AroundServlet`,
   `GeometryOverpassServlet`, `OverpassElementServlet`, `OverpassFeaturesServlet`.
 - The Tracestrack key follows the same secret-handling convention already

@@ -55,6 +55,15 @@ public class BuildInfo {
     }
 
     /**
+     * Get the Protomaps hosted tile API key, or "" if none is configured.
+     * Set via the {@code protomaps.api.key} Maven property in
+     * {@code ~/.m2/settings.xml} - never committed.
+     */
+    public static String getProtomapsApiKey() {
+        return PROPERTIES.getProperty("project.protomaps.key", "");
+    }
+
+    /**
      * Get the build timestamp
      */
     public static String getBuildTimestamp() {

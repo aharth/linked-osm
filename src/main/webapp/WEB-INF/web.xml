@@ -54,6 +54,7 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-name>tag</servlet-name>
 		<servlet-name>overpassElement</servlet-name>
 		<servlet-name>sparql</servlet-name>
+		<servlet-name>tileProtomaps</servlet-name>
 		<dispatcher>REQUEST</dispatcher>
 	</filter-mapping>
 
@@ -126,6 +127,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet>
 		<servlet-name>routes</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.RoutesServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>tileProtomaps</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.ProtomapsTileServlet</servlet-class>
 	</servlet>
 
 	<servlet-mapping>
@@ -267,6 +272,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>sparql-page</servlet-name>
 		<url-pattern>/sparql.html</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>tileProtomaps</servlet-name>
+		<url-pattern>/tile/protomaps/*</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>error</servlet-name>
