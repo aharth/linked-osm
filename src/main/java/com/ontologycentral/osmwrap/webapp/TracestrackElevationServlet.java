@@ -29,7 +29,7 @@ public class TracestrackElevationServlet extends HttpServlet {
     public void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String key = TracestrackRouting.key(req);
         if (key == null) {
-            resp.sendError(403, "Tracestrack elevation requires a trusted request and a configured upstream key");
+            resp.sendError(402, "Tracestrack elevation requires a trusted request and a configured upstream key");
             return;
         }
 

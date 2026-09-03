@@ -54,7 +54,7 @@ public class TracestrackTileServlet extends HttpServlet {
 
         String key = TracestrackRouting.key(req);
         if (key == null) {
-            resp.sendError(403, "Tracestrack tiles require a trusted request and a configured upstream key");
+            resp.sendError(402, "Tracestrack tiles require a trusted request and a configured upstream key");
             return;
         }
 

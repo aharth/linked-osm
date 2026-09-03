@@ -19,7 +19,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * <p>{@code /tile/protomaps/{z}/{x}/{y}.mvt} - no rendering, no format
  * negotiation: the upstream {@code .mvt} bytes are streamed back as-is.
  * Untrusted requests, or a deployment with no Protomaps key configured, get
- * 403 rather than a broken proxy attempt.
+ * 402 rather than a broken proxy attempt.
  */
 @SuppressWarnings("serial")
 public class ProtomapsTileServlet extends HttpServlet {
@@ -56,7 +56,7 @@ public class ProtomapsTileServlet extends HttpServlet {
 
         String url = ProtomapsRouting.tileUrl(req, z, x, y);
         if (url == null) {
-            resp.sendError(403, "Protomaps tiles require a trusted request and a configured upstream key");
+            resp.sendError(402, "Protomaps tiles require a trusted request and a configured upstream key");
             return;
         }
 
