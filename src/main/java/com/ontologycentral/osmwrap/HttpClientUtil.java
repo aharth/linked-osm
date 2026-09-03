@@ -81,6 +81,33 @@ public final class HttpClientUtil {
     }
 
     /**
+     * Perform an HTTP POST request with an arbitrary body and content type
+     * (e.g. forwarding a client's JSON body upstream unmodified).
+     *
+     * @param url the URL to post to
+     * @param body the raw request body
+     * @param contentType the {@code Content-Type} header value
+     * @return the HTTP response with an InputStream body
+     * @throws IOException if the request fails
+     */
+    public static HttpResponse<InputStream> postRaw(String url, byte[] body, String contentType)
+            throws IOException {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(RESPONSE_TIMEOUT)
+                .header("User-Agent", BuildInfo.getUserAgent())
+                .header("Content-Type", contentType)
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build();
+        try {
+            return CLIENT.send(req, HttpResponse.BodyHandlers.ofInputStream());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("HTTP POST interrupted: " + url, e);
+        }
+    }
+
+    /**
      * POST the same form data to each URL in order and return the first
      * 200 answer. Non-200 answers and transport errors fall through to the
      * next URL (a different hostname forces a fresh connection, sidestepping

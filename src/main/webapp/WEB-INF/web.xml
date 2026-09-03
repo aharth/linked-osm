@@ -55,6 +55,8 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-name>overpassElement</servlet-name>
 		<servlet-name>sparql</servlet-name>
 		<servlet-name>tileProtomaps</servlet-name>
+		<servlet-name>tileTracestrack</servlet-name>
+		<servlet-name>tracestrackElevation</servlet-name>
 		<dispatcher>REQUEST</dispatcher>
 	</filter-mapping>
 
@@ -131,6 +133,14 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet>
 		<servlet-name>tileProtomaps</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.ProtomapsTileServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>tileTracestrack</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.TracestrackTileServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>tracestrackElevation</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.TracestrackElevationServlet</servlet-class>
 	</servlet>
 
 	<servlet-mapping>
@@ -276,6 +286,14 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>tileProtomaps</servlet-name>
 		<url-pattern>/tile/protomaps/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>tileTracestrack</servlet-name>
+		<url-pattern>/tile/tracestrack/*</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>tracestrackElevation</servlet-name>
+		<url-pattern>/tracestrack/elevation</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>error</servlet-name>

@@ -122,6 +122,11 @@
     <dl>
       <dt>Search <a href="https://nominatim.openstreetmap.org/" target="_blank">Nominatim</a></dt>
       <dd>
+        <select id="search-example-select">
+          <option value="">&#x2014; select example &#x2014;</option>
+        </select>
+      </dd>
+      <dd>
         <input type="text" id="search-input-main" placeholder="place name"
                onkeydown="if(event.key==='Enter') loadGeoJsonUrl('map-main','/nominatim/search?q='+encodeURIComponent(this.value),0)">
         <button type="button"
@@ -150,6 +155,11 @@
       </dd>
       <dt>Nodes around a point &#x2013; <a href="https://overpass-api.de/" target="_blank">Overpass</a></dt>
       <dd>
+        <select id="around-example-select">
+          <option value="">&#x2014; select example &#x2014;</option>
+        </select>
+      </dd>
+      <dd>
         radius (m): <input type="text" id="around-radius-main" value="100" size="6">
         <button type="button"
                 onclick="var st=window.maps['map-main'],c=st.map.getCenter();
@@ -159,6 +169,82 @@
 
   </div>
 
+  <h2>Example URIs</h2>
+  <p>Every feature, query and tile below has a dereferenceable URI — browsers
+    get GeoJSON by default, add <code>.ttl</code>/<code>.rdf</code> or an
+    <code>Accept</code> header for RDF.</p>
+  <ul>
+    <li><a href="/osm/node/1">/osm/node/1</a> &middot;
+      <a href="/osm/node/1.ttl">Turtle</a>
+      &mdash; node by ID, straight from the OSM API</li>
+    <li><a href="/osm/way/32113829">/osm/way/32113829</a>
+      &mdash; way by ID, Palas building</li>
+    <li><a href="/osm/relation/51477">/osm/relation/51477</a>
+      &mdash; relation by ID, Germany</li>
+    <li><a href="/overpass/relation/147">/overpass/relation/147</a>
+      &mdash; same shape as <code>/osm/relation/*</code>, served via Overpass
+      instead of the OSM API directly (Tigris River)</li>
+    <li><a href="/geo/osm/way/32113829">/geo/osm/way/32113829</a>
+      &mdash; geometry-only GeoJSON (no RDF), straight from the OSM API</li>
+    <li><a href="/geo/overpass/relation/147">/geo/overpass/relation/147</a>
+      &mdash; geometry-only GeoJSON via Overpass</li>
+    <li><a href="/nominatim/search?q=Kaiserburg">/nominatim/search?q=Kaiserburg</a>
+      &mdash; place-name search via Nominatim</li>
+    <li><a href="/overpass/features?bbox=11.075,49.457,11.077,49.459&amp;type=nwr">/overpass/features?bbox=&hellip;&amp;type=nwr</a>
+      &mdash; all features in a bounding box, Kaiserburg, Nuremberg</li>
+    <li><a href="/overpass/poi?bbox=11.075,49.457,11.077,49.459&amp;filter=amenity=cafe">/overpass/poi?bbox=&hellip;&amp;filter=amenity=cafe</a>
+      &mdash; points of interest in a bounding box</li>
+    <li><a href="/overpass/around?lon=11.077&amp;lat=49.458&amp;radius=100">/overpass/around?lon=&amp;lat=&amp;radius=</a>
+      &mdash; nodes within a radius of a point, Kaiserburg</li>
+    <li><a href="/changeset/1">/changeset/1</a>
+      &mdash; RDF only, no JSON; OpenStreetMap's first-ever changeset
+      (Steve Coast, 2005-04-09)</li>
+    <li><a href="/tag/amenity.json">/tag/amenity.json</a> &middot;
+      <a href="/tag/amenity.rdf">RDF</a>
+      &mdash; SKOS representation of an OSM tag key, sourced from taginfo</li>
+    <li><a href="/sparql.html">/sparql.html</a>
+      &mdash; interactive SPARQL query form over the wrapper's own data;
+      machine clients POST/GET <code>/sparql?query=&hellip;</code> with a
+      <code>.json</code>/<code>.xml</code>/<code>.tsv</code>/<code>.ttl</code>/<code>.rdf</code>
+      suffix or Accept header</li>
+    <li><a href="/routes.json">/routes.json</a>
+      &mdash; machine-readable manifest of every deployed route, its formats
+      and query params &mdash; introspected from the live deployment, not
+      hand-maintained</li>
+  </ul>
+  <p>Vector tile passthrough to Protomaps' hosted basemap API
+    (<code>/tile/protomaps/{z}/{x}/{y}.mvt</code>) &mdash; trusted requests
+    only (bearer key or whitelisted network), 403 otherwise; see
+    <a href="faq.html">FAQ</a>. Same point (Kaiserburg, Nuremberg) at three
+    zoom levels, up to Protomaps' maxzoom of 15:</p>
+  <ul>
+    <li><a href="/tile/protomaps/5/16/10.mvt">/tile/protomaps/5/16/10.mvt</a>
+      &mdash; z5, continent scale</li>
+    <li><a href="/tile/protomaps/10/543/349.mvt">/tile/protomaps/10/543/349.mvt</a>
+      &mdash; z10, regional scale</li>
+    <li><a href="/tile/protomaps/15/17392/11189.mvt">/tile/protomaps/15/17392/11189.mvt</a>
+      &mdash; z15, Protomaps' maxzoom</li>
+  </ul>
+
+  <p>Passthrough to Tracestrack's raster, vector, terrain-RGB and elevation
+    APIs &mdash; same trust gate as Protomaps above, using the wrapper's own
+    paid key so callers don't need one of their own. Same point (Kaiserburg,
+    Nuremberg), z10:</p>
+  <ul>
+    <li><a href="/tile/tracestrack/en/10/543/349.webp">/tile/tracestrack/en/10/543/349.webp</a>
+      &mdash; raster, English labels, standard style</li>
+    <li><a href="/tile/tracestrack/topo_en/10/543/349.webp?style=dark2">/tile/tracestrack/topo_en/10/543/349.webp?style=dark2</a>
+      &mdash; raster, topographic base, dark colour variant</li>
+    <li><a href="/tile/tracestrack/vt/carto/10/543/349.pbf">/tile/tracestrack/vt/carto/10/543/349.pbf</a>
+      &mdash; vector tile, carto dataset</li>
+    <li><a href="/tile/tracestrack/terrain-rgb/10/543/349.webp">/tile/tracestrack/terrain-rgb/10/543/349.webp</a>
+      &mdash; terrain-RGB elevation tile</li>
+  </ul>
+  <p><code>POST /tracestrack/elevation</code> with a JSON array of
+    <code>{"lat":…,"lon":…}</code> returns a ground elevation per coordinate
+    &mdash; not a clickable URI, see
+    <a href="https://tracestrack.com/docs/">Tracestrack's own docs</a> for
+    the request shape (forwarded through unmodified).</p>
 
   <hr>
   <a href="http://ontologycentral.com/">OntologyCentral</a>, 2009-2026.
@@ -187,6 +273,22 @@ fetch('examples.json').then(r => r.json()).then(ex => {
 
   var ovp = document.getElementById('overpass-example-select');
   ex.features.forEach(f => addOpt(ovp, '/'+f.type+'/'+f.id, f.type+'/'+f.id+' \u2014 '+f.label));
+
+  var srch = document.getElementById('search-example-select');
+  ex.search.forEach(s => addOpt(srch, s.q, s.q));
+  srch.addEventListener('change', function() {
+    if (this.value) document.getElementById('search-input-main').value = this.value;
+  });
+
+  var arnd = document.getElementById('around-example-select');
+  ex.around.forEach(a => addOpt(arnd, a.lon+','+a.lat+','+a.radius, a.label));
+  arnd.addEventListener('change', function() {
+    if (!this.value) return;
+    var parts = this.value.split(',');
+    var lon = Number(parts[0]), lat = Number(parts[1]);
+    document.getElementById('around-radius-main').value = parts[2];
+    setMapLocation('map-main', (lon-0.002)+','+(lat-0.002)+','+(lon+0.002)+','+(lat+0.002));
+  });
 });
   </script>
 </body>

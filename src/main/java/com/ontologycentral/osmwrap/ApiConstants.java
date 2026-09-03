@@ -30,6 +30,15 @@ public final class ApiConstants {
         "https://api.tracestrack.com/overpass/%s/interpreter";
 
     /**
+     * Tracestrack's tile/elevation host - raster tiles, vector tiles,
+     * terrain-RGB tiles and the elevation lookup all live here (distinct
+     * from {@code api.tracestrack.com}, used above for Overpass; per
+     * Tracestrack's own docs both hostnames serve the same API surface,
+     * but this is the one their docs' own examples use for these).
+     */
+    public static final String TRACESTRACK_TILE_BASE = "https://tile.tracestrack.com";
+
+    /**
      * Protomaps' hosted basemap tile API (vector, {@code .mvt}, maxzoom 15).
      * {@code %1$d}, {@code %2$d}, {@code %3$d} are z/x/y; {@code %4$s} is the
      * key from {@link BuildInfo#getProtomapsApiKey()}.

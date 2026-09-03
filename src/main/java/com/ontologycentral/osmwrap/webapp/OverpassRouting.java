@@ -1,7 +1,6 @@
 package com.ontologycentral.osmwrap.webapp;
 
 import com.ontologycentral.osmwrap.ApiConstants;
-import com.ontologycentral.osmwrap.BuildInfo;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -10,8 +9,9 @@ import jakarta.servlet.http.HttpServletRequest;
  *
  * <p>A request that carried a valid {@code Authorization: Bearer} key (see
  * {@link RateLimitFilter}) is routed to the paid Tracestrack endpoint, if a
- * key is configured via {@link BuildInfo#getTracestrackApiKey()}. Everyone
- * else gets the free public mirrors in {@link ApiConstants#OVERPASS_API_BASES}.
+ * key is configured (see {@link TracestrackRouting#key(HttpServletRequest)}).
+ * Everyone else gets the free public mirrors in
+ * {@link ApiConstants#OVERPASS_API_BASES}.
  */
 public final class OverpassRouting {
 
@@ -32,11 +32,9 @@ public final class OverpassRouting {
 
     /** Full fallback chain to use for this request. */
     public static String[] bases(HttpServletRequest req) {
-        if (isTrusted(req)) {
-            String key = BuildInfo.getTracestrackApiKey();
-            if (!key.isEmpty()) {
-                return new String[] { String.format(ApiConstants.TRACESTRACK_OVERPASS_TEMPLATE, key) };
-            }
+        String key = TracestrackRouting.key(req);
+        if (key != null) {
+            return new String[] { String.format(ApiConstants.TRACESTRACK_OVERPASS_TEMPLATE, key) };
         }
         return ApiConstants.OVERPASS_API_BASES;
     }

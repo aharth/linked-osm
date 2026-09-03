@@ -35,9 +35,10 @@ import jakarta.servlet.http.HttpServletResponse;
  * header are also exempt. Keys are configured as a comma-separated list via the
  * {@code api-keys} servlet context parameter, filtered into {@code web.xml} at
  * package time from the {@code api.keys} Maven property (set in
- * {@code ~/.m2/settings.xml}, never committed - see {@code pom.xml}). The same
- * bearer-key check also routes Overpass-backed servlets to the paid Tracestrack
- * endpoint instead of the free public mirrors - see {@link OverpassRouting}.
+ * {@code ~/.m2/settings.xml}, never committed - see {@code pom.xml}). Both a
+ * valid bearer key and the whitelisted-subnet/loopback exemptions above also
+ * route Overpass-backed servlets to the paid Tracestrack endpoint instead of
+ * the free public mirrors - see {@link OverpassRouting}.
  */
 public class RateLimitFilter implements Filter {
 
@@ -97,9 +98,10 @@ public class RateLimitFilter implements Filter {
 
         String ip = clientIp(req);
         boolean validKey = hasValidKey(req);
-        req.setAttribute(OverpassRouting.TRUSTED_ATTR, validKey);
+        boolean exempt = isExempt(ip) || isLoopbackRequest(req);
+        req.setAttribute(OverpassRouting.TRUSTED_ATTR, validKey || exempt);
 
-        if (!isExempt(ip) && !isLoopbackRequest(req) && !validKey) {
+        if (!exempt && !validKey) {
             Bucket bucket = buckets.computeIfAbsent(ip, k ->
                     Bucket.builder()
                             .addLimit(Bandwidth.builder()

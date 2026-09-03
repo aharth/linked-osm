@@ -2,6 +2,62 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-03] Restore search/around example presets; document the full URI scheme on index.html
+
+- `search-example-select` and `around-example-select` return to `index.html`,
+  gone since the 2026-03-01 UI redesign (`39993f4`, "improved query ui")
+  consolidated the layout and dropped them along with the old per-service
+  bbox/lon/lat inputs. `examples.json` had kept shipping its `search` and
+  `around` arrays the whole time with nothing reading them - dead data until
+  now. `search` fills the Nominatim text input directly; `around` (no lon/lat
+  input any more, just a radius - the control reads the map's current
+  center) pans the map to a small bbox around the example point instead.
+- New "Example URIs" section at the bottom of `index.html`, one clickable
+  list per endpoint family, mirroring the pattern from `linked-pdok`'s
+  `index.jsp` (`<h2>`/`<p>`/`<ul><li><a>...</a> &mdash; description</li>`).
+  Covers every servlet in `web.xml` that wasn't already reachable through
+  the interactive map controls: `/geo/osm/*`, `/geo/overpass/*`,
+  `/changeset/*` (OSM's first-ever changeset, id 1), `/tag/*` (SKOS from
+  taginfo), `/sparql.html`, and `/routes.json` (the self-describing route
+  manifest) - plus three `/tile/protomaps/{z}/{x}/{y}.mvt` examples at
+  z5/z10/z15, same point (Kaiserburg, Nuremberg) at each zoom so the
+  progression is legible. (Tracestrack examples follow in the next entry,
+  alongside the code that serves them.)
+
+## [2026-09-03] Passthrough proxies for Tracestrack's raster, vector, terrain-RGB and elevation APIs
+
+- New `/tile/tracestrack/*` (`TracestrackTileServlet`) covers all three of
+  Tracestrack's tile shapes in one servlet, dispatched on the leading path
+  segment per their own docs (`tracestrack.com/docs/`):
+  `/vt/{name}/{z}/{x}/{y}.pbf` (vector), `/terrain-rgb/{z}/{x}/{y}.webp`
+  (terrain-RGB elevation tiles), and `/{mapname}/{z}/{x}/{y}.{ext}` (combined
+  raster, `webp`/`png`, optional `?style=` colour variant) - no rendering, no
+  format negotiation, upstream bytes streamed back as-is. New
+  `/tracestrack/elevation` (`TracestrackElevationServlet`, `POST`) forwards a
+  client's JSON coordinate array unmodified via `HttpClientUtil.postRaw()`
+  (new: arbitrary body + content-type, alongside the existing form-encoded
+  `post()`).
+- Trust-gated the same way as `/tile/protomaps` and the Tracestrack Overpass
+  routing: `TracestrackRouting.key()` factors the shared
+  trusted-request-plus-configured-key check out of `OverpassRouting` so the
+  four Tracestrack-backed servlets (now five, counting Overpass) don't each
+  duplicate it. No free fallback - 403 for untrusted requests or an
+  unconfigured key.
+- URL construction (`TracestrackTileServlet.upstreamUrl()`) is a pure static
+  method, unit-tested (`TracestrackTileServletTest`, 9 cases: all three tile
+  shapes, digit validation on z/x, extension validation per shape, `style`
+  query-param URL-encoding, malformed-path rejection).
+- Endpoint shapes came from Tracestrack's own docs site
+  (`tracestrack.com/docs/`), which 403s to automated fetches same as their
+  ToS page - the user read the docs directly and pasted them in. Community
+  sources found first (a GPXSee GitHub issue, a MOBAC forum thread) turned
+  out to be stale/incomplete (they showed `/topo__/{z}/{x}/{y}.png`, missing
+  the language-code map names, the `style` param, and the `@2x`/`@1x`
+  density suffix) - not used.
+- `index.html`'s Example URIs section gets four Tracestrack links alongside
+  the existing Protomaps ones (raster with and without a style variant,
+  vector, terrain-RGB) plus a note on the elevation POST shape.
+
 ## [2026-09-03] Passthrough tile proxy to Protomaps' hosted vector tile API, trusted callers only
 
 - New `/tile/protomaps/{z}/{x}/{y}.mvt` (`ProtomapsTileServlet`) streams the
