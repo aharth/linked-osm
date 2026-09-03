@@ -1,14 +1,17 @@
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix doap: <http://usefulinc.com/ns/doap#> .
 
 # <index#osmwrap>, matching ProvUtil and every sibling wrapper
 # (index#inspirewrap / #advwrap / #pdokwrap / #giscowrap). Was <#osmwrap>, which
 # disagreed with ProvUtil's {root}/index#osmwrap and was base-sensitive besides:
 # with no @base a bare fragment resolves against the retrieval URI. The five XSL
 # stylesheets were moved to /index#osmwrap in the same change.
-<index#osmwrap> a prov:SoftwareAgent ;
+<index#osmwrap> a prov:SoftwareAgent, doap:Project ;
     rdfs:label "Linked OSM (osmwrap)" ;
-    owl:versionInfo "${project.version}+${git.commit.id.describe}" ;
+    doap:release [
+        a doap:Version ;
+        doap:revision "${project.version}+${git.commit.id.describe}"
+    ] ;
     foaf:page <index.html> .

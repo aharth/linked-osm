@@ -2,6 +2,22 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-04] Describe `index#osmwrap`'s version via doap:release/doap:Version
+
+- `owl:versionInfo` on `<index#osmwrap>` replaced with `doap:release [ a
+  doap:Version ; doap:revision "${project.version}+${git.commit.id.describe}"
+  ]`, and the resource additionally typed `doap:Project` alongside
+  `prov:SoftwareAgent`. `owl:versionInfo` is conventionally an ontology's own
+  version annotation, not a software agent's build fingerprint;
+  `schema:softwareVersion` was considered and rejected (schema.org's loose,
+  reuse-for-anything typing). DOAP's release/Version pair is the vocabulary
+  actually built for this, at the cost of one extra blank node over a flat
+  literal. Same literal value as before, still filtered by
+  `git-commit-id-plugin`. This is a one-off divergence from the family
+  convention recorded in `../linked-family/checklist.md` (every other
+  wrapper still uses `owl:versionInfo` for this); not yet proposed for the
+  other siblings.
+
 ## [2026-09-03] Restore search/around example presets; document the full URI scheme on index.html
 
 - `search-example-select` and `around-example-select` return to `index.html`,
