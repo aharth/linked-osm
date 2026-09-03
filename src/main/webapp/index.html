@@ -173,6 +173,9 @@
   <p>Every feature, query and tile below has a dereferenceable URI — browsers
     get GeoJSON by default, add <code>.ttl</code>/<code>.rdf</code> or an
     <code>Accept</code> header for RDF.</p>
+
+  <h3>OSM API</h3>
+  <p>Straight from <code>api.openstreetmap.org</code>, no proxying.</p>
   <ul>
     <li><a href="/osm/node/1">/osm/node/1</a> &middot;
       <a href="/osm/node/1.ttl">Turtle</a>
@@ -181,37 +184,40 @@
       &mdash; way by ID, Palas building</li>
     <li><a href="/osm/relation/51477">/osm/relation/51477</a>
       &mdash; relation by ID, Germany</li>
-    <li><a href="/overpass/relation/147">/overpass/relation/147</a>
-      &mdash; same shape as <code>/osm/relation/*</code>, served via Overpass
-      instead of the OSM API directly (Tigris River)</li>
     <li><a href="/geo/osm/way/32113829">/geo/osm/way/32113829</a>
       &mdash; geometry-only GeoJSON (no RDF), straight from the OSM API</li>
-    <li><a href="/geo/overpass/relation/147">/geo/overpass/relation/147</a>
-      &mdash; geometry-only GeoJSON via Overpass</li>
-    <li><a href="/nominatim/search?q=Kaiserburg">/nominatim/search?q=Kaiserburg</a>
-      &mdash; place-name search via Nominatim</li>
-    <li><a href="/overpass/features?bbox=11.075,49.457,11.077,49.459&amp;type=nwr">/overpass/features?bbox=&hellip;&amp;type=nwr</a>
-      &mdash; all features in a bounding box, Kaiserburg, Nuremberg</li>
-    <li><a href="/overpass/poi?bbox=11.075,49.457,11.077,49.459&amp;filter=amenity=cafe">/overpass/poi?bbox=&hellip;&amp;filter=amenity=cafe</a>
-      &mdash; points of interest in a bounding box</li>
-    <li><a href="/overpass/around?lon=11.077&amp;lat=49.458&amp;radius=100">/overpass/around?lon=&amp;lat=&amp;radius=</a>
-      &mdash; nodes within a radius of a point, Kaiserburg</li>
     <li><a href="/changeset/1">/changeset/1</a>
       &mdash; RDF only, no JSON; OpenStreetMap's first-ever changeset
       (Steve Coast, 2005-04-09)</li>
     <li><a href="/tag/amenity.json">/tag/amenity.json</a> &middot;
       <a href="/tag/amenity.rdf">RDF</a>
       &mdash; SKOS representation of an OSM tag key, sourced from taginfo</li>
-    <li><a href="/sparql.html">/sparql.html</a>
-      &mdash; interactive SPARQL query form over the wrapper's own data;
-      machine clients POST/GET <code>/sparql?query=&hellip;</code> with a
-      <code>.json</code>/<code>.xml</code>/<code>.tsv</code>/<code>.ttl</code>/<code>.rdf</code>
-      suffix or Accept header</li>
-    <li><a href="/routes.json">/routes.json</a>
-      &mdash; machine-readable manifest of every deployed route, its formats
-      and query params &mdash; introspected from the live deployment, not
-      hand-maintained</li>
   </ul>
+
+  <h3>Nominatim</h3>
+  <p>Geocoding, not feature lookup.</p>
+  <ul>
+    <li><a href="/nominatim/search?q=Kaiserburg">/nominatim/search?q=Kaiserburg</a>
+      &mdash; place-name search via Nominatim</li>
+  </ul>
+
+  <h3>Overpass</h3>
+  <p>Bbox and bulk queries the OSM API itself can't do.</p>
+  <ul>
+    <li><a href="/overpass/relation/147">/overpass/relation/147</a>
+      &mdash; same shape as <code>/osm/relation/*</code>, served via Overpass
+      instead of the OSM API directly (Tigris River)</li>
+    <li><a href="/geo/overpass/relation/147">/geo/overpass/relation/147</a>
+      &mdash; geometry-only GeoJSON via Overpass</li>
+    <li><a href="/overpass/features?bbox=11.075,49.457,11.077,49.459&amp;type=nwr">/overpass/features?bbox=&hellip;&amp;type=nwr</a>
+      &mdash; all features in a bounding box, Kaiserburg, Nuremberg</li>
+    <li><a href="/overpass/poi?bbox=11.075,49.457,11.077,49.459&amp;filter=amenity=cafe">/overpass/poi?bbox=&hellip;&amp;filter=amenity=cafe</a>
+      &mdash; points of interest in a bounding box</li>
+    <li><a href="/overpass/around?lon=11.077&amp;lat=49.458&amp;radius=100">/overpass/around?lon=&amp;lat=&amp;radius=</a>
+      &mdash; nodes within a radius of a point, Kaiserburg</li>
+  </ul>
+
+  <h3>Commercial APIs</h3>
   <p>Vector tile passthrough to Protomaps' hosted basemap API
     (<code>/tile/protomaps/{z}/{x}/{y}.mvt</code>) &mdash; trusted requests
     only (bearer key or whitelisted network), 403 otherwise; see
@@ -225,7 +231,6 @@
     <li><a href="/tile/protomaps/15/17392/11189.mvt">/tile/protomaps/15/17392/11189.mvt</a>
       &mdash; z15, Protomaps' maxzoom</li>
   </ul>
-
   <p>Passthrough to Tracestrack's raster, vector, terrain-RGB and elevation
     APIs &mdash; same trust gate as Protomaps above, using the wrapper's own
     paid key so callers don't need one of their own. Same point (Kaiserburg,
@@ -245,6 +250,20 @@
     &mdash; not a clickable URI, see
     <a href="https://tracestrack.com/docs/">Tracestrack's own docs</a> for
     the request shape (forwarded through unmodified).</p>
+
+  <h3>Wrapper</h3>
+  <p>Introspection into the wrapper itself, not an upstream.</p>
+  <ul>
+    <li><a href="/sparql.html">/sparql.html</a>
+      &mdash; interactive SPARQL query form over the wrapper's own data;
+      machine clients POST/GET <code>/sparql?query=&hellip;</code> with a
+      <code>.json</code>/<code>.xml</code>/<code>.tsv</code>/<code>.ttl</code>/<code>.rdf</code>
+      suffix or Accept header</li>
+    <li><a href="/routes.json">/routes.json</a>
+      &mdash; machine-readable manifest of every deployed route, its formats
+      and query params &mdash; introspected from the live deployment, not
+      hand-maintained</li>
+  </ul>
 
   <hr>
   <a href="http://ontologycentral.com/">OntologyCentral</a>, 2009-2026.

@@ -13,8 +13,10 @@ All notable changes to the OpenStreetMap Linked Data Wrapper project will be doc
   input any more, just a radius - the control reads the map's current
   center) pans the map to a small bbox around the example point instead.
 - New "Example URIs" section at the bottom of `index.html`, one clickable
-  list per endpoint family, mirroring the pattern from `linked-pdok`'s
-  `index.jsp` (`<h2>`/`<p>`/`<ul><li><a>...</a> &mdash; description</li>`).
+  list per endpoint family under its own `<h3>`, grouped in upstream order
+  (OSM API, Nominatim, Overpass, Commercial APIs, Wrapper) - mirroring the
+  pattern from `linked-pdok`'s `index.jsp`
+  (`<h2>`/`<p>`/`<ul><li><a>...</a> &mdash; description</li>`).
   Covers every servlet in `web.xml` that wasn't already reachable through
   the interactive map controls: `/geo/osm/*`, `/geo/overpass/*`,
   `/changeset/*` (OSM's first-ever changeset, id 1), `/tag/*` (SKOS from
