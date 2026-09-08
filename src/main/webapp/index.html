@@ -272,6 +272,15 @@
       &mdash; machine-readable manifest of every deployed route, its formats
       and query params &mdash; introspected from the live deployment, not
       hand-maintained</li>
+    <li><a href="/status">/status</a> (<a href="/status.html">.html</a>,
+      <a href="/status.ttl">.ttl</a>)
+      &mdash; live reachability of every upstream this wrapper depends on
+      (OSM API, Nominatim, Overpass, Protomaps, Tracestrack), plus the
+      Tracestrack raster/vector layer names known to <code>/tile</code>
+      &mdash; JSON by default, cached 5 minutes; the RDF view describes it
+      as a <code>dcat:Catalog</code> of <code>dcat:DataService</code>s with
+      each probe's outcome as a W3C HTTP-vocabulary
+      <code>http:Response</code></li>
   </ul>
 
   <hr>

@@ -27,9 +27,12 @@ import org.apache.jena.riot.RDFWriter;
 @SuppressWarnings("serial")
 public class ErrorServlet extends HttpServlet {
 
-    private static final String NS_HTTP = "http://www.w3.org/2011/http#";
+    // Package-private (not private): StatusServlet reuses the W3C HTTP vocabulary machinery
+    // below to describe a reachability PROBE's outcome, the same "describe the HTTP
+    // transaction" idiom applied to a probe instead of a failed request.
+    static final String NS_HTTP = "http://www.w3.org/2011/http#";
     private static final String NS_HTTP_METHODS = "http://www.w3.org/2011/http-methods#";
-    private static final String NS_HTTP_STATUS = "http://www.w3.org/2011/http-statusCodes#";
+    static final String NS_HTTP_STATUS = "http://www.w3.org/2011/http-statusCodes#";
     private static final String NS_PROV = "http://www.w3.org/ns/prov#";
 
     private static final Map<Integer, String> REASON_PHRASES = Map.of(
@@ -39,9 +42,11 @@ public class ErrorServlet extends HttpServlet {
 
     // Individuals the http-statusCodes (2011) vocabulary actually defines —
     // it predates RFC 6585, so 429 has no individual there; those codes fall
-    // back to the plain statusCodeValue/reasonPhrase literals only.
-    private static final Map<Integer, String> STATUS_CODE_INDIVIDUALS = Map.of(
-            400, "BadRequest", 404, "NotFound", 406, "NotAcceptable",
+    // back to the plain statusCodeValue/reasonPhrase literals only. 200 is
+    // included for StatusServlet's reachability triples (this servlet itself
+    // never generates a 200 error page, obviously).
+    static final Map<Integer, String> STATUS_CODE_INDIVIDUALS = Map.of(
+            200, "OK", 400, "BadRequest", 404, "NotFound", 406, "NotAcceptable",
             500, "InternalServerError", 502, "BadGateway", 504, "GatewayTimeout");
 
     @Override

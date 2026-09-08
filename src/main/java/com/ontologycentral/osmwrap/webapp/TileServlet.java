@@ -29,6 +29,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFWriter;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 
 /**
  * The family-standard tile endpoint: {@code /tile?s={source}&layer={layer}&z=&x=&y=[&f=...]},
@@ -256,6 +257,7 @@ public class TileServlet extends HttpServlet {
         m.setNsPrefix("dcat", NS_DCAT);
         m.setNsPrefix("dct",  NS_DCT);
         m.setNsPrefix("foaf", NS_FOAF);
+        m.setNsPrefix("rdfs", RDFS.getURI());
         m.setNsPrefix("xsd",  "http://www.w3.org/2001/XMLSchema#");
 
         boolean wantsPng = "png".equals(tile.fmt());
@@ -278,6 +280,30 @@ public class TileServlet extends HttpServlet {
         r.addProperty(m.createProperty(NS_DCT + "rights"),
                 "Data: © OpenStreetMap contributors; Maps © Tracestrack "
                 + "(CC BY 4.0, tracestrack.com/terms-of-service/)");
+        // Two DIFFERENT licences cover two DIFFERENT things bundled into one pixel grid: the
+        // underlying map DATA (ODbL, via OSM) and Tracestrack's RENDERING of it (their own CC BY
+        // 4.0 grant on the tile image) - dct:license is multi-valued, so both are asserted rather
+        // than picked as if only one applied.
+        r.addProperty(m.createProperty(NS_DCT + "license"),
+                m.createResource("https://opendatacommons.org/licenses/odbl/1-0/"));
+        r.addProperty(m.createProperty(NS_DCT + "license"),
+                m.createResource("https://creativecommons.org/licenses/by/4.0/"));
+        r.addProperty(m.createProperty(NS_DCT + "publisher"), m.createResource()
+                .addProperty(RDF.type, m.createResource(NS_FOAF + "Organization"))
+                .addProperty(m.createProperty(NS_FOAF + "name"), "Tracestrack")
+                .addProperty(m.createProperty(NS_FOAF + "page"), m.createResource("https://tracestrack.com/")));
+        // What reproducibility this tile does NOT have, stated rather than silently missing: see
+        // plans/tile-endpoint-osm-carto.md's item 3 - Tracestrack's own terms (§6) disclaim
+        // both the style version and the underlying OSM data vintage as stable/guaranteed, and
+        // neither is exposed per-tile by the API, so this document does not claim either. Compare
+        // TileServlet's WMS-backed siblings, which likewise disclose an approximation rather than
+        // hide it (their X-Tile-Reprojection caveat).
+        r.addProperty(RDFS.comment,
+                "Rendered on request by Tracestrack; the map style's version and the OpenStreetMap "
+                + "data vintage this tile was drawn from are not exposed per-tile by the API and are "
+                + "not guaranteed stable by the upstream (tracestrack.com/terms-of-service/ §6: "
+                + "map styles and data freshness/consistency may change over time without notice). "
+                + "Not asserted here rather than assumed.");
         r.addProperty(m.createProperty(NS_GEO + "hasGeometry"), m.createResource()
                 .addProperty(RDF.type, m.createResource(NS_GEO + "Geometry"))
                 .addProperty(m.createProperty(NS_GEO + "asWKT"),

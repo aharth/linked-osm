@@ -2,6 +2,100 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-08] `/status` gains an RDF view; a content-negotiation bug fixed; Tracestrack's raster styles verified
+
+- `/status.ttl`/`.rdf`/`.nt` (content-negotiated, suffix or `Accept`)
+  joins `/status`'s JSON/HTML views, matching linked-pdok's (2026-09-03)
+  and linked-adv's (2026-09-08) own `/status` RDF shape: the document is a
+  `dcat:Catalog` of `dcat:DataService` rows, Tracestrack's layers as
+  `dcat:Distribution`s, each probe's outcome as a W3C HTTP-vocabulary
+  `http:Response` — the same "describe the HTTP transaction" idiom
+  `ErrorServlet` already uses for failed requests, here applied to a
+  reachability probe instead. `ErrorServlet`'s `NS_HTTP`/`NS_HTTP_STATUS`/
+  `STATUS_CODE_INDIVIDUALS` widened from `private` to package-private for
+  `StatusServlet` to reuse, and `STATUS_CODE_INDIVIDUALS` gained a
+  `200 → "OK"` entry (an error servlet obviously never emits its own 200).
+  A config-only row (no key configured, or elevation's deliberately
+  unprobed one) gets an `rdfs:comment`, never a fabricated `http:Response` —
+  there was no HTTP transaction to describe.
+- **Found and fixed a real content-negotiation bug while writing this**:
+  the suffix-less RDF/HTML/JSON preference comparison used `rdfQ >= htmlQ
+  && rdfQ >= jsonQ`. A bare `Accept: */*` scores every type equally via the
+  wildcard, so the tie wrongly won toward RDF instead of falling through to
+  the JSON default — caught by a test (`bareStarAcceptDefaultsToJson`),
+  fixed with strict `>` comparisons. `TileServlet.wantsRdf`/linked-pdok's
+  own `StatusServlet` use the same `>=` shape and likely carry the identical
+  bug against a bare `*/*` — not fixed there, just flagging it as a
+  probably-shared defect worth checking.
+- `StatusServlet.resolveFormat` and `.buildStatusModel` are both static,
+  network-free, and directly unit-tested (`StatusServletTest`, 17 cases) —
+  suffix-wins-over-Accept, the RDF three-way Turtle/RDF-XML/N-Triples pick,
+  the `*/*` fix above, and the RDF model shape (catalog membership, a
+  successful probe's `http:Response`, a config-only row's plain comment,
+  layers becoming distributions, no real key ever reaching a reported URI).
+- **Verified, not just flagged, that Tracestrack has no `osm-carto`-
+  equivalent raster style**: live-probed `layer=osm/standard/default/
+  streets/outdoor/carto/basic` against production, all 404 with
+  Tracestrack's own `"Error proxying request"` body passed through
+  verbatim (confirms the rejection is upstream, not this wrapper) - `topo`/
+  `topo_en`/language-code variants (`en`) remain the only working raster
+  layers. `topo` already blends osm-carto and OpenTopoMap per Tracestrack's
+  own description; there is nothing closer to ask for. Recorded in
+  `plans/tile-endpoint-osm-carto.md`.
+- Family checklist updated: `osm` now has both `TileServlet` and
+  `StatusServlet`/`ServiceStatusChecker`, in each case explicitly NOT a
+  straight port (no WMS/`ServiceRegistry`/regions here) — noted as such
+  rather than silently counted alongside the WMS-backed siblings.
+
+## [2026-09-08] `/status`, and richer `/tile` provenance (plan items 2 and 3)
+
+- New `/status`/`/status.json`/`/status.html` (`StatusServlet` +
+  `ServiceStatusChecker`), the piece `plans/tile-endpoint-osm-carto.md`
+  flagged as missing (item 2): live reachability for every upstream this
+  wrapper depends on (OSM API 0.6, Nominatim, Overpass, Protomaps,
+  Tracestrack tile + elevation), 5-minute cached concurrent fan-out, JSON
+  by default (matching linked-adv's deployed `/status`), `.html`/`Accept`
+  negotiated otherwise.
+  - **No region concept here**, unlike linked-adv/-pdok's
+    `regions.{region}.services[]` - osmwrap has one global instance of each
+    upstream, so this reports a flat `services[]` array instead. A
+    consumer built against the region-grouped WMS shape (behaim's
+    `loadLayerRegistry`) needs its own osmwrap-specific branch regardless;
+    there's no WMS here for a `kind === "wms"` check to match anyway.
+  - Tracestrack's raster/vector layer names (`topo`, `topo_en`, `en`,
+    `carto`, `terrain-rgb`) are a **hand-maintained list**, not discovered -
+    Tracestrack has no capabilities API for this the way WMS/OGC API
+    Features do. Kept in sync with `index.html`'s examples; update both
+    together.
+  - Elevation is deliberately **not** live-probed - every other probe is
+    either free (OSM/Nominatim/Overpass) or one cheap tile fetch, but an
+    elevation lookup would spend one of the account's paid Tracestrack
+    credits purely to answer a status check, repeatedly, for every visitor.
+    Configuration presence is reported instead.
+  - The Protomaps and Tracestrack probe URIs are built and reported with
+    the API key **omitted from construction**, not stripped afterward -
+    same discipline as `TileServlet`'s cache-key form, pinned by
+    `protomapsDisplayUrlNeverCarriesARealKey`.
+- `TileServlet`'s `&f=ttl` description gained the fields item 3 of that
+  plan wanted, to the extent Tracestrack actually discloses them: split
+  `dct:license` (ODbL for the underlying OSM data, CC BY 4.0 for
+  Tracestrack's rendering - two different licenses for two different
+  things bundled into one pixel grid, both asserted rather than picked as
+  if only one applied), a `dct:publisher` naming Tracestrack, and an
+  `rdfs:comment` stating plainly that the map style's version and the OSM
+  data vintage are **not** exposed per-tile and **not** guaranteed stable
+  by Tracestrack's own terms (§6) - not asserted here rather than
+  fabricated, the same "disclose the limitation, don't silently ship it"
+  pattern the WMS-backed siblings use for approximate reprojection.
+- Smoke-tested against a local Jetty with real keys configured: `/status`
+  correctly distinguishes Protomaps' vector (`.mvt`, checked via
+  `Content-Type: application/x-protobuf`/`vector-tile`) from Tracestrack's
+  raster (checked via `image/*`) - an earlier draft wrongly reused the
+  raster content-type check for Protomaps and reported it DOWN despite a
+  200. Layer registry, elevation's non-probe note, and the enriched
+  `/tile` RDF (license split, publisher, disclosure comment) all verified
+  against the real upstreams.
+
 ## [2026-09-08] `/tile?s=&layer=&z=&x=&y=`: the family-standard tile endpoint, backed by Tracestrack
 
 - New `TileServlet` at `/tile` matches the shape linked-adv/linked-pdok/

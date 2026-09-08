@@ -58,6 +58,7 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-name>tileTracestrack</servlet-name>
 		<servlet-name>tracestrackElevation</servlet-name>
 		<servlet-name>tile</servlet-name>
+		<servlet-name>status</servlet-name>
 		<dispatcher>REQUEST</dispatcher>
 	</filter-mapping>
 
@@ -146,6 +147,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet>
 		<servlet-name>tile</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.TileServlet</servlet-class>
+	</servlet>
+	<servlet>
+		<servlet-name>status</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.StatusServlet</servlet-class>
 	</servlet>
 
 	<servlet-mapping>
@@ -299,6 +304,30 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>tile</servlet-name>
 		<url-pattern>/tile</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>status</servlet-name>
+		<url-pattern>/status</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>status</servlet-name>
+		<url-pattern>/status.json</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>status</servlet-name>
+		<url-pattern>/status.html</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>status</servlet-name>
+		<url-pattern>/status.ttl</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>status</servlet-name>
+		<url-pattern>/status.rdf</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>status</servlet-name>
+		<url-pattern>/status.nt</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>tracestrackElevation</servlet-name>
