@@ -49,7 +49,8 @@ public class GeometryOverpassServlet extends HttpServlet {
 
         // Check for file extension suffix in ID
         String format = "json"; // default to JSON
-        if (id.contains(".")) {
+        boolean explicitFormat = id.contains(".");
+        if (explicitFormat) {
             String extension = id.substring(id.lastIndexOf(".") + 1).toLowerCase();
             if ("json".equals(extension)) {
                 format = "json";
@@ -66,12 +67,20 @@ public class GeometryOverpassServlet extends HttpServlet {
             id = id.substring(0, id.indexOf("."));
         }
 
-        // Content negotiation: check Accept header for format preference (if no extension specified)
-        if ("json".equals(format)) {
+        // Content negotiation: only when the URL gave no explicit extension — a suffix
+        // always wins (family convention). Compare kml/wkt against geo+json with
+        // prefers(), not a bare maxQ()>0: a generic "Accept: */*" (the curl/most-clients
+        // default) matches every candidate via wildcard with equal q, so a raw maxQ()>0
+        // check treated "KML is acceptable" as "KML is preferred" and hijacked plain
+        // requests with no real Accept opinion into KML. prefers() only fires on an
+        // actual, strict preference for kml/wkt over geo+json.
+        if (!explicitFormat) {
             List<AcceptHeader.AcceptType> accepted = AcceptHeader.parse(req.getHeader("Accept"));
-            if (AcceptHeader.maxQ(accepted, "application", "vnd.google-earth.kml+xml") > 0) {
+            if (AcceptHeader.prefers(accepted, "application", "vnd.google-earth.kml+xml",
+                    "application", "geo+json")) {
                 format = "kml";
-            } else if (AcceptHeader.maxQ(accepted, "application", "wkt") > 0) {
+            } else if (AcceptHeader.prefers(accepted, "application", "wkt",
+                    "application", "geo+json")) {
                 format = "wkt";
             }
         }

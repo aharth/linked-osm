@@ -2,6 +2,93 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-09] Production outage fixed (dead shared `HttpClient`); a classloader leak, a SPARQL-graph-loading URI bug, a suffix-vs-Accept bug, and an invalid-JSON bug found and fixed; new smoke coverage for every upstream
+
+- **Root-caused and fixed a live production outage**: every upstream call
+  (Overpass, OSM API, Nominatim, taginfo, Tracestrack, Protomaps) was failing
+  with `IOException: selector manager closed`. `HttpClientUtil`'s shared
+  `java.net.http.HttpClient` runs one internal `SelectorManager` thread for
+  its whole process lifetime; if that thread ever dies (the JDK gives it no
+  recovery path), the client is permanently broken and every subsequent
+  `send()` fails identically — which is exactly what was observed across
+  every servlet doing outbound HTTP simultaneously. `HttpClientUtil` now
+  holds the client in an `AtomicReference` and, on catching that specific
+  message, rebuilds and retries once instead of requiring a manual process
+  restart to recover.
+- **Found and fixed the most likely driver of the memory pressure behind
+  that outage**: `jena-geosparql` pulls in Apache SIS (`sis-referencing`),
+  which lazily starts a process-static daemon thread
+  (`org.apache.sis.system.ReferenceQueueConsumer`) the first time
+  `GeoSPARQLConfig.setupNoIndex()` runs in `Listener.contextInitialized`.
+  SIS never stops it on its own, so a hot redeploy (a new WAR dropped onto a
+  live Tomcat, this wrapper's normal deploy path — no container restart)
+  leaked the entire outgoing webapp's classloader on every single deploy,
+  confirmed live via Tomcat's own `clearReferencesThreads` warning.
+  `Listener.contextDestroyed` (previously empty) now calls
+  `org.apache.sis.system.Shutdown.stop(Listener.class)` — SIS's own
+  documented container-shutdown hook, confirmed by decompiling it to check
+  it actually stops the thread rather than being a no-op.
+- **Capped `RdfFilter`'s in-memory response buffering** (32 MB): every
+  response passes through this filter (mapped to `/*`) as a full
+  `ByteArrayOutputStream` capture for Turtle/RDF-XML renegotiation, and
+  conversion additionally parses the buffer into a Jena `Model` and
+  re-serialises it — three unbounded copies per request, on every route,
+  with no cap. A response over the limit now gets a clear 500 instead of
+  unbounded buffering.
+- **Found and fixed a suffix-vs-Accept bug in `GeometryOSMServlet` and
+  `GeometryOverpassServlet`** (`/geo/osm/*`, `/geo/overpass/*`): a plain
+  `Accept: */*` (the `curl`/most-HTTP-clients default) silently overrode an
+  *explicit* `.json` suffix to KML, because the Accept-based fallback ran
+  unconditionally whenever the format happened to be `json` — whether that
+  came from an explicit suffix or the undecided default — and compared
+  candidates with a bare `maxQ(...) > 0`, which a wildcard Accept satisfies
+  for everything with equal weight. Related to (though a different failure
+  shape than) 2026-09-08's `StatusServlet` wildcard tie-break bug flagged
+  there as "probably shared" — this one lets Accept override an *explicit*
+  suffix rather than just mis-resolve a tie. Fixed: the Accept-based
+  fallback now only runs when no extension was given at all, and uses
+  `prefers()` (a strict comparison) instead of a bare presence check.
+- **Found and fixed invalid JSON in `/tag/{key}.json`**
+  (`TaginfoConverter`): both JSON-LD builders unconditionally appended a
+  trailing comma after each field/array on the assumption something always
+  followed, which produced a syntax error (trailing comma before `}`)
+  whenever the last populated field happened to be `narrower`, `example`,
+  or a zero-tailed `osm:statistics` block — silently invalid depending on
+  which fields a given tag has, not on any input that looks unusual. Fixed
+  with a small `trimTrailingComma` helper used before every object close.
+- **Found and fixed a URI-doubling bug in `RdfFilter`'s RDF/XML output**,
+  caught by the new smoke coverage below: `/sparql`'s `FROM </osm/node/…>`
+  graph loading (`SparqlServlet.readGraph`, a plain
+  `RDFParser.create().source(uri)...parse(m)`) was resolving the loaded
+  document's own subject IRIs to doubled paths like
+  `.../osm/node/osm/node/11980635629#id`. Root cause: `RdfFilter` relativized
+  its RDF/XML output against the site root (`rdf:about="osm/node/…"`, no
+  leading slash) but Jena's RDF/XML writer relativizes without ever emitting
+  a matching `xml:base` — confirmed directly against Jena 6.1.0
+  (`RDFXML_PLAIN` and `RDFXML_ABBREV` both do this) — so any consumer that
+  doesn't already know the intended base (every consumer that isn't this
+  filter itself, including Jena's own `RDFParser.source(uri)`) resolves the
+  bare relative path against the *fetch* URL instead, merging it onto the
+  URL's own parent path per RFC 3986 §5.3 instead of replacing it. Also
+  contradicted this family's own documented convention (`N-Triples /
+  RDF-XML / JSON-LD carry absolutes under the request's public root` —
+  only Turtle is meant to relativize). Fixed by dropping `.base(siteRoot)`
+  from both RDF/XML write call sites, so RDF/XML now always carries
+  absolute URIs.
+- Fixed a stale assertion in `test/smoke-rdf.sh`: it checked for a bare
+  `</#osmwrap>` self-reference, from before the wrapper agent moved to
+  `/index#osmwrap` (the family's "the wrapper's URI lives in index"
+  convention, already in place — the test just hadn't been updated).
+- **New smoke coverage**: `test/smoke-upstreams.sh` covers every upstream
+  `test/smoke-rdf.sh` didn't touch — Overpass (`features`/`poi`/`around`/
+  `node`/`way`/`relation`), Nominatim, taginfo, `/geo/osm`, `/geo/overpass`,
+  `/changeset`, and the key-gated tile family (Protomaps, Tracestrack
+  tiles + elevation, accepting either a correctly-gated 402 or a validated
+  200 depending on caller trust). This gap is exactly why the outage above
+  went undetected server-side and had to be found from a consumer's side
+  instead. Both suites are green after all fixes above: 26/26
+  (`smoke-rdf.sh`), 20/20 (`smoke-upstreams.sh`).
+
 ## [2026-09-08] `/status` gains an RDF view; a content-negotiation bug fixed; Tracestrack's raster styles verified
 
 - `/status.ttl`/`.rdf`/`.nt` (content-negotiated, suffix or `Accept`)

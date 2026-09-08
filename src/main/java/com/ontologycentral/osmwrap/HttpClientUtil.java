@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,11 +26,53 @@ import java.util.regex.Pattern;
  */
 public final class HttpClientUtil {
 
-    private static final HttpClient CLIENT =
-            HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(15))
-                    .followRedirects(HttpClient.Redirect.NORMAL)
-                    .build();
+    /**
+     * The shared client, held mutable because the JDK's {@code HttpClient} has no
+     * recovery path of its own: if its internal selector-manager thread ever dies
+     * (observed in production after heap pressure elsewhere in the process), every
+     * subsequent {@code send()} on that instance fails permanently with
+     * {@code IOException: selector manager closed}. {@link #send} detects exactly
+     * that message and swaps in a fresh client rather than requiring a process
+     * restart to recover.
+     */
+    private static final AtomicReference<HttpClient> CLIENT = new AtomicReference<>(newClient());
+
+    private static final String DEAD_CLIENT_MESSAGE = "selector manager closed";
+
+    private static HttpClient newClient() {
+        return HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(15))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+    }
+
+    /**
+     * Send a request on the shared client, transparently rebuilding and retrying
+     * once if the client has died (see {@link #CLIENT}).
+     */
+    private static <T> HttpResponse<T> send(HttpRequest req, HttpResponse.BodyHandler<T> handler)
+            throws IOException {
+        HttpClient client = CLIENT.get();
+        try {
+            return client.send(req, handler);
+        } catch (IOException e) {
+            if (e.getMessage() == null || !e.getMessage().contains(DEAD_CLIENT_MESSAGE)) {
+                throw e;
+            }
+            HttpClient fresh = newClient();
+            CLIENT.compareAndSet(client, fresh); // no-op if another thread already replaced it
+            try {
+                return CLIENT.get().send(req, handler);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                throw new IOException("HTTP request interrupted (after client rebuild): "
+                        + req.uri(), ie);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("HTTP request interrupted: " + req.uri(), e);
+        }
+    }
 
     /** Timeout for responses that may carry large payloads (e.g. relation /full). */
     private static final Duration RESPONSE_TIMEOUT = Duration.ofSeconds(120);
@@ -48,12 +91,7 @@ public final class HttpClientUtil {
                 .header("User-Agent", BuildInfo.getUserAgent())
                 .GET()
                 .build();
-        try {
-            return CLIENT.send(req, HttpResponse.BodyHandlers.ofInputStream());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("HTTP GET interrupted: " + url, e);
-        }
+        return send(req, HttpResponse.BodyHandlers.ofInputStream());
     }
 
     /**
@@ -72,12 +110,7 @@ public final class HttpClientUtil {
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(formData))
                 .build();
-        try {
-            return CLIENT.send(req, HttpResponse.BodyHandlers.ofInputStream());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("HTTP POST interrupted: " + url, e);
-        }
+        return send(req, HttpResponse.BodyHandlers.ofInputStream());
     }
 
     /**
@@ -99,12 +132,7 @@ public final class HttpClientUtil {
                 .header("Content-Type", contentType)
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body))
                 .build();
-        try {
-            return CLIENT.send(req, HttpResponse.BodyHandlers.ofInputStream());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("HTTP POST interrupted: " + url, e);
-        }
+        return send(req, HttpResponse.BodyHandlers.ofInputStream());
     }
 
     /**
@@ -168,13 +196,7 @@ public final class HttpClientUtil {
                 .header("User-Agent", BuildInfo.getUserAgent())
                 .GET()
                 .build();
-        HttpResponse<String> resp;
-        try {
-            resp = CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IOException("HTTP GET interrupted: " + url, e);
-        }
+        HttpResponse<String> resp = send(req, HttpResponse.BodyHandlers.ofString());
         if (resp.statusCode() != 200) {
             throw new IOException("HTTP " + resp.statusCode() + " from " + url);
         }

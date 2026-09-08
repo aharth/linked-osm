@@ -110,9 +110,11 @@ test_resource() {
     else
         check_rapper       "$type Turtle valid"  turtle "$TTL" "$url.ttl"
         check_no_abs_ttl   "$type no abs URIs"          "$TTL"
-        grep -q '</#osmwrap>' "$TTL" \
-            && ok  "$type: </#osmwrap> relative in Turtle" \
-            || fail "$type: </#osmwrap> missing or absolute in Turtle"
+        # The wrapper agent lives at /index#osmwrap (family convention: "the wrapper's
+        # URI lives in index"), not a bare /#osmwrap — stale check updated 2026-09-09.
+        grep -q '</index#osmwrap>' "$TTL" \
+            && ok  "$type: </index#osmwrap> relative in Turtle" \
+            || fail "$type: </index#osmwrap> missing or absolute in Turtle"
     fi
 
     if [ -z "$RDF" ]; then

@@ -25,6 +25,18 @@ import org.apache.jena.riot.RDFWriter;
 public class RdfFilter implements Filter {
     private static final Logger _log = Logger.getLogger(RdfFilter.class.getName());
 
+    /**
+     * Cap on how much of a response this filter will buffer in memory to inspect/
+     * renegotiate its representation (Turtle&lt;-&gt;RDF/XML). Every response passes
+     * through here (mapped to {@code /*}), and conversion additionally parses the
+     * buffered bytes into a Jena {@link Model} and re-serialises them — heavier than
+     * the raw byte count. Unbounded buffering here was implicated in a production
+     * outage (heap pressure killed the shared {@code HttpClient}'s selector-manager
+     * thread, see {@code com.ontologycentral.osmwrap.HttpClientUtil}); a response
+     * past this cap is rejected rather than buffered.
+     */
+    private static final int MAX_CAPTURE_BYTES = 32 * 1024 * 1024;
+
     @Override
     public void doFilter(
             jakarta.servlet.ServletRequest request,
@@ -36,11 +48,21 @@ public class RdfFilter implements Filter {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
         ByteArrayOutputStream capture = new ByteArrayOutputStream();
-        CaptureResponseWrapper wrapper = new CaptureResponseWrapper(httpResponse, capture);
+        CaptureResponseWrapper wrapper = new CaptureResponseWrapper(httpResponse, capture, MAX_CAPTURE_BYTES);
 
         chain.doFilter(request, wrapper);
 
         wrapper.flushBuffer();
+
+        if (wrapper.isOverflowed()) {
+            _log.warning("Response for " + httpRequest.getRequestURI() + " exceeded "
+                    + MAX_CAPTURE_BYTES + " bytes; rejecting rather than buffering further");
+            if (!httpResponse.isCommitted()) {
+                httpResponse.sendError(500, "Response too large to negotiate (over "
+                        + (MAX_CAPTURE_BYTES / (1024 * 1024)) + " MB)");
+            }
+            return;
+        }
 
         String contentType = wrapper.getContentType();
 
@@ -74,9 +96,6 @@ public class RdfFilter implements Filter {
         String queryString = httpRequest.getQueryString();
         // Document URL as Jena parse base so <> resolves to the document URI.
         String base = proto + "://" + host + requestPath;
-        // Site root used as RDF/XML write base so path-absolute refs (/tag/..., /osm/...) are
-        // written as relative URIs with xml:base="https://example.com/".
-        String siteRoot = proto + "://" + host + "/";
 
         byte[] data = capture.toByteArray();
 
@@ -98,10 +117,12 @@ public class RdfFilter implements Filter {
                             .base(base)
                             .checking(false)
                             .parse(model);
+                    // No .base(...): RDF/XML carries absolute URIs (family convention) —
+                    // Jena's writer relativizes without ever emitting xml:base, which broke
+                    // re-resolution elsewhere (see CHANGELOG 2026-09-09).
                     ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
                     RDFWriter.create()
                             .lang(Lang.RDFXML)
-                            .base(siteRoot)
                             .source(model)
                             .output(rdfOut);
                     byte[] result = rdfOut.toByteArray();
@@ -164,10 +185,12 @@ public class RdfFilter implements Filter {
                             .lang(Lang.RDFXML)
                             .base(base)
                             .parse(model);
+                    // No .base(...): RDF/XML carries absolute URIs (family convention) —
+                    // Jena's writer relativizes without ever emitting xml:base, which broke
+                    // re-resolution elsewhere (see CHANGELOG 2026-09-09).
                     ByteArrayOutputStream rdfOut = new ByteArrayOutputStream();
                     RDFWriter.create()
                             .lang(Lang.RDFXML)
-                            .base(siteRoot)
                             .source(model)
                             .output(rdfOut);
                     byte[] result = rdfOut.toByteArray();
@@ -192,14 +215,28 @@ public class RdfFilter implements Filter {
 
     private static class CaptureResponseWrapper extends HttpServletResponseWrapper {
         private final ByteArrayOutputStream capture;
+        private final int maxBytes;
         private ServletOutputStream outputStream;
         private PrintWriter writer;
         private String contentType;
         private int status = 200;
+        private boolean overflowed = false;
 
-        CaptureResponseWrapper(HttpServletResponse response, ByteArrayOutputStream capture) {
+        CaptureResponseWrapper(HttpServletResponse response, ByteArrayOutputStream capture, int maxBytes) {
             super(response);
             this.capture = capture;
+            this.maxBytes = maxBytes;
+        }
+
+        boolean isOverflowed() {
+            return overflowed;
+        }
+
+        /** Stops capturing (dropping the excess) the first time the cap is crossed. */
+        private void checkCapacity(int additional) {
+            if (!overflowed && capture.size() + additional > maxBytes) {
+                overflowed = true;
+            }
         }
 
         @Override
@@ -241,12 +278,18 @@ public class RdfFilter implements Filter {
                 outputStream = new ServletOutputStream() {
                     @Override
                     public void write(int b) throws IOException {
-                        capture.write(b);
+                        checkCapacity(1);
+                        if (!overflowed) {
+                            capture.write(b);
+                        }
                     }
 
                     @Override
                     public void write(byte[] b, int off, int len) throws IOException {
-                        capture.write(b, off, len);
+                        checkCapacity(len);
+                        if (!overflowed) {
+                            capture.write(b, off, len);
+                        }
                     }
 
                     @Override
@@ -265,7 +308,9 @@ public class RdfFilter implements Filter {
         @Override
         public PrintWriter getWriter() throws IOException {
             if (writer == null) {
-                writer = new PrintWriter(new java.io.OutputStreamWriter(capture, getCharacterEncoding()));
+                // Route through getOutputStream() so the capacity check above also
+                // guards this path, rather than writing to `capture` directly.
+                writer = new PrintWriter(new java.io.OutputStreamWriter(getOutputStream(), getCharacterEncoding()));
             }
             return writer;
         }

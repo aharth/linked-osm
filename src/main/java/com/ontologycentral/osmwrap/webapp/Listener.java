@@ -151,5 +151,20 @@ public class Listener implements ServletContextListener {
     }
 
     public void contextDestroyed(ServletContextEvent event) {
+        // jena-geosparql pulls in Apache SIS (sis-referencing), which lazily starts a
+        // static daemon thread (org.apache.sis.system.ReferenceQueueConsumer) the first
+        // time GeoSPARQLConfig.setupNoIndex() runs. SIS never stops it on its own, so a
+        // hot redeploy (WAR swapped without a full container restart) leaks the entire
+        // outgoing webapp classloader — confirmed in production via Tomcat's own
+        // "appears to have started a thread ... but has failed to stop it" warning at
+        // undeploy. Repeated leaked classloaders (and everything static they pinned:
+        // caches, the shared HttpClient, its threads) are a plausible driver of the
+        // heap pressure behind the "selector manager closed" HttpClient outage - see
+        // HttpClientUtil. SIS exposes exactly this shutdown hook for containers.
+        try {
+            org.apache.sis.system.Shutdown.stop(Listener.class);
+        } catch (Exception e) {
+            _log.log(Level.WARNING, "Apache SIS shutdown failed: " + e.getMessage(), e);
+        }
     }
 }

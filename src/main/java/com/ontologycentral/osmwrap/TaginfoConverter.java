@@ -226,6 +226,7 @@ public class TaginfoConverter {
         if (countRelations > 0) {
             json.append("    \"osm:countRelations\": ").append(countRelations);
         }
+        trimTrailingComma(json);
         json.append("\n  },\n");
 
         // Add namespace variants as narrower concepts
@@ -263,8 +264,33 @@ public class TaginfoConverter {
             json.append("\n  ],\n");
         }
 
-        json.append("}\n");
+        closeJsonObject(json);
         return json.toString();
+    }
+
+    /**
+     * Appends the closing {@code }} for a top-level JSON object built by unconditionally
+     * appending {@code ",\n"} after each field/array — which leaves a trailing comma
+     * whenever the LAST populated field is one of the conditionally-emitted ones
+     * ({@code narrower}, {@code example}, or a stats block whose last count happened to
+     * be zero). Silently invalid JSON otherwise: valid JSON one moment (another field
+     * present after it) and broken the next depending on which fields a given tag
+     * happens to have.
+     */
+    private static void closeJsonObject(StringBuilder json) {
+        trimTrailingComma(json);
+        json.append("}\n");
+    }
+
+    /** Removes a trailing comma (ignoring trailing whitespace) if present, no-op otherwise. */
+    private static void trimTrailingComma(StringBuilder json) {
+        int i = json.length() - 1;
+        while (i >= 0 && Character.isWhitespace(json.charAt(i))) {
+            i--;
+        }
+        if (i >= 0 && json.charAt(i) == ',') {
+            json.delete(i, i + 1);
+        }
     }
 
     /**
@@ -296,6 +322,7 @@ public class TaginfoConverter {
         if (countNodes > 0) json.append("    \"osm:countNodes\": ").append(countNodes).append(",\n");
         if (countWays > 0) json.append("    \"osm:countWays\": ").append(countWays).append(",\n");
         if (countRelations > 0) json.append("    \"osm:countRelations\": ").append(countRelations);
+        trimTrailingComma(json);
         json.append("\n  },\n");
 
         // Add used values as skos:example literals
@@ -313,7 +340,7 @@ public class TaginfoConverter {
             json.append("\n  ],\n");
         }
 
-        json.append("}\n");
+        closeJsonObject(json);
         return json.toString();
     }
 
