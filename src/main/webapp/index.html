@@ -250,6 +250,15 @@
     &mdash; not a clickable URI, see
     <a href="https://tracestrack.com/docs/">Tracestrack's own docs</a> for
     the request shape (forwarded through unmodified).</p>
+  <p>The family-standard <code>/tile?s=&amp;layer=&amp;z=&amp;x=&amp;y=</code>
+    shape (same contract as linked-adv/linked-pdok/linked-cdse's own
+    <code>/tile</code>), here a cached wrapper around the Tracestrack raster
+    passthrough above &mdash; content-negotiates a Turtle description of the
+    same tile's footprint and ground resolution:</p>
+  <ul>
+    <li><a href="/tile?s=tracestrack&amp;layer=topo_en&amp;z=10&amp;x=543&amp;y=349">/tile?s=tracestrack&amp;layer=topo_en&amp;z=10&amp;x=543&amp;y=349</a>
+      &mdash; raster (<a href="/tile?s=tracestrack&amp;layer=topo_en&amp;z=10&amp;x=543&amp;y=349&amp;f=ttl">.ttl</a>)</li>
+  </ul>
 
   <h3>Wrapper</h3>
   <p>Introspection into the wrapper itself, not an upstream.</p>

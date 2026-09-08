@@ -2,6 +2,44 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-08] `/tile?s=&layer=&z=&x=&y=`: the family-standard tile endpoint, backed by Tracestrack
+
+- New `TileServlet` at `/tile` matches the shape linked-adv/linked-pdok/
+  linked-cdse/linked-inspire already serve for their own WMS-backed `/tile`:
+  `?s={source}&layer={layer}&z=&x=&y=[&style=][&f=webp|png|ttl|rdf|nt]`.
+  Unlike those siblings there is no WMS and no reprojection to get wrong -
+  Tracestrack's raster API is already a Web-Mercator z/x/y pyramid at
+  256×256, so this is a cached pass-through of the existing
+  `TracestrackTileServlet` proxy wrapped in the shared contract, not a new
+  upstream integration. `s` is a one-value enum (`tracestrack`) today rather
+  than a free service URL - there's no multi-service registry here, only one
+  commercial raster source wired up - left as a parameter so a second source
+  can be added later without breaking callers.
+- Caffeine-cached (128 MB, 6 h TTL, keyed by the upstream URL) like the
+  sibling `/tile`s. `&f=ttl`/`&f=rdf`/`&f=nt` (or an RDF-preferring `Accept`)
+  answers a `dcat:Distribution` description instead of the image: footprint
+  WKT, `dcat:spatialResolutionInMeters` (same Mercator-latitude-corrected
+  ground-resolution formula as the WMS-backed siblings), Tracestrack's
+  required attribution string, and `prov:hadPrimarySource`.
+- **The cache key and the `prov:hadPrimarySource` URL are both built with
+  `key=null`** - `upstreamUrl(tile, ext, null)` - never derived by
+  stripping the credential from the real fetch URL after the fact. The
+  family checklist's "a test asserting the key never reaches a
+  serialization" is pinned by `TileServletTest.cacheKeyFormOmitsCredentialEntirely`.
+- **This is the general-purpose, interactive-use endpoint - not the
+  bulk/systematic corpus-export use case** in
+  `plans/tile-endpoint-osm-carto.md`, which Tracestrack's terms of service
+  gate on a separate written mass-download agreement not yet sought. A
+  single map client panning around (this wrapper's own map UI, or any
+  sibling wrapper's consumer) is the ordinary use this proxy and the
+  existing `TracestrackTileServlet` already serve; that plan's blocker is
+  unaffected by this change.
+- Smoke-tested against a local Jetty with a real Tracestrack key configured:
+  usage JSON on missing params, 404 on an unknown `s=` or an out-of-range
+  `z`/`x`/`y`, 402 on an untrusted/unkeyed request, a real raster fetch
+  round-tripping through the cache, and the `&f=ttl` description rendering
+  with the upstream URL key-free.
+
 ## [2026-09-04] Describe `index#osmwrap`'s version via doap:release/doap:Version
 
 - `owl:versionInfo` on `<index#osmwrap>` replaced with `doap:release [ a
