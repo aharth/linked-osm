@@ -70,11 +70,15 @@ check_rapper() {
     fi
 }
 
-# Run SPARQL query against a local Turtle file (roqet -D requires a URL)
+# Run SPARQL query against a local Turtle file (roqet -D requires a URL).
+# -F turtle is required: raptor's content-based format guesser recognizes
+# "@prefix"-style Turtle but not the "BASE"/"PREFIX" (no @) prologue style
+# some osmwrap Turtle responses use, and these fetched files have no
+# extension for guessing to fall back on either.
 roqet_doc() {
     local label="$1" file="$2" base_url="$3" query="$4"
     local result
-    result=$(roqet -q -D "file://$file" -e "$query" 2>/dev/null) || true
+    result=$(roqet -q -F turtle -D "file://$file" -e "$query" 2>/dev/null) || true
     if [ -n "$result" ]; then
         ok "$label"
         echo "     $(echo "$result" | head -2)"
@@ -158,12 +162,83 @@ test_resource() {
     echo ""
 }
 
+# Fetch /tag/{key} and /tag/{key}={value}: SKOS concepts served by TagServlet,
+# minted as dc:subject on /overpass/features output (map.xsl). key=value pages
+# were added 2026-09-09 to fix /tag/{key}={value} 404s (was a plain 404 by
+# design; Taginfo's per-value /tag/stats endpoint made it worth building).
+#
+# httpRange-14 split (added 2026-09-09): the SKOS concept lives at an absolute
+# {url}#concept, not the bare document URL -- the bare "" document instead
+# carries prov:generatedAtTime/wasAttributedTo/hadPrimarySource about the
+# response itself. #concept is an absolute reference (baseUri+key+"#concept"),
+# not a bare relative "#concept", so the concept's identity is the same
+# whether fetched as .rdf, .json, or content-negotiated plain -- only the
+# document-level prov triples differ per URL variant.
+test_tag() {
+    local key="$1" value="$2"
+    local url="$BASE/tag/$key"
+    local vurl="$BASE/tag/$key=$value"
+
+    echo "-- tag key $key"
+    local RDF JSON
+    RDF=$(fetch_once "$url.rdf" "application/rdf+xml")
+    JSON=$(fetch_once "$url.json")
+    if [ -z "$RDF" ]; then
+        fail "tag key RDF/XML: fetch failed"
+    else
+        check_rapper "tag key RDF/XML valid" rdfxml "$RDF" "$url.rdf"
+        grep -q '<skos:Concept' "$RDF" \
+            && ok  "tag key: is skos:Concept" \
+            || fail "tag key: not marked as skos:Concept"
+        grep -q 'prov:generatedAtTime' "$RDF" \
+            && ok  "tag key: document has prov:generatedAtTime" \
+            || fail "tag key: document missing prov:generatedAtTime"
+    fi
+    if [ -z "$JSON" ]; then
+        fail "tag key JSON-LD: fetch failed"
+    else
+        ok "tag key JSON-LD: fetch ok"
+    fi
+    [ -n "$RDF" ] && rm -f "$RDF"
+    [ -n "$JSON" ] && rm -f "$JSON"
+    echo ""
+
+    echo "-- tag value $key=$value"
+    local VTTL VRDF
+    VTTL=$(fetch_once "$vurl" "text/turtle")
+    VRDF=$(fetch_once "$vurl.rdf" "application/rdf+xml")
+
+    if [ -z "$VTTL" ]; then
+        fail "tag value Turtle: fetch failed"
+    else
+        check_rapper "tag value Turtle valid" turtle "$VTTL" "$vurl"
+        roqet_doc "tag value: document has prov:wasAttributedTo" "$VTTL" "$vurl" \
+            "PREFIX prov: <http://www.w3.org/ns/prov#>
+             SELECT ?a WHERE { <$vurl> prov:wasAttributedTo ?a } LIMIT 1"
+        roqet_doc "tag value: skos:broader points at key #concept" "$VTTL" "$vurl" \
+            "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+             SELECT ?b WHERE { <$vurl#concept> skos:broader ?b } LIMIT 1"
+    fi
+
+    if [ -z "$VRDF" ]; then
+        fail "tag value RDF/XML: fetch failed"
+    else
+        check_rapper "tag value RDF/XML valid" rdfxml "$VRDF" "$vurl.rdf"
+    fi
+
+    [ -n "$VTTL" ] && rm -f "$VTTL"
+    [ -n "$VRDF" ] && rm -f "$VRDF"
+    echo ""
+}
+
 echo "=== osmwrap RDF smoke tests  BASE=$BASE ==="
 echo ""
 
 test_resource node     11980635629 "$BASE/osm/node/11980635629"
 test_resource way      100          "$BASE/osm/way/100"
 test_resource relation 147          "$BASE/osm/relation/147"
+
+test_tag tracktype grade1
 
 # ── SPARQL endpoint queries (FROM uses relative URIs resolved by server BASE) ──
 echo "-- SPARQL endpoint $SPARQL"
@@ -197,6 +272,21 @@ roqet_sparql "SPARQL: relation label" \
      SELECT ?r ?lbl
      FROM </osm/relation/147>
      WHERE { ?r rdfs:label ?lbl } LIMIT 3'
+
+# /tag schema: key concepts and their key=value narrower concepts (added 2026-09-09
+# alongside the key=value fix, as worked examples of the SKOS shape for consumers).
+roqet_sparql "SPARQL: tag key concepts" \
+    'PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+     SELECT ?concept ?label
+     FROM </tag/tracktype>
+     WHERE { ?concept a skos:Concept ; skos:prefLabel ?label } LIMIT 3'
+
+roqet_sparql "SPARQL: tag value narrower than key" \
+    'PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+     PREFIX osm: <http://osm.geovocab.org/vocab#>
+     SELECT ?value ?broader ?count
+     FROM </tag/tracktype=grade1>
+     WHERE { ?value skos:broader ?broader ; osm:countAll ?count } LIMIT 3'
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

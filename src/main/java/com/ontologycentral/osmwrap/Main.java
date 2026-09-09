@@ -302,6 +302,9 @@ public class Main {
             // Fetch key values
             String values = converter.fetchKeyValues(tagKey);
 
+            // Fetch confirmed OSM wiki page (title + description), if any
+            String wikiJson = converter.fetchKeyWiki(tagKey);
+
             // For base keys (no colon), fetch namespace variants
             String namespacesJson = "";
             if (!tagKey.contains(":")) {
@@ -309,7 +312,7 @@ public class Main {
             }
 
             // Convert to SKOS JSON-LD (native format from Taginfo API)
-            String output = converter.convertToSKOSJson(tagKey, keyInfo, values, namespacesJson, "/tag/");
+            String output = converter.convertToSKOSJson(tagKey, keyInfo, values, namespacesJson, "/tag/", wikiJson);
             System.out.println(output);
 
         } catch (IOException e) {

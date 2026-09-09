@@ -64,7 +64,11 @@
 
       <!-- Feature bodies for answers fetched with `out geom` (the
            /overpass/features query): tags as dc:subject links to the /tag
-           SKOS concepts, geometry as a WKT literal (CRS84 lon/lat).
+           SKOS concept for that key=value pair, at its #concept fragment
+           (dereferenceable via TagServlet.handleValueRequest, narrower than
+           /tag/{key}#concept; the bare /tag/{key}={value} document carries
+           PROV-O about the response itself, not the concept it describes),
+           geometry as a WKT literal (CRS84 lon/lat).
            Untagged elements stay reference-only; relations get tags but no
            geometry (multipolygon assembly is not the XSLT's job). -->
       <xsl:for-each select="node[tag]">
@@ -98,7 +102,7 @@
 
   <xsl:template name="feature-tags">
     <xsl:for-each select="tag">
-      <dc:subject rdf:resource="/tag/{encode-for-uri(@k)}={encode-for-uri(@v)}"/>
+      <dc:subject rdf:resource="/tag/{encode-for-uri(@k)}={encode-for-uri(@v)}#concept"/>
     </xsl:for-each>
   </xsl:template>
 

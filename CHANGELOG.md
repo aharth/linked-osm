@@ -2,6 +2,133 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-09] `/tag` pages gain real OSM wiki links/definitions and a codelist split; fixed a silently-wrong-overload bug and an unsorted-values bug found along the way
+
+- **`/tag/{key}` and `/tag/{key}={value}` now link to a *confirmed* OSM wiki
+  page with a real definition, instead of a guessed link with no
+  description.** The previous `rdfs:seeAlso` was hand-built
+  (`https://wiki.openstreetmap.org/wiki/Key:{key}`) and never checked
+  against anything — could point at a page that doesn't exist. Taginfo's
+  `wiki_pages` endpoint (`/key/wiki_pages?key=...`, `/tag/wiki_pages?key=..
+  &value=...`) returns the actual per-language wiki pages, each with a
+  confirmed `title` and a real `description`. `TaginfoConverter` now calls
+  this, extracts the English entry, and only emits `rdfs:seeAlso` when a
+  page is confirmed to exist, plus a new `skos:definition` with the real
+  text. Also fixed `fetchKeyWiki`, which was dead code with the wrong URL
+  shape (`/key/{key}/wiki_pages`, a 404) — the correct endpoint is
+  query-param style.
+- **`/tag/{key}` now models its values as a codelist, not a flat top-20
+  list.** Taginfo's `/key/values` response carries an `in_wiki` flag and a
+  description per value — already fetched for the key page, previously
+  discarded down to a bare value string. `in_wiki: true` is the closest
+  thing OSM tagging has to a controlled vocabulary for a key (most keys are
+  otherwise freeform text): those values now get `skos:narrower` links to
+  their own `/tag/{key}={value}#concept` page; unconfirmed values stay
+  `skos:example`-only, unlinked. For `surface` (well-documented) most of
+  the top 20 are wiki-confirmed; for `name` (freeform place names), only 4
+  of 20 are — exactly the intended split.
+- **Fixed a real, unrelated bug found while checking the above**:
+  `fetchKeyValues` had no `sortname`/`sortorder`, so Taginfo returned
+  values in essentially arbitrary order — for `building` this meant
+  single-use junk like `#16`/`#5d98e5` ahead of `yes`/`house` (used
+  millions of times). Every `skos:example`/`skos:narrower` on every key
+  page has been listing near-random noise instead of the actually common
+  values since the endpoint was added. Fixed with
+  `sortname=count&sortorder=desc`.
+- **Caught a silently-wrong-overload bug of my own before it shipped**:
+  after adding a `wikiJson` parameter, two unrelated `TaginfoConverter`
+  methods ended up with the same 5-`String` arity. `TagServlet`'s existing
+  5-argument call to the renamed method **compiled cleanly** against the
+  *other* overload — no compiler error, just silently wrong values
+  (`namespacesJson` bound to `baseUri`, the literal `"/tag/"` bound to
+  `wikiJson`). Caught only by reading `javac`'s full error output line by
+  line rather than trusting a `BUILD_OK`. Fixed by updating all three call
+  sites (`TagServlet.doGet`, `TagServlet.handleValueRequest`, `Main.java`)
+  to actually fetch and pass the wiki data.
+- Smoke suite still green after all of the above: 36/36.
+
+## [2026-09-09] `/tag/{key}={value}` now dereferenceable, with its own SKOS concept, PROV-O, wiki links, and caching; a self-inflicted outage from an invalid XML comment
+
+- **`/tag/{key}={value}` 404s fixed**: `dc:subject` on `/overpass/features`
+  output (`map.xsl`) has always minted per-tag URIs in this shape, but
+  `TagServlet` explicitly 404'd on any `key=value` path — values existed
+  only as `skos:example` literals on the key's own page, never as their own
+  resource. Found from behaim's consuming side (linking each OSM class in a
+  training-corpus overview table to its definition) hitting a 404 on a real,
+  unmodified `dc:subject` value. Fixed by building real per-value pages:
+  `TaginfoConverter.fetchTagStats`/`convertValueToSKOSRDF`/
+  `convertValueToSKOSJson` call Taginfo's `/tag/stats` endpoint (the
+  per-value sibling of the `/key/overview` call the key page already used)
+  and `TagServlet.handleValueRequest` serves the result instead of 404ing.
+- **Fixed a 500 on values containing reserved URI characters** (e.g. a
+  literal space): the minted `rdf:about`/`@id` only used XML-entity
+  escaping, not URI-safety, so a value like `Café & Bar` produced a
+  syntactically invalid IRI that Jena's Turtle serializer rejected. Added
+  `encodeUriComponent` (percent-encoding via `URLEncoder`, converted from
+  form-encoding to RFC 3986 style) and applied it everywhere a tag *value*
+  is embedded in a minted URI.
+- **httpRange-14 split for `/tag` pages**: the SKOS concept now lives at an
+  absolute `#concept` fragment (`/tag/building=yes#concept`), matching this
+  family's existing `/node/{id}#id` convention, instead of at the bare
+  document URL. The bare document now carries `prov:generatedAtTime`,
+  `prov:wasAttributedTo </index#osmwrap>`, and `prov:hadPrimarySource`
+  pointing at the actual Taginfo API call — previously `/tag` pages carried
+  no provenance at all. Applied to both key and value pages, RDF/XML and
+  JSON-LD (`@graph` with a document node + a `#concept` node), including
+  namespace-variant keys and the `/tag/index` scheme's `hasConcept` links.
+  Caught and fixed a design bug of my own mid-change: the concept was first
+  minted at a *bare relative* `"#concept"`, so its identity silently shifted
+  depending on whether `.rdf`, `.json`, or the plain content-negotiated URL
+  fetched it. Fixed by hardcoding the absolute path instead of relying on
+  relative-URI resolution.
+- **Fixed a percent-encoding inconsistency for colon-namespaced keys**
+  (e.g. `building:type:de`): value pages and `skos:narrower` links were
+  percent-encoding the *key* portion too, producing
+  `/tag/building%3Atype%3Ade#concept` — a different URI string than what
+  the key's own page asserts about itself (`/tag/building:type:de#concept`,
+  unencoded, colons are safe in URI paths). Only the *value* genuinely needs
+  percent-encoding (free text, can contain spaces/`&`/etc.); the key now
+  stays in the same plain form everywhere, so `skos:broader`/`skos:narrower`
+  always point at the exact URI the target document self-identifies as.
+- **`/tag/{key}` now `skos:narrower`-links its values**: each value already
+  listed as a `skos:example` literal also gets a
+  `skos:narrower rdf:resource=".../tag/{key}={value}#concept"` link, in
+  both RDF/XML and JSON-LD, for plain and colon-namespaced keys alike.
+- **`/tag/{key}` now links to its OSM wiki page**: `rdfs:seeAlso` to
+  `https://wiki.openstreetmap.org/wiki/Key:{key}` already existed for
+  `/tag/{key}={value}` pages and for colon-namespaced keys' RDF/XML, but
+  was missing entirely for the common case (plain keys, e.g. `/tag/building`)
+  and for colon-namespaced keys' JSON-LD. Added to both remaining paths;
+  normalized the one existing link from `http://` to `https://`.
+- **Added server-side caching for Taginfo API calls**: `TaginfoConverter`
+  now caches raw Taginfo responses (Caffeine, 24h TTL matching the
+  `Cache-Control` header `TagServlet` already sends, 5000-entry cap),
+  mirroring the pattern already used in `FeatureServlet`/`SparqlServlet`/
+  `TileServlet`. A repeat request for the same key/value within the window
+  skips the round trip to Taginfo entirely.
+- **Self-inflicted outage, found and fixed**: a comment added to `map.xsl`
+  during the above used `--` (double hyphen) inside an XML comment, which
+  is illegal XML. `Listener.contextInitialized` loads `map.xsl` eagerly at
+  startup via `TransformerFactory.newTemplates`, so the broken comment threw
+  there, `Listener`'s failed startup took the *entire* webapp down (every
+  route, not just `/tag`) — matching exactly the "one or more listeners
+  failed to start" / `Context ... startup failed` log lines seen after
+  deploy. Fixed and re-verified every `.xsl` file with `xmllint --noout`
+  plus an actual Saxon `Templates` load (the same call `Listener` makes)
+  before the next deploy.
+- **`test/smoke-rdf.sh`**: added `test_tag()` covering `/tag/{key}` and
+  `/tag/{key}={value}` (RDF/XML + Turtle validity, `skos:Concept` typing,
+  `prov:generatedAtTime`/`wasAttributedTo`, `skos:broader` resolving to the
+  key's `#concept`) plus two `/sparql` examples demonstrating the `/tag`
+  schema. Fixed two latent bugs in the script surfaced by writing these:
+  a `local a=... b=$a` assignment reading the not-yet-set outer `$a` under
+  `set -u` (split into separate `local` statements), and `roqet_doc` failing
+  to parse Turtle bodies that use the `BASE`/`PREFIX` (no `@`) prologue
+  style instead of `@prefix`/`@base` — raptor's content-sniffing guesser
+  doesn't recognize it and the fetched files have no extension to fall back
+  on, so results silently came back empty; fixed with an explicit
+  `-F turtle`. Suite is green after all fixes above: 36/36.
+
 ## [2026-09-09] Production outage fixed (dead shared `HttpClient`); a classloader leak, a SPARQL-graph-loading URI bug, a suffix-vs-Accept bug, and an invalid-JSON bug found and fixed; new smoke coverage for every upstream
 
 - **Root-caused and fixed a live production outage**: every upstream call

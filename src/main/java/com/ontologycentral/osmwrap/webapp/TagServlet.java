@@ -12,11 +12,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * Servlet that provides SKOS representations of OSM tag keys.
+ * Servlet that provides SKOS representations of OSM tag keys and key=value pairs.
  *
  * Endpoints:
  * - /tag/{key}.rdf - SKOS/RDF representation
  * - /tag/{key}.json - SKOS JSON-LD representation
+ * - /tag/{key}={value}.rdf - SKOS/RDF representation of one tag value, narrower than {key}
+ * - /tag/{key}={value}.json - SKOS JSON-LD representation of one tag value
  */
 @SuppressWarnings("serial")
 public class TagServlet extends HttpServlet {
@@ -69,9 +71,12 @@ public class TagServlet extends HttpServlet {
             return;
         }
 
-        // key=value paths are not supported; values are listed on the key resource
-        if (key.indexOf('=') > 0) {
-            resp.sendError(404, "Tag value URIs are not supported; see /tag/" + key.substring(0, key.indexOf('=')));
+        // key=value: a narrower SKOS concept for one specific tag value
+        int eq = key.indexOf('=');
+        if (eq > 0) {
+            String tagKey = key.substring(0, eq);
+            String tagValue = key.substring(eq + 1);
+            handleValueRequest(resp, tagKey, tagValue, format);
             return;
         }
 
@@ -81,6 +86,7 @@ public class TagServlet extends HttpServlet {
             // Fetch data from Taginfo
             String keyInfo = converter.fetchKeyInfo(key);
             String values = converter.fetchKeyValues(key);
+            String wikiJson = converter.fetchKeyWiki(key);
 
             // For base keys (no colon), also fetch namespace variants
             String namespacesJson = "";
@@ -91,10 +97,10 @@ public class TagServlet extends HttpServlet {
             String output;
             if (format.equals("json")) {
                 resp.setContentType("application/ld+json");
-                output = converter.convertToSKOSJson(key, keyInfo, values, namespacesJson, "/tag/");
+                output = converter.convertToSKOSJson(key, keyInfo, values, namespacesJson, "/tag/", wikiJson);
             } else {
                 resp.setContentType("application/rdf+xml");
-                output = converter.convertToSKOSRDF(key, keyInfo, values, namespacesJson, "/tag/");
+                output = converter.convertToSKOSRDF(key, keyInfo, values, namespacesJson, "/tag/", wikiJson);
             }
 
             resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
@@ -107,6 +113,45 @@ public class TagServlet extends HttpServlet {
             return;
         } catch (RuntimeException e) {
             _log.warning("Error processing tag: " + e.getMessage());
+            resp.sendError(500, "Error processing tag: " + e.getMessage());
+            return;
+        }
+
+        os.close();
+    }
+
+    /**
+     * Handle requests for /tag/{key}={value}.{rdf|json}
+     */
+    private void handleValueRequest(HttpServletResponse resp, String key, String value, String format)
+            throws IOException {
+        OutputStream os = resp.getOutputStream();
+
+        try {
+            _log.info("fetching tag stats for: " + key + "=" + value);
+
+            String statsJson = converter.fetchTagStats(key, value);
+            String wikiJson = converter.fetchTagWiki(key, value);
+
+            String output;
+            if (format.equals("json")) {
+                resp.setContentType("application/ld+json");
+                output = converter.convertValueToSKOSJson(key, value, statsJson, "/tag/", wikiJson);
+            } else {
+                resp.setContentType("application/rdf+xml");
+                output = converter.convertValueToSKOSRDF(key, value, statsJson, "/tag/", wikiJson);
+            }
+
+            resp.setCharacterEncoding(StandardCharsets.UTF_8.name());
+            resp.setHeader("Cache-Control", "public, max-age=86400"); // Cache for 1 day
+            os.write(output.getBytes(StandardCharsets.UTF_8));
+
+        } catch (IOException e) {
+            _log.warning("Error fetching tag stats: " + e.getMessage());
+            resp.sendError(503, "Unable to fetch tag information: " + e.getMessage());
+            return;
+        } catch (RuntimeException e) {
+            _log.warning("Error processing tag value: " + e.getMessage());
             resp.sendError(500, "Error processing tag: " + e.getMessage());
             return;
         }
