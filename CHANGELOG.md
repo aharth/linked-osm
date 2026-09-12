@@ -2,6 +2,27 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-12] `RateLimitFilter` accepts self-issued API keys from a shared key directory
+
+- **Bearer keys no longer have to be baked into the WAR.** `RateLimitFilter`
+  now also accepts any key whose SHA-256 hex hash names a `<hash>.json` file
+  in the directory given by the new `keys-dir` context-param (`keys.dir`
+  Maven property, same `~/.m2/settings.xml` convention as `api.keys`; empty
+  means the lookup is off). Those files are written by the new wunderfacts
+  key service after a WebID (Solid-OIDC) login — see
+  `wunderfacts/plans/api-keys.md` for the contract. Deleting a file revokes
+  the key. The raw key is never on disk, only its hash, and the file name is
+  derived from the hash so a token can't escape the directory.
+- The static `api-keys` list still works as a **fallback** (checked after the
+  filesystem), so the shared token keeps working while callers move to
+  self-issued keys. Dropping it is a follow-up.
+- A self-issued key gets the same `OverpassRouting.TRUSTED_ATTR` treatment as
+  a static one (paid Tracestrack route). No other behaviour changed.
+- `web.xml`: fixed the stale comment still claiming an `OSMWRAP_API_KEYS`
+  env var override (removed 2026-08-26).
+- **Only linked-osm so far.** The other `linked-*` copies of the filter are
+  unchanged; porting is the next step.
+
 ## [2026-09-09] `/tag` pages gain real OSM wiki links/definitions and a codelist split; fixed a silently-wrong-overload bug and an unsorted-values bug found along the way
 
 - **`/tag/{key}` and `/tag/{key}={value}` now link to a *confirmed* OSM wiki

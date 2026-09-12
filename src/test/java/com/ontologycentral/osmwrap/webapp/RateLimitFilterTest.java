@@ -5,11 +5,18 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Set;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
-/** Subnet exemption logic of the per-IP rate limit. */
+/** Subnet exemption and API-key lookup logic of the per-IP rate limit. */
 public class RateLimitFilterTest {
+
+    @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
     @Test
     public void localIpv4RangeIsExempt() {
@@ -71,5 +78,46 @@ public class RateLimitFilterTest {
         assertNull(RateLimitFilter.bearerToken("Bearer "));
         assertNull(RateLimitFilter.bearerToken("Basic abc123"));
         assertNull(RateLimitFilter.bearerToken("abc123"));
+    }
+
+    @Test
+    public void sha256HexKnownAnswer() {
+        // printf 'abc' | sha256sum
+        assertEquals(
+                "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                RateLimitFilter.sha256Hex("abc"));
+        assertEquals(64, RateLimitFilter.sha256Hex("").length());
+    }
+
+    @Test
+    public void keyFileExistsMatchesHashedFileName() throws IOException {
+        Path dir = tmp.getRoot().toPath();
+        String key = "wf_abcDEF0123456789-_";
+        Files.writeString(dir.resolve(RateLimitFilter.sha256Hex(key) + ".json"),
+                "{\"principal\":\"https://example.org/me#i\"}");
+        assertTrue(RateLimitFilter.keyFileExists(dir, key));
+        assertFalse(RateLimitFilter.keyFileExists(dir, "wf_unknown"));
+        assertFalse(RateLimitFilter.keyFileExists(dir, "../../etc/passwd"));
+        assertFalse(RateLimitFilter.keyFileExists(dir, "has space"));
+        assertFalse(RateLimitFilter.keyFileExists(dir, ""));
+        assertFalse(RateLimitFilter.keyFileExists(dir, null));
+        assertFalse(RateLimitFilter.keyFileExists(dir.resolve("missing"), key));
+        assertFalse(RateLimitFilter.keyFileExists(null, key));
+    }
+
+    @Test
+    public void keyFileMustBeRegularFile() throws IOException {
+        Path dir = tmp.getRoot().toPath();
+        String key = "wf_dirnotfile";
+        Files.createDirectory(dir.resolve(RateLimitFilter.sha256Hex(key) + ".json"));
+        assertFalse(RateLimitFilter.keyFileExists(dir, key));
+    }
+
+    @Test
+    public void parseKeysDirBlankMeansOff() {
+        assertNull(RateLimitFilter.parseKeysDir(null));
+        assertNull(RateLimitFilter.parseKeysDir("   "));
+        assertEquals(Path.of("/var/lib/wunderfacts/keys"),
+                RateLimitFilter.parseKeysDir(" /var/lib/wunderfacts/keys "));
     }
 }

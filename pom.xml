@@ -37,6 +37,21 @@
     <api.keys></api.keys>
 
     <!--
+      Directory of self-issued API keys, shared with the wunderfacts key
+      service on the same host (one <sha256-of-key>.json per key). Same rule
+      as api.keys: EMPTY HERE, real value in the ~/.m2/settings.xml profile:
+
+        <properties>
+          <api.keys>THE-TOKEN</api.keys>
+          <keys.dir>/var/lib/wunderfacts/keys</keys.dir>
+        </properties>
+
+      A clone without it builds a WAR that only honours the static api.keys
+      list; the filesystem lookup is simply off.
+    -->
+    <keys.dir></keys.dir>
+
+    <!--
       Tracestrack Overpass API key (paid plan) - same rule as api.keys above:
       EMPTY HERE AND NEVER SET IN THIS FILE. Real value goes in the same
       ~/.m2/settings.xml profile:

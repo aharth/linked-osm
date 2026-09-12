@@ -11,8 +11,15 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<param-value>https</param-value>
 	</context-param>
 
-	<!-- rate-limit exemption keys (RateLimitFilter): the env var
-	     OSMWRAP_API_KEYS overrides this baked-in fallback -->
+	<!-- rate-limit exemption keys (RateLimitFilter). Both values come from
+	     ~/.m2/settings.xml at package time, see pom.xml.
+	     keys-dir: shared directory of self-issued keys (<sha256>.json files
+	     written by the wunderfacts key service); empty disables the lookup.
+	     api-keys: legacy static comma-separated list, kept as a fallback. -->
+	<context-param>
+		<param-name>keys-dir</param-name>
+		<param-value>${keys.dir}</param-value>
+	</context-param>
 	<context-param>
 		<param-name>api-keys</param-name>
 		<param-value>${api.keys}</param-value>

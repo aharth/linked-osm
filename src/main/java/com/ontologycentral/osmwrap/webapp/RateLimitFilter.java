@@ -4,7 +4,11 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
@@ -32,9 +36,22 @@ import jakarta.servlet.http.HttpServletResponse;
  *   IPv4 192.168.0.0/16, IPv6 fc00::/7 and fe80::/10.
  *
  * <p>Requests carrying a valid API key in an {@code Authorization: Bearer <key>}
- * header are also exempt. Keys are configured as a comma-separated list via the
- * {@code api-keys} servlet context parameter, filtered into {@code web.xml} at
- * package time from the {@code api.keys} Maven property (set in
+ * header are also exempt. A key is valid if either
+ *
+ * <ul>
+ *   <li>a file named {@code <sha256-hex-of-key>.json} exists in the shared key
+ *       directory given by the {@code keys-dir} servlet context parameter. Keys
+ *       there are self-issued through the wunderfacts key service after a WebID
+ *       login (see {@code wunderfacts/plans/api-keys.md}); deleting the file
+ *       revokes the key. The raw key is never stored, only its hash. Unset
+ *       {@code keys-dir} disables this lookup; or
+ *   <li>it matches one of the static keys in the comma-separated
+ *       {@code api-keys} servlet context parameter. This is the legacy shared
+ *       token, kept as a fallback while callers move to self-issued keys.
+ * </ul>
+ *
+ * Both parameters are filtered into {@code web.xml} at package time from the
+ * {@code keys.dir} / {@code api.keys} Maven properties (set in
  * {@code ~/.m2/settings.xml}, never committed - see {@code pom.xml}). Both a
  * valid bearer key and the whitelisted-subnet/loopback exemptions above also
  * route Overpass-backed servlets to the paid Tracestrack endpoint instead of
@@ -80,14 +97,23 @@ public class RateLimitFilter implements Filter {
     }
 
     private static final String KEYS_PARAM = "api-keys";
+    private static final String KEYS_DIR_PARAM = "keys-dir";
+
+    /** Self-issued keys are base64url; anything else cannot be in the store. */
+    private static final java.util.regex.Pattern TOKEN_SHAPE =
+            java.util.regex.Pattern.compile("[A-Za-z0-9_-]{1,128}");
 
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
 
     private volatile Set<String> apiKeys = Set.of();
 
+    /** Shared key directory, or {@code null} when filesystem keys are off. */
+    private volatile Path keysDir;
+
     @Override
     public void init(FilterConfig cfg) {
         apiKeys = parseKeys(cfg.getServletContext().getInitParameter(KEYS_PARAM));
+        keysDir = parseKeysDir(cfg.getServletContext().getInitParameter(KEYS_DIR_PARAM));
     }
 
     @Override
@@ -123,7 +149,13 @@ public class RateLimitFilter implements Filter {
 
     private boolean hasValidKey(HttpServletRequest req) {
         String token = bearerToken(req.getHeader("Authorization"));
-        if (token == null || apiKeys.isEmpty()) {
+        if (token == null) {
+            return false;
+        }
+        if (keysDir != null && keyFileExists(keysDir, token)) {
+            return true;
+        }
+        if (apiKeys.isEmpty()) {
             return false;
         }
         byte[] tokenBytes = token.getBytes(StandardCharsets.UTF_8);
@@ -147,6 +179,40 @@ public class RateLimitFilter implements Filter {
             }
         }
         return Set.copyOf(keys);
+    }
+
+    static Path parseKeysDir(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return Paths.get(value.trim());
+    }
+
+    /**
+     * Whether {@code dir/<sha256-hex(token)>.json} exists. The file name is
+     * derived from the hash, never from the token itself, so no token can
+     * escape the directory; the shape check just skips hashing obvious junk.
+     */
+    static boolean keyFileExists(Path dir, String token) {
+        if (dir == null || token == null || !TOKEN_SHAPE.matcher(token).matches()) {
+            return false;
+        }
+        return Files.isRegularFile(dir.resolve(sha256Hex(token) + ".json"));
+    }
+
+    static String sha256Hex(String s) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(s.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(Character.forDigit((b >> 4) & 0xf, 16))
+                   .append(Character.forDigit(b & 0xf, 16));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     static String bearerToken(String authHeader) {
