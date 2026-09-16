@@ -15,6 +15,7 @@
   <xsl:param name="element-id" select="''"/>
   <xsl:param name="source-prefix" select="'/osm'"/>
   <xsl:param name="upstream-url" select="''"/>
+  <xsl:param name="geometry-gml" select="''"/>
 
   <xsl:key name="nodeById" match="node" use="@id"/>
 
@@ -70,7 +71,13 @@
       <xsl:text>    foaf:page &lt;/geo/osm/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>&gt; ;&#10;</xsl:text>
       <xsl:text>    foaf:page &lt;/geo/overpass/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>&gt; ;&#10;</xsl:text>
       <xsl:text>    geo:lat "</xsl:text><xsl:value-of select="sum($allNodes/@lat) div count($allNodes)"/><xsl:text>" ;&#10;</xsl:text>
-      <xsl:text>    geo:long "</xsl:text><xsl:value-of select="sum($allNodes/@lon) div count($allNodes)"/><xsl:text>" .&#10;</xsl:text>
+      <xsl:text>    geo:long "</xsl:text><xsl:value-of select="sum($allNodes/@lon) div count($allNodes)"/><xsl:text>"</xsl:text>
+      <xsl:if test="normalize-space($geometry-gml) != ''">
+        <xsl:text> ;&#10;    locn:geometry "</xsl:text>
+        <xsl:value-of select="local:ttl($geometry-gml)"/>
+        <xsl:text>"^^rdf:XMLLiteral</xsl:text>
+      </xsl:if>
+      <xsl:text> .&#10;</xsl:text>
       <xsl:text>&#10;</xsl:text>
     </xsl:if>
 

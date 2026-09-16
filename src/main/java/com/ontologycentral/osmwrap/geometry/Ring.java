@@ -139,6 +139,27 @@ public class Ring {
     }
 
     /**
+     * Convert ring to a GML {@code gml:posList} coordinate string (lon lat lon lat ...) -
+     * CRS84 axis order, matching node.xsl/way.xsl's hand-built GML.
+     * @return "lon lat lon lat ... lon lat", or "" if not closed/empty
+     */
+    public String toGmlPosList() {
+        if (!isClosed || coordinates.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < coordinates.size(); i++) {
+            if (i > 0) {
+                sb.append(" ");
+            }
+            double[] coord = coordinates.get(i);
+            sb.append(coord[0]).append(" ").append(coord[1]);
+        }
+        return sb.toString();
+    }
+
+    /**
      * Convert ring to KML format
      * @return <coordinates>lon,lat,0 lon,lat,0 ...</coordinates>
      */

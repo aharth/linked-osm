@@ -203,6 +203,55 @@ public class MultipolygonGeometry {
         return sb.toString();
     }
 
+    private static final String GML_NS = "xmlns:gml=\"http://www.opengis.net/gml/3.2\"";
+    private static final String GML_CRS84 = "srsName=\"http://www.opengis.net/def/crs/OGC/1.3/CRS84\"";
+
+    /**
+     * Convert to a GML 3.2 {@code gml:Polygon} (single outer ring) or {@code gml:MultiSurface}
+     * (multiple outer rings) fragment, CRS84 axis order - matching the hand-built GML that
+     * node.xsl/way.xsl already embed via {@code locn:geometry}. Inner rings (holes) are
+     * associated with the first outer ring only, same simplification as {@link #toWKT()}.
+     * @return the GML fragment, or {@code null} if the geometry isn't valid
+     */
+    public String toGML() {
+        if (!isValid()) {
+            return null;
+        }
+        return isMultiPolygon() ? toGMLMultiSurface() : toGMLPolygon();
+    }
+
+    private String toGMLPolygon() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<gml:Polygon ").append(GML_NS).append(" ").append(GML_CRS84).append(">");
+        appendGmlPolygonBody(sb, outerRings.get(0), innerRings);
+        sb.append("</gml:Polygon>");
+        return sb.toString();
+    }
+
+    private String toGMLMultiSurface() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<gml:MultiSurface ").append(GML_NS).append(" ").append(GML_CRS84).append(">");
+        for (int i = 0; i < outerRings.size(); i++) {
+            sb.append("<gml:surfaceMember><gml:Polygon>");
+            // Associate inner rings with first polygon for simplicity, same as toWKTMultiPolygon.
+            appendGmlPolygonBody(sb, outerRings.get(i), i == 0 ? innerRings : List.of());
+            sb.append("</gml:Polygon></gml:surfaceMember>");
+        }
+        sb.append("</gml:MultiSurface>");
+        return sb.toString();
+    }
+
+    private static void appendGmlPolygonBody(StringBuilder sb, Ring outer, List<Ring> inners) {
+        sb.append("<gml:exterior><gml:LinearRing><gml:posList>")
+          .append(outer.toGmlPosList())
+          .append("</gml:posList></gml:LinearRing></gml:exterior>");
+        for (Ring inner : inners) {
+            sb.append("<gml:interior><gml:LinearRing><gml:posList>")
+              .append(inner.toGmlPosList())
+              .append("</gml:posList></gml:LinearRing></gml:interior>");
+        }
+    }
+
     /**
      * Convert to KML Polygon format with outerBoundaryIs and innerBoundaryIs
      */

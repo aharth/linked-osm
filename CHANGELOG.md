@@ -2,6 +2,28 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-17] Relations get real inline geometry in RDF; route relations' GeoJSON fallback no longer fetches member ways one at a time
+
+- **`/relation/{id}` RDF now carries the relation's actual shape, not just a centroid.**
+  `node.xsl`/`way.xsl` already embedded a full `locn:geometry` GML literal
+  (`gml:Point`/`gml:Polygon`/`gml:LineString`); `relation.xsl` only ever emitted an
+  averaged `geo:lat`/`geo:long` point, because building real multipolygon geometry
+  needs `MultipolygonHandler`'s ring-assembly logic, which only exists in Java, not
+  XSLT. `FeatureServlet` now builds a GML fragment (`GeoJsonConverter.extractGeometryGml`,
+  new `MultipolygonGeometry.toGML()`/`Ring.toGmlPosList()`) from the `/full` XML it
+  already fetched and passes it in as a new `geometry-gml` XSLT parameter; `relation.xsl`
+  embeds it as `locn:geometry` alongside the existing centroid when present. Multipolygon
+  relations get a real `gml:Polygon`/`gml:MultiSurface`; anything else (routes, ...) gets
+  a flattened `gml:LineString` over all member coordinates in order. No behaviour change
+  when geometry can't be built (upstream failure, no members, etc.) - falls back to the
+  centroid-only output as before.
+- **Fixed a real N+1: the non-multipolygon relation fallback in `GeoJsonConverter`
+  (used by `/geo/osm/relation/{id}` GeoJSON and now also by the RDF path above) fetched
+  every member way individually** (`GET /way/{id}` in a loop - hundreds of calls for a
+  large route relation). It now bulk-fetches via `HttpClientUtil.fetchWaysBulk` +
+  `fetchNodesBulk`, the same approach `MultipolygonHandler` already used for multipolygon
+  members - at most a couple of batched calls regardless of member count.
+
 ## [2026-09-12] `RateLimitFilter` accepts self-issued API keys from a shared key directory
 
 - **Bearer keys no longer have to be baked into the WAR.** `RateLimitFilter`

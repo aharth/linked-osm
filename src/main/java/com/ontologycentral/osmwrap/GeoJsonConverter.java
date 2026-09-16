@@ -1,8 +1,6 @@
 package com.ontologycentral.osmwrap;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -459,17 +457,7 @@ public final class GeoJsonConverter {
                     }
                 }
                 List<Map<String, String>> members = extractMemberReferences(osmXml);
-                List<double[]> coordinates = new ArrayList<>();
-                for (Map<String, String> member : members) {
-                    String memberType = member.get("type");
-                    String memberRef = member.get("ref");
-                    if ("node".equals(memberType)) {
-                        coordinates.addAll(fetchNodeCoordinates(java.util.Arrays.asList(memberRef)));
-                    } else if ("way".equals(memberType)) {
-                        List<String> wayNodeRefs = fetchWayNodeReferences(memberRef);
-                        coordinates.addAll(fetchNodeCoordinates(wayNodeRefs));
-                    }
-                }
+                List<double[]> coordinates = fetchRelationMemberCoordinates(members);
                 if (coordinates.isEmpty()) {
                     return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}");
                 }
@@ -482,6 +470,53 @@ public final class GeoJsonConverter {
             LOG.warning("Error extracting geometry from OSM: " + e.getMessage());
             return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}");
         }
+    }
+
+    /**
+     * Extract a GML 3.2 geometry fragment for a relation, for embedding inline in the RDF Turtle
+     * output ({@code locn:geometry}) the same way node.xsl/way.xsl already embed one for nodes
+     * and ways. Multipolygon relations get a real {@code gml:Polygon}/{@code gml:MultiSurface}
+     * via {@link MultipolygonHandler} (which reuses inline {@code /full} way/node data when the
+     * caller already fetched it - no extra upstream calls for that case); anything else
+     * (routes, ...) falls back to one flattened {@code gml:LineString} over all member
+     * coordinates in order, via {@link #fetchRelationMemberCoordinates}.
+     *
+     * @param osmXml OSM API XML response body (ideally a {@code /full} response)
+     * @param id     the OSM relation ID (used for logging)
+     * @return the GML fragment, or {@code null} if no geometry could be built
+     * @throws IOException if an upstream HTTP call fails
+     */
+    public static String extractGeometryGml(String osmXml, String id) throws IOException {
+        if (MultipolygonHandler.isMultipolygon(osmXml)) {
+            try {
+                LOG.info("Processing multipolygon relation " + id + " for GML");
+                MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(osmXml, id);
+                String gml = geom.toGML();
+                if (gml != null) {
+                    return gml;
+                }
+            } catch (Exception e) {
+                LOG.warning("Error processing multipolygon for GML: " + e.getMessage());
+            }
+        }
+        List<Map<String, String>> members = extractMemberReferences(osmXml);
+        List<double[]> coordinates = fetchRelationMemberCoordinates(members);
+        if (coordinates.isEmpty()) {
+            return null;
+        }
+        return buildGmlLineString(coordinates);
+    }
+
+    private static String buildGmlLineString(List<double[]> coordinates) {
+        StringBuilder posList = new StringBuilder();
+        for (int i = 0; i < coordinates.size(); i++) {
+            if (i > 0) posList.append(" ");
+            double[] c = coordinates.get(i);
+            posList.append(c[0]).append(" ").append(c[1]);
+        }
+        return "<gml:LineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" "
+                + "srsName=\"http://www.opengis.net/def/crs/OGC/1.3/CRS84\">"
+                + "<gml:posList>" + posList + "</gml:posList></gml:LineString>";
     }
 
     private static List<String> extractNodeReferences(String osmXml) {
@@ -507,15 +542,36 @@ public final class GeoJsonConverter {
         return members;
     }
 
-    private static List<String> fetchWayNodeReferences(String wayId) throws IOException {
-        String url = ApiConstants.OSM_API_BASE + "/way/" + wayId;
-        HttpResponse<InputStream> response = HttpClientUtil.get(url);
-        if (response.statusCode() != 200) {
-            return new ArrayList<>();
+    /**
+     * Resolves a route-style relation's member coordinates (nodes + way node lists) with two
+     * bulk upstream calls at most - one {@code fetchWaysBulk} for every member way, one
+     * {@code fetchNodesBulk} for every node referenced (directly or via a member way) - instead
+     * of one {@code GET /way/{id}} per member way. Mirrors how {@link MultipolygonHandler}
+     * already resolves multipolygon members.
+     */
+    private static List<double[]> fetchRelationMemberCoordinates(List<Map<String, String>> members)
+            throws IOException {
+        List<String> wayIds = new ArrayList<>();
+        for (Map<String, String> member : members) {
+            if ("way".equals(member.get("type"))) {
+                wayIds.add(member.get("ref"));
+            }
         }
-        String osmXml = HttpClientUtil.readToString(response.body());
-        response.body().close();
-        return extractNodeReferences(osmXml);
+        Map<String, List<String>> wayNodes = wayIds.isEmpty()
+                ? new HashMap<>() : HttpClientUtil.fetchWaysBulk(wayIds);
+
+        List<String> allNodeIds = new ArrayList<>();
+        for (Map<String, String> member : members) {
+            String memberType = member.get("type");
+            String memberRef = member.get("ref");
+            if ("node".equals(memberType)) {
+                allNodeIds.add(memberRef);
+            } else if ("way".equals(memberType)) {
+                List<String> nodeRefs = wayNodes.get(memberRef);
+                if (nodeRefs != null) allNodeIds.addAll(nodeRefs);
+            }
+        }
+        return fetchNodeCoordinates(allNodeIds);
     }
 
     private static List<double[]> fetchNodeCoordinates(List<String> nodeIds) throws IOException {

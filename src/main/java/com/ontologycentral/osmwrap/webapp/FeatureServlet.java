@@ -264,6 +264,14 @@ public class FeatureServlet extends HttpServlet {
                 }
                 if (ctrl.equals("/relation/")) {
                     t.setParameter("element-id", id);
+                    try {
+                        String gml = GeoJsonConverter.extractGeometryGml(xml, id);
+                        if (gml != null) {
+                            t.setParameter("geometry-gml", gml);
+                        }
+                    } catch (IOException | RuntimeException e) {
+                        _log.log(Level.WARNING, "relation " + id + ": geometry-gml build failed: " + e.getMessage(), e);
+                    }
                 }
                 resp.setContentType("text/turtle");
                 _log.info("applying xslt");
