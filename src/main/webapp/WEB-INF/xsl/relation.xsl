@@ -16,8 +16,11 @@
   <xsl:param name="source-prefix" select="'/osm'"/>
   <xsl:param name="upstream-url" select="''"/>
   <xsl:param name="geometry-gml" select="''"/>
-
-  <xsl:key name="nodeById" match="node" use="@id"/>
+  <!-- Mean of all member node coordinates, computed in Java from the /full response
+       (FeatureServlet/OsmFullDocument). The document this stylesheet sees has the member
+       node/way elements stripped, so there is nothing to sum here. Empty = no geometry. -->
+  <xsl:param name="centroid-lat" select="''"/>
+  <xsl:param name="centroid-lon" select="''"/>
 
   <xsl:template match="osm">
     <xsl:call-template name="ttl-prefixes"/>
@@ -37,8 +40,10 @@
   </xsl:template>
 
   <xsl:template match="relation">
-    <xsl:variable name="allNodes" select="//node[normalize-space(@lat)]"/>
-    <xsl:variable name="hasGeo" select="count($allNodes) > 0"/>
+    <!-- Geometry belongs to the requested relation only; member relations listed in the
+         same /full document get just their tags and members. -->
+    <xsl:variable name="hasGeo" select="normalize-space($centroid-lat) != '' and normalize-space($centroid-lon) != ''
+                                        and ($element-id = '' or @id = $element-id)"/>
 
     <!-- Feature -->
     <xsl:text>&lt;</xsl:text><xsl:value-of select="$source-prefix"/><xsl:text>/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>#id&gt; a spatial:Feature, osm:Relation ;&#10;</xsl:text>
@@ -70,8 +75,8 @@
       <xsl:text>&lt;/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>#geo&gt; a geom:Geometry ;&#10;</xsl:text>
       <xsl:text>    foaf:page &lt;/geo/osm/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>&gt; ;&#10;</xsl:text>
       <xsl:text>    foaf:page &lt;/geo/overpass/relation/</xsl:text><xsl:value-of select="@id"/><xsl:text>&gt; ;&#10;</xsl:text>
-      <xsl:text>    geo:lat "</xsl:text><xsl:value-of select="sum($allNodes/@lat) div count($allNodes)"/><xsl:text>" ;&#10;</xsl:text>
-      <xsl:text>    geo:long "</xsl:text><xsl:value-of select="sum($allNodes/@lon) div count($allNodes)"/><xsl:text>"</xsl:text>
+      <xsl:text>    geo:lat "</xsl:text><xsl:value-of select="$centroid-lat"/><xsl:text>" ;&#10;</xsl:text>
+      <xsl:text>    geo:long "</xsl:text><xsl:value-of select="$centroid-lon"/><xsl:text>"</xsl:text>
       <xsl:if test="normalize-space($geometry-gml) != ''">
         <xsl:text> ;&#10;    locn:geometry "</xsl:text>
         <xsl:value-of select="local:ttl($geometry-gml)"/>
@@ -91,7 +96,8 @@
     </xsl:if>
   </xsl:template>
 
-  <!-- Suppress member node/way elements from /full response -->
+  <!-- Member node/way elements are already stripped by OsmFullDocument; keep this guard
+       in case the stylesheet is ever run over a raw /full response. -->
   <xsl:template match="node|way"/>
 
   <xsl:template match="member">

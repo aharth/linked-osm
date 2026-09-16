@@ -383,16 +383,29 @@ public final class GeoJsonConverter {
      */
     public static String osmFeatureToGeoJson(String xml, String elementType, String id,
             String geometryJson, String sourcePrefix) {
+        List<String[]> tags = new ArrayList<>();
+        Matcher tagMatcher = TAG_PATTERN.matcher(xml);
+        while (tagMatcher.find()) {
+            tags.add(new String[]{decodeXmlEntities(tagMatcher.group(1)), decodeXmlEntities(tagMatcher.group(2))});
+        }
+        return osmFeatureToGeoJson(tags, elementType, id, geometryJson, sourcePrefix);
+    }
+
+    /**
+     * Same as {@link #osmFeatureToGeoJson(String, String, String, String, String)} but with the
+     * element's tags already extracted as {@code {k, v}} pairs. Used for relations parsed from a
+     * {@code /full} response, where a regex over the whole document would also pick up the
+     * member ways' and nodes' tags.
+     */
+    public static String osmFeatureToGeoJson(List<String[]> tags, String elementType, String id,
+            String geometryJson, String sourcePrefix) {
         StringBuilder props = new StringBuilder();
         props.append("\"osm_type\":\"").append(escapeJson(elementType)).append("\"");
         props.append(",\"osm_id\":\"").append(escapeJson(id)).append("\"");
 
-        Matcher tagMatcher = TAG_PATTERN.matcher(xml);
-        while (tagMatcher.find()) {
-            String tagKey = decodeXmlEntities(tagMatcher.group(1));
-            String tagValue = decodeXmlEntities(tagMatcher.group(2));
-            props.append(",\"").append(escapeJson(osmTagKey(tagKey))).append("\":\"");
-            props.append(escapeJson(transformOsmValue(tagKey, tagValue))).append("\"");
+        for (String[] kv : tags) {
+            props.append(",\"").append(escapeJson(osmTagKey(kv[0]))).append("\":\"");
+            props.append(escapeJson(transformOsmValue(kv[0], kv[1]))).append("\"");
         }
 
         return "{\"type\":\"Feature\""
@@ -473,24 +486,42 @@ public final class GeoJsonConverter {
     }
 
     /**
-     * Extract a GML 3.2 geometry fragment for a relation, for embedding inline in the RDF Turtle
-     * output ({@code locn:geometry}) the same way node.xsl/way.xsl already embed one for nodes
-     * and ways. Multipolygon relations get a real {@code gml:Polygon}/{@code gml:MultiSurface}
-     * via {@link MultipolygonHandler} (which reuses inline {@code /full} way/node data when the
-     * caller already fetched it - no extra upstream calls for that case); anything else
-     * (routes, ...) falls back to one flattened {@code gml:LineString} over all member
-     * coordinates in order, via {@link #fetchRelationMemberCoordinates}.
-     *
-     * @param osmXml OSM API XML response body (ideally a {@code /full} response)
-     * @param id     the OSM relation ID (used for logging)
-     * @return the GML fragment, or {@code null} if no geometry could be built
-     * @throws IOException if an upstream HTTP call fails
+     * GeoJSON geometry of a relation from a parsed {@code /full} document: Polygon/MultiPolygon
+     * for multipolygon and boundary relations, otherwise one LineString over all member
+     * coordinates in order (same shape as {@link #extractGeometryJson} produces, but without
+     * any upstream calls: every member way and node is already inline).
      */
-    public static String extractGeometryGml(String osmXml, String id) throws IOException {
-        if (MultipolygonHandler.isMultipolygon(osmXml)) {
+    public static String relationGeometryJson(OsmFullDocument doc, String id) {
+        OsmFullDocument.Relation rel = doc.relation(id);
+        if (MultipolygonHandler.isMultipolygon(rel)) {
+            try {
+                LOG.info("Processing multipolygon relation " + id);
+                MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(doc, id);
+                return MultipolygonHandler.toGeoJSON(geom);
+            } catch (Exception e) {
+                LOG.warning("Error processing multipolygon: " + e.getMessage());
+            }
+        }
+        List<double[]> coordinates = relationMemberCoordinates(doc, rel);
+        if (coordinates.isEmpty()) {
+            return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
+        }
+        return buildLineStringGeometry(coordinates);
+    }
+
+    /**
+     * GML geometry of a relation from a parsed {@code /full} document, for the
+     * {@code locn:geometry} literal in the Turtle output: Polygon/MultiSurface for multipolygon
+     * and boundary relations, otherwise one LineString over all member coordinates in order.
+     *
+     * @return the GML fragment, or {@code null} if no geometry could be built
+     */
+    public static String relationGeometryGml(OsmFullDocument doc, String id) {
+        OsmFullDocument.Relation rel = doc.relation(id);
+        if (MultipolygonHandler.isMultipolygon(rel)) {
             try {
                 LOG.info("Processing multipolygon relation " + id + " for GML");
-                MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(osmXml, id);
+                MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(doc, id);
                 String gml = geom.toGML();
                 if (gml != null) {
                     return gml;
@@ -499,12 +530,35 @@ public final class GeoJsonConverter {
                 LOG.warning("Error processing multipolygon for GML: " + e.getMessage());
             }
         }
-        List<Map<String, String>> members = extractMemberReferences(osmXml);
-        List<double[]> coordinates = fetchRelationMemberCoordinates(members);
+        List<double[]> coordinates = relationMemberCoordinates(doc, rel);
         if (coordinates.isEmpty()) {
             return null;
         }
         return buildGmlLineString(coordinates);
+    }
+
+    /**
+     * Member coordinates of a route-style relation in member order: node members directly,
+     * way members as their node lists. Members not present in the document are skipped.
+     */
+    private static List<double[]> relationMemberCoordinates(OsmFullDocument doc, OsmFullDocument.Relation rel) {
+        List<double[]> coordinates = new ArrayList<>();
+        if (rel == null) return coordinates;
+        Map<String, double[]> nodes = doc.nodes();
+        for (OsmFullDocument.Member m : rel.members()) {
+            if ("node".equals(m.type())) {
+                double[] c = nodes.get(m.ref());
+                if (c != null) coordinates.add(c);
+            } else if ("way".equals(m.type())) {
+                List<String> refs = doc.ways().get(m.ref());
+                if (refs == null) continue;
+                for (String ref : refs) {
+                    double[] c = nodes.get(ref);
+                    if (c != null) coordinates.add(c);
+                }
+            }
+        }
+        return coordinates;
     }
 
     private static String buildGmlLineString(List<double[]> coordinates) {

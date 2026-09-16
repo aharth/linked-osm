@@ -163,23 +163,25 @@
   </p>
 
   <a name="large-relations"></a>
-  <h2>Why do some large relations return an error?</h2>
+  <h2>How are large relations handled?</h2>
 
   <p>
-    RDF and GML relation responses require fetching <code>/relation/{id}/full</code> from
-    the OSM API, which returns every member way and every node of every way in one response.
-    For large administrative or geographic boundaries this can be tens of megabytes of XML.
-    The wrapper first fetches the lightweight <code>/relation/{id}</code> response to count
-    way members; if the count exceeds 200 the request is rejected immediately rather than
-    attempting a fetch that would time out or exhaust bandwidth.  Possible error codes:
+    Relation responses in every format fetch <code>/relation/{id}/full</code> from the OSM
+    API, which returns every member way and every node of every way in one response.  For
+    large administrative or geographic boundaries this can be tens of megabytes of XML (the
+    boundary of Germany, relation 51477, is about 34&nbsp;MB).  The wrapper does not hold this
+    response as a string; it streams it once with a StAX parser, keeping only node coordinates,
+    way node lists and the relation elements themselves, and builds the geometry from those.
+    Member ways and nodes are therefore never fetched individually, and the parsed result is
+    proportional to the number of distinct nodes rather than to the raw XML size.
+  </p>
+  <p>
+    The fetched response is cached for 24 hours and concurrent requests for the same relation
+    share one upstream fetch, so a large relation costs the OSM API at most one
+    <code>/full</code> request per day regardless of how often it is requested here.  There is
+    no member-count limit.  Possible error codes:
   </p>
   <dl>
-    <dt>413 Content Too Large</dt>
-    <dd>
-      The relation has more than 200 way members.  The error message names the count and
-      suggests the <code>/geo/overpass/relation/{id}.json</code> geometry endpoint as an
-      alternative.
-    </dd>
     <dt>509 Bandwidth Limit Exceeded / 529 Too Many Requests</dt>
     <dd>
       The upstream OSM API rejected the request.  The upstream error body is forwarded verbatim.

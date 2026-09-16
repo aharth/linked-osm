@@ -13,6 +13,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.ontologycentral.osmwrap.HttpClientUtil;
+import com.ontologycentral.osmwrap.OsmFullDocument;
+import com.ontologycentral.osmwrap.OsmFullDocument.Member;
 
 /**
  * Handles detection and processing of OSM multipolygon relations.
@@ -42,40 +44,52 @@ public class MultipolygonHandler {
         return false;
     }
 
+    /** True if the relation's {@code type} tag is {@code multipolygon} or {@code boundary}. */
+    public static boolean isMultipolygon(OsmFullDocument.Relation rel) {
+        if (rel == null) return false;
+        String type = rel.tag("type");
+        return "multipolygon".equals(type) || "boundary".equals(type);
+    }
+
     /**
      * Convert OSM multipolygon relation to MultipolygonGeometry
      * Handles bulk fetching of member ways and node coordinates from OSM API
      */
     public static MultipolygonGeometry buildMultipolygon(String relationXml, String relationId) throws IOException {
-        MultipolygonGeometry geom = new MultipolygonGeometry();
-
-        // Extract members with their roles
-        List<Map<String, String>> members = extractMembers(relationXml);
-
-        // Separate way and node members
-        List<String> wayIds = new ArrayList<>();
-        Map<String, String> wayRoles = new HashMap<>();
-        List<String> nodeIds = new ArrayList<>();
-        Map<String, String> nodeRoles = new HashMap<>();
-
-        for (Map<String, String> member : members) {
-            String type = member.get("type");
-            String ref = member.get("ref");
-            String role = member.get("role");
-
-            if ("way".equals(type)) {
-                wayIds.add(ref);
-                wayRoles.put(ref, role);
-            } else if ("node".equals(type)) {
-                nodeIds.add(ref);
-                nodeRoles.put(ref, role);
-            }
-        }
-
         // Parse any inline way/node data already present in the XML (e.g. from /full responses).
         // Only HTTP-fetch what is missing — avoids hundreds of round-trips for large relations.
-        Map<String, List<String>> inlineWayNodes = parseInlineWays(relationXml);
-        Map<String, double[]> inlineNodeCoords = parseInlineNodes(relationXml);
+        return buildMultipolygon(extractMembers(relationXml), parseInlineWays(relationXml),
+                parseInlineNodes(relationXml), relationId);
+    }
+
+    /**
+     * Build the multipolygon of a relation from an already-parsed {@code /full} document.
+     * Everything the relation needs is inline, so this normally makes no upstream calls.
+     */
+    public static MultipolygonGeometry buildMultipolygon(OsmFullDocument doc, String relationId) throws IOException {
+        OsmFullDocument.Relation rel = doc.relation(relationId);
+        List<Member> members = rel == null ? new ArrayList<>() : rel.members();
+        return buildMultipolygon(members, doc.ways(), doc.nodes(), relationId);
+    }
+
+    /**
+     * Shared assembly: resolve member ways to node lists and nodes to coordinates (fetching
+     * from upstream only what {@code inlineWayNodes}/{@code inlineNodeCoords} do not already
+     * contain), then stitch the way segments into rings by role.
+     */
+    private static MultipolygonGeometry buildMultipolygon(List<Member> members,
+            Map<String, List<String>> inlineWayNodes, Map<String, double[]> inlineNodeCoords,
+            String relationId) throws IOException {
+        MultipolygonGeometry geom = new MultipolygonGeometry();
+
+        List<String> wayIds = new ArrayList<>();
+        Map<String, String> wayRoles = new HashMap<>();
+        for (Member member : members) {
+            if ("way".equals(member.type()) && member.ref() != null) {
+                wayIds.add(member.ref());
+                wayRoles.put(member.ref(), member.role() != null ? member.role() : "outer");
+            }
+        }
 
         if (!wayIds.isEmpty()) {
             try {
@@ -87,8 +101,11 @@ public class MultipolygonHandler {
                 Map<String, List<String>> fetchedWayNodes =
                         wayIdsToFetch.isEmpty() ? new HashMap<>() : HttpClientUtil.fetchWaysBulk(wayIdsToFetch);
 
-                Map<String, List<String>> allWayNodes = new HashMap<>(inlineWayNodes);
-                allWayNodes.putAll(fetchedWayNodes);
+                Map<String, List<String>> allWayNodes = inlineWayNodes;
+                if (!fetchedWayNodes.isEmpty()) {
+                    allWayNodes = new HashMap<>(inlineWayNodes);
+                    allWayNodes.putAll(fetchedWayNodes);
+                }
 
                 // Collect all unique node IDs referenced by member ways
                 Set<String> allWayNodeIds = new HashSet<>();
@@ -105,8 +122,11 @@ public class MultipolygonHandler {
                 Map<String, double[]> fetchedNodeCoords =
                         nodeIdsToFetch.isEmpty() ? new HashMap<>() : HttpClientUtil.fetchNodesBulk(nodeIdsToFetch);
 
-                Map<String, double[]> nodeCoordinates = new HashMap<>(inlineNodeCoords);
-                nodeCoordinates.putAll(fetchedNodeCoords);
+                Map<String, double[]> nodeCoordinates = inlineNodeCoords;
+                if (!fetchedNodeCoords.isEmpty()) {
+                    nodeCoordinates = new HashMap<>(inlineNodeCoords);
+                    nodeCoordinates.putAll(fetchedNodeCoords);
+                }
 
                 // Collect per-role way segments then stitch into rings
                 List<List<double[]>> outerSegments = new ArrayList<>();
@@ -147,49 +167,19 @@ public class MultipolygonHandler {
             }
         }
 
-        // Process node members
-        if (!nodeIds.isEmpty()) {
-            try {
-                Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(nodeIds);
-
-                for (String nodeId : nodeIds) {
-                    try {
-                        if (nodeCoordinates.containsKey(nodeId)) {
-                            double[] coord = nodeCoordinates.get(nodeId);
-                            List<double[]> singleCoord = new ArrayList<>();
-                            singleCoord.add(coord);
-                            String role = nodeRoles.get(nodeId);
-                            Ring ring = new Ring(singleCoord, role);
-                            // Note: single node rings won't be closed/valid, but we process them anyway
-                        }
-                    } catch (Exception e) {
-                        logger.warning("Failed to process node " + nodeId + " in relation " + relationId + ": " + e.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                logger.warning("Error bulk fetching nodes for relation " + relationId + ": " + e.getMessage());
-            }
-        }
-
+        // Node members (label, admin_centre, ...) carry no ring geometry and are ignored.
         return geom;
     }
 
     /**
      * Extract member elements from relation XML
-     * @return List of maps with "type", "ref", and "role" keys
      */
-    private static List<Map<String, String>> extractMembers(String osmXml) {
-        List<Map<String, String>> members = new ArrayList<>();
+    private static List<Member> extractMembers(String osmXml) {
+        List<Member> members = new ArrayList<>();
         Matcher m = MEMBER_PATTERN.matcher(osmXml);
-
         while (m.find()) {
-            Map<String, String> member = new HashMap<>();
-            member.put("type", m.group(1));
-            member.put("ref", m.group(2));
-            member.put("role", m.group(3) != null ? m.group(3) : "outer");
-            members.add(member);
+            members.add(new Member(m.group(1), m.group(2), m.group(3) != null ? m.group(3) : "outer"));
         }
-
         return members;
     }
 

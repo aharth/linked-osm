@@ -11,6 +11,12 @@
 
   <xsl:strip-space elements="*"/>
 
+  <!-- Mean member node coordinates, computed in Java (see relation.xsl). Empty = no geometry. -->
+  <xsl:param name="centroid-lat" select="''"/>
+  <xsl:param name="centroid-lon" select="''"/>
+  <!-- id of the requested relation; the point geometry is emitted for that one only -->
+  <xsl:param name="element-id" select="''"/>
+
   <xsl:template match="osm">
     <wfs:FeatureCollection
         gml:id="linked-osm"
@@ -21,17 +27,17 @@
   </xsl:template>
 
   <xsl:template match="relation">
-    <xsl:variable name="allNodes" select="//node[normalize-space(@lat)]"/>
     <wfs:member>
       <osm:relation>
         <xsl:attribute name="gml:id">relation.<xsl:value-of select="@id"/></xsl:attribute>
-        <xsl:if test="count($allNodes) > 0">
+        <xsl:if test="normalize-space($centroid-lat) != '' and normalize-space($centroid-lon) != ''
+                      and ($element-id = '' or @id = $element-id)">
           <osm:geometry>
             <gml:Point srsName="http://www.opengis.net/def/crs/OGC/1.3/CRS84">
               <gml:pos>
-                <xsl:value-of select="sum($allNodes/@lon) div count($allNodes)"/>
+                <xsl:value-of select="$centroid-lon"/>
                 <xsl:text> </xsl:text>
-                <xsl:value-of select="sum($allNodes/@lat) div count($allNodes)"/>
+                <xsl:value-of select="$centroid-lat"/>
               </gml:pos>
             </gml:Point>
           </osm:geometry>

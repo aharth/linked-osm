@@ -2,6 +2,52 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-17] Relations of any size: `/full` is stream-parsed, the 200-way limit is gone
+
+- **`/relation/{id}` no longer refuses large relations.** The old two-step probe
+  (fetch `/relation/{id}`, count way members, 413 above 200) is removed; every relation
+  format now fetches `/relation/{id}/full` directly. Rationale and the roads not taken
+  (byte threshold, bulk-fetch fallback, XSLT streaming) are in
+  `plans/relation-full-streaming.md`. Cost to the OSM API is bounded by the existing
+  24 h response cache plus in-flight deduplication: one `/full` fetch per relation per
+  day, whatever its size.
+- **New `OsmFullDocument`: a single StAX pass over the raw `/full` bytes** replaces the
+  whole-document Java string and the regex scans over it. It keeps node id → coords,
+  way id → node refs, every relation's members/tags, the mean centroid, and a stripped
+  relations-only XML that is what `relation.xsl`/`relation-gml.xsl` are now run over.
+  The stylesheets take `centroid-lat`/`centroid-lon`/`element-id` as parameters
+  (strings - Saxon rejects a Java `Double` there) instead of `//node` scans; the
+  `nodeById` key is gone from `relation.xsl`. `FeatureServlet`'s cache holds raw
+  `byte[]` bodies instead of strings, and `fetchXml` no longer calls `readToString`.
+- **Measured on relation 51477 (Germany, 34 MB, 159 102 nodes, 1 608 ways):** the old
+  path took 236 s and made thousands of upstream calls; the new one parses in 0.45 s
+  and builds the GML in 0.16 s with no upstream calls. Heap for the document dropped
+  from 74 MB (UTF-16 string) to 34 MB retained. End-to-end on Jetty: `.ttl` 3.9 MB in
+  20 s cold (the upstream fetch), 0.5 s cached; `.json` MultiPolygon 3.7 MB; `.gml`
+  0.7 MB. Turtle validates with rapper.
+- **The old regex path was also wrong, not just slow.** `MEMBER_PATTERN` matched the
+  members of *every* `<relation>` in the `/full` document - Germany's plus its 16
+  Länder subareas - then bulk-fetched the ~8 000 Land boundary ways that are not
+  inline, and stitched state borders in as outer rings. The new path uses the primary
+  relation's members only (8 outer rings, 1 inner for 51477). GeoJSON properties
+  likewise come from the primary relation's tags only; member way/node tags no longer
+  leak in.
+- **Fixed: `relation.xsl` emitted the geometry block for every relation in the
+  document**, not just the requested one. With the embedded GML literal that was 17
+  copies of 3.3 MB for 51477 and tripped `RdfFilter`'s 32 MB negotiation cap. Geometry
+  (centroid and `locn:geometry`, and the `gml:Point` in `relation-gml.xsl`) is now
+  emitted only where `@id = $element-id`.
+- **Known, not fixed:** `/osm/relation/{id}.rdf` returns 500 (`Turtle parse error:
+  .../tag/ref:nuts:1`) for any relation carrying a tag key whose last colon segment is
+  numeric - every German Land has `ref:nuts:1`. Jena's RDF/XML writer cannot split
+  such a predicate IRI into namespace + NCName. Pre-existing (production fails on
+  `/osm/relation/62422.rdf` today); large relations merely make it reachable more often.
+- `faq.html`'s "large relations" section rewritten to describe the streaming approach
+  and the absence of a member limit. New `OsmFullDocumentTest` (11 tests) uses the real
+  `/full` response of relation 147 as a fixture and a synthetic document with a
+  forward node reference and a nested member relation; two of them run the real
+  stylesheets through Saxon over the stripped document.
+
 ## [2026-09-17] `/vocab/` is now an LDP collection resource
 
 - **`/vocab/` (the new `osm.ttl`/`s3db.ttl` vocabulary directory) content-negotiates**:
