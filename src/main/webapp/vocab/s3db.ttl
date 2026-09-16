@@ -1,0 +1,101 @@
+@prefix s3db: <s3db#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+
+# Vocabulary for the OSM "Simple 3D Buildings" (S3DB) tagging scheme
+# (https://wiki.openstreetmap.org/wiki/Simple_3D_buildings). Unlike a measured survey
+# source, S3DB properties are mapper-estimated scalar tags on the building's 2D footprint
+# (a way or relation already served by /way, /relation) — there is no per-surface roof/wall/
+# ground geometry as in LoD2 CityGML, only a footprint plus height/levels/roof scalars used
+# to extrude a procedural approximation.
+
+s3db:Building a rdfs:Class ;
+    rdfs:label "Building"@en ;
+    rdfs:comment "An OSM building=* feature carrying Simple 3D Buildings tags (height, levels, roof shape) on its 2D footprint."@en .
+
+s3db:BuildingPart a rdfs:Class ;
+    rdfs:subClassOf s3db:Building ;
+    rdfs:label "Building part"@en ;
+    rdfs:comment "An OSM building:part=* feature: one volume of a building whose overall footprint is modelled as several parts with independent height/roof (e.g. a tower section taller than the main roof). Not linked to its parent s3db:Building by any OSM relation — the association is spatial (the part's footprint falls within the outer building=* footprint) and must be inferred by the consumer, not read off a tag."@en .
+
+s3db:levels a rdf:Property ;
+    rdfs:label "levels"@en ;
+    rdfs:comment "building:levels — number of above-ground storeys."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:integer .
+
+s3db:levelsUnderground a rdf:Property ;
+    rdfs:label "underground levels"@en ;
+    rdfs:comment "building:levels:underground — number of below-ground storeys."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:integer .
+
+s3db:height a rdf:Property ;
+    rdfs:label "height (m)"@en ;
+    rdfs:comment "height — the feature's overall height above ground, mapper-estimated. Usable for 3D extrusion of the footprint."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:decimal .
+
+s3db:minHeight a rdf:Property ;
+    rdfs:label "minimum height (m)"@en ;
+    rdfs:comment "min_height — the height above ground at which this part starts (e.g. an overhang or arcade on columns)."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:decimal .
+
+s3db:minLevel a rdf:Property ;
+    rdfs:label "minimum level"@en ;
+    rdfs:comment "min_level — the storey at which this part starts, as a level index rather than a metre height."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:integer .
+
+s3db:roofShape a rdf:Property ;
+    rdfs:label "roof shape"@en ;
+    rdfs:comment "roof:shape — an OSM roof-shape codelist value: flat, skillion, gabled, half-hipped, hipped, pyramidal, gambrel, mansard, dome, onion, round, saltbox, cone, skeleton, ... (see the OSM wiki key page)."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:string .
+
+s3db:roofHeight a rdf:Property ;
+    rdfs:label "roof height (m)"@en ;
+    rdfs:comment "roof:height — the vertical extent of the roof structure itself (not the whole building), mapper-estimated."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:decimal .
+
+s3db:roofAngle a rdf:Property ;
+    rdfs:label "roof angle (°)"@en ;
+    rdfs:comment "roof:angle — the slope of the roof faces from horizontal, mapper-estimated."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:decimal .
+
+s3db:roofDirection a rdf:Property ;
+    rdfs:label "roof direction"@en ;
+    rdfs:comment "roof:direction — the compass direction (or degrees) the roof slopes down towards."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:string .
+
+s3db:roofOrientation a rdf:Property ;
+    rdfs:label "roof orientation"@en ;
+    rdfs:comment "roof:orientation — 'along' or 'across', the ridge's orientation relative to the footprint's longer side; an alternative to roof:direction when the exact compass direction isn't known."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:string .
+
+s3db:roofLevels a rdf:Property ;
+    rdfs:label "roof levels"@en ;
+    rdfs:comment "roof:levels — number of storeys contained within the roof structure (e.g. an attic)."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:integer .
+
+s3db:roofMaterial a rdf:Property ;
+    rdfs:label "roof material"@en ;
+    rdfs:comment "roof:material — e.g. tile, slate, metal, thatch."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:string .
+
+s3db:roofColour a rdf:Property ;
+    rdfs:label "roof colour"@en ;
+    rdfs:comment "roof:colour — a colour name or #rrggbb value."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:string .
+
+s3db:material a rdf:Property ;
+    rdfs:label "building material"@en ;
+    rdfs:comment "building:material — e.g. brick, concrete, wood, glass."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:string .
+
+s3db:colour a rdf:Property ;
+    rdfs:label "building colour"@en ;
+    rdfs:comment "building:colour — a colour name or #rrggbb value."@en ;
+    rdfs:domain s3db:Building ; rdfs:range xsd:string .
+
+s3db:hasPart a rdf:Property ;
+    rdfs:label "has building part"@en ;
+    rdfs:comment "Links a s3db:Building to one of its s3db:BuildingParts. Not present in OSM source data as a direct relation — inferred by linked-osm from spatial containment of building:part footprints within the outer building=* footprint."@en ;
+    rdfs:domain s3db:Building ; rdfs:range s3db:BuildingPart .

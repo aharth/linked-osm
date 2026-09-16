@@ -1,0 +1,66 @@
+@prefix osm:  <vocab#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix spatial: <http://geovocab.org/spatial#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+
+# Vocabulary for linked-osm (osmwrap). Covers the OSM data model itself — the three
+# primitive element types, changesets, and relation membership — in the spirit of
+# geovocab.org/NeoGeo: a thin, specific vocabulary layered on generic terms rather than
+# reinventing them. Every element is already typed spatial:Feature (geovocab.org/spatial#,
+# RCC8-based topological relations) and carries its geometry as a geom:Geometry
+# (geovocab.org/geometry#); this vocabulary adds only what's specific to OSM's own element
+# model on top of those. Arbitrary OSM tags are NOT covered here — each tag key already
+# mints its own dereferenceable predicate at /tag/{key} (wiki description + taginfo stats
+# via TagServlet), which serves as the tag vocabulary instead.
+
+osm:Element a rdfs:Class ;
+    rdfs:subClassOf spatial:Feature ;
+    rdfs:label "OSM element"@en ;
+    rdfs:comment "Common superclass of the three OSM primitive element types (node, way, relation)."@en .
+
+osm:Node a rdfs:Class ;
+    rdfs:subClassOf osm:Element ;
+    rdfs:label "Node"@en ;
+    rdfs:comment "An OSM node: a single point with a WGS84 lat/lon, optionally tagged."@en .
+
+osm:Way a rdfs:Class ;
+    rdfs:subClassOf osm:Element ;
+    rdfs:label "Way"@en ;
+    rdfs:comment "An OSM way: an ordered list of nodes, forming a line or (if closed) an area."@en .
+
+osm:Relation a rdfs:Class ;
+    rdfs:subClassOf osm:Element ;
+    rdfs:label "Relation"@en ;
+    rdfs:comment "An OSM relation: an ordered, typed grouping of member elements (nodes, ways or other relations), each with a role."@en .
+
+osm:Changeset a rdfs:Class ;
+    rdfs:subClassOf prov:Activity ;
+    rdfs:label "Changeset"@en ;
+    rdfs:comment "The OSM changeset that created or modified a given version of an element, modelled as a PROV-O Activity."@en .
+
+osm:Membership a rdfs:Class ;
+    rdfs:label "Relation membership"@en ;
+    rdfs:comment "One entry in a relation's ordered member list: which element, its role, and its position. Reified because a member's role and sequence are properties of the membership itself, not of the member element or the relation alone."@en .
+
+osm:member a rdf:Property ;
+    rdfs:label "has member"@en ;
+    rdfs:comment "Links a relation to one of its memberships."@en ;
+    rdfs:domain osm:Relation ; rdfs:range osm:Membership .
+
+osm:memberFeature a rdf:Property ;
+    rdfs:label "member feature"@en ;
+    rdfs:comment "The node, way or relation referenced by this membership."@en ;
+    rdfs:domain osm:Membership ; rdfs:range osm:Element .
+
+osm:role a rdf:Property ;
+    rdfs:label "role"@en ;
+    rdfs:comment "The membership's role string, e.g. 'outer'/'inner' for a multipolygon, 'stop'/'platform' for a public-transport route. May be empty in the source data."@en ;
+    rdfs:domain osm:Membership ; rdfs:range xsd:string .
+
+osm:sequence a rdf:Property ;
+    rdfs:label "sequence"@en ;
+    rdfs:comment "The membership's 0-based position in the relation's member list; member order is significant, e.g. for route relations."@en ;
+    rdfs:domain osm:Membership ; rdfs:range xsd:integer .
