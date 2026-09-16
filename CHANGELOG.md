@@ -2,6 +2,20 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-17] `/vocab/` is now an LDP collection resource
+
+- **`/vocab/` (the new `osm.ttl`/`s3db.ttl` vocabulary directory) content-negotiates**:
+  RDF clients (the default) get it as an `ldp:BasicContainer` with one `ldp:contains`
+  triple per file, plus the standard PROV `generatedAtTime`/`wasAttributedTo`; HTML
+  clients get a plain browsable `<ul>` listing. Bare `/vocab` (no trailing slash)
+  redirects to `/vocab/`, the `DirectorySlash` convention. New `DirectoryServlet`,
+  mapped to `/vocab`+`/vocab/*` so it covers any nesting under the mount, not just the
+  root.
+- Ported from `linked-inspire`'s `DirectoryServlet` (there, directory-tree-generic,
+  shared between `/vocab/` and `/inspire/`), adapted to linked-osm's own
+  `AcceptHeader`/`ProvUtil` and `StatusServlet`'s three-way Turtle/RDF-XML/N-Triples
+  negotiation shape (no suffix to key off, since every path here ends in `/`).
+
 ## [2026-09-17] Relations get real inline geometry in RDF; route relations' GeoJSON fallback no longer fetches member ways one at a time
 
 - **`/relation/{id}` RDF now carries the relation's actual shape, not just a centroid.**

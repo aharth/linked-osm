@@ -159,6 +159,10 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<servlet-name>status</servlet-name>
 		<servlet-class>com.ontologycentral.osmwrap.webapp.StatusServlet</servlet-class>
 	</servlet>
+	<servlet>
+		<servlet-name>directory</servlet-name>
+		<servlet-class>com.ontologycentral.osmwrap.webapp.DirectoryServlet</servlet-class>
+	</servlet>
 
 	<servlet-mapping>
 		<servlet-name>routes</servlet-name>
@@ -339,6 +343,14 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 	<servlet-mapping>
 		<servlet-name>tracestrackElevation</servlet-name>
 		<url-pattern>/tracestrack/elevation</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>directory</servlet-name>
+		<url-pattern>/vocab</url-pattern>
+	</servlet-mapping>
+	<servlet-mapping>
+		<servlet-name>directory</servlet-name>
+		<url-pattern>/vocab/*</url-pattern>
 	</servlet-mapping>
 	<servlet-mapping>
 		<servlet-name>error</servlet-name>
