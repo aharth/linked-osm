@@ -15,7 +15,6 @@ import com.ontologycentral.osmwrap.UpstreamCache;
 import com.ontologycentral.osmwrap.UpstreamCache.UpstreamException;
 
 import jakarta.servlet.ServletContext;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,7 +36,7 @@ import javax.xml.transform.stream.StreamSource;
 public class FeatureServlet extends HttpServlet {
     private static final Logger _log = Logger.getLogger(FeatureServlet.class.getName());
 
-    public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+    public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String pathInfo = req.getPathInfo();
         if (pathInfo == null || !pathInfo.startsWith("/")) {
             resp.sendError(404, "No path specified");
@@ -64,8 +63,16 @@ public class FeatureServlet extends HttpServlet {
         // fetches /osm/{type}/{id}.json). Same rule as linked-adv's /oid/{oid}: .html
         // suffix, or an Accept that STRICTLY prefers text/html over the data formats.
         if (format.equals("html")) {
+            // Written here rather than forwarded to the container's default servlet: on
+            // Tomcat that servlet hands static files to the connector (sendfile), which
+            // bypasses the capturing wrapper RdfFilter puts around every response, and the
+            // body arrived empty in production (200, Content-Length 0). Serving the bytes
+            // ourselves behaves the same in every container.
             resp.setHeader("Vary", "Accept");
-            req.getRequestDispatcher("/element.html").forward(req, resp);
+            resp.setContentType("text/html;charset=UTF-8");
+            byte[] page = elementPage(getServletContext());
+            resp.setContentLength(page.length);
+            resp.getOutputStream().write(page);
             return;
         }
 
@@ -109,6 +116,21 @@ public class FeatureServlet extends HttpServlet {
         }
 
         os.close();
+    }
+
+    private static volatile byte[] elementPage;
+
+    /** {@code /element.html} from the webapp, read once. */
+    static byte[] elementPage(ServletContext ctx) throws IOException {
+        byte[] page = elementPage;
+        if (page == null) {
+            try (java.io.InputStream in = ctx.getResourceAsStream("/element.html")) {
+                if (in == null) throw new IOException("element.html not in webapp");
+                page = in.readAllBytes();
+            }
+            elementPage = page;
+        }
+        return page;
     }
 
     /** Outcome of format negotiation: the element id and one of rdf, json, gml, html. */

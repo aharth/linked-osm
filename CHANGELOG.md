@@ -11,7 +11,11 @@ All notable changes to the OpenStreetMap Linked Data Wrapper project will be doc
   (`initOsmMap`/`loadGeoJsonUrl`, so it looks like the index page's feature panel), and
   links to every raw format, the geometry-only endpoints, osm.org and the OSM API URL. The
   page loads `/osm/{type}/{id}.json` itself, so it shows exactly what the data formats
-  carry. `Vary: Accept` is set on the forward.
+  carry. `Vary: Accept` is set. The servlet writes the page bytes itself (read once from
+  the webapp) instead of forwarding to the container's default servlet: on Tomcat that
+  servlet hands static files to the connector via sendfile, which bypasses `RdfFilter`'s
+  capturing wrapper, and the first production deploy returned `200` with
+  `Content-Length: 0` for browsers while Jetty was fine.
 - `AcceptHeader.prefersHtml` (mirrors linked-adv's `AdvOidServlet.prefersHtml`): a bare
   `*/*` (curl, most clients) ties and keeps getting Turtle; a semantic-web browser that
   ranks RDF at q=1 above html at 0.95 keeps getting RDF; an explicit extension always
