@@ -53,11 +53,13 @@
     <dt><code>/osm/way/100#geo</code></dt>
     <dd>
       The geometry &mdash; a <code>geom:Geometry</code> resource carrying
-      the spatial representation of the feature: WKT literal
-      (<code>locn:geometry</code> with datatype
-      <code>geosparql:wktLiteral</code>), centroid coordinates
-      (<code>geo:lat</code>, <code>geo:long</code>), and links to the GeoJSON endpoints.
-      The feature links to its geometry via <code>geom:geometry</code>.
+      the spatial representation of the feature: a GML 3.2 literal
+      (<code>locn:geometry</code> with datatype <code>rdf:XMLLiteral</code>:
+      <code>gml:Point</code>, <code>gml:LineString</code>, <code>gml:Polygon</code> or
+      <code>gml:MultiSurface</code>), centroid coordinates
+      (<code>geo:lat</code>, <code>geo:long</code>), and links to the geometry endpoints.
+      The feature links to its geometry via <code>geom:geometry</code>. The block has the
+      same shape for nodes, ways and relations.
     </dd>
   </dl>
 
@@ -125,29 +127,41 @@
 
   <!-- Geometry building -->
 
-  <a name="relation-wkt"></a>
-  <h2>Why do relations lack a WKT geometry in the RDF output?</h2>
+  <a name="geometry"></a>
+  <h2>How is the geometry built?</h2>
 
   <p>
-    For nodes and ways, the XSLT stylesheet can produce a WKT literal directly from the
-    coordinates in the OSM XML response.  For a <code>type=multipolygon</code> relation
-    the geometry is more complex: the member ways are unordered fragments that must be
-    stitched together into closed outer and inner rings before a
-    <code>MULTIPOLYGON(...)</code> literal can be formed.  This ring-assembly algorithm
-    is not expressible in XSLT 2.0, so the <code>#geo</code> block in
-    <code>/osm/relation/{id}.rdf</code> carries only a centroid, not a WKT shape.
+    The same way for every element and every output format.  The wrapper fetches the
+    element from the OSM API (<code>/node/{id}</code>; <code>/way/{id}/full</code> and
+    <code>/relation/{id}/full</code>, which include the member nodes and ways inline),
+    parses the response once, and builds one geometry object in Java from it:
+  </p>
+  <dl>
+    <dt>node</dt>
+    <dd>a Point.</dd>
+    <dt>way</dt>
+    <dd>a Polygon when the way is closed (first node equals last node, at least four
+      nodes), otherwise a LineString.</dd>
+    <dt>relation with <code>type=multipolygon</code> or <code>type=boundary</code></dt>
+    <dd>the member ways are stitched end-to-end into closed outer and inner rings, giving a
+      Polygon or MultiPolygon.  Only the requested relation's own members are used; member
+      relations listed in the same response contribute nothing.</dd>
+    <dt>any other relation (routes, networks, ...)</dt>
+    <dd>a LineString over all member coordinates in member order, or no geometry at all
+      when no member has coordinates.</dd>
+  </dl>
+  <p>
+    That one object is then serialised into whichever format was asked for: the GML literal
+    in the RDF <code>#geo</code> block, the <code>osm:geometry</code> element of the GML
+    feature collection, the <code>geometry</code> member of the GeoJSON feature, and the
+    GeoJSON, WKT and KML variants of <code>/geo/osm/{type}/{id}</code>.  They always agree,
+    because none of them is computed separately.  Where no geometry could be built, the RDF
+    has neither <code>geom:geometry</code> nor a <code>#geo</code> resource, GeoJSON has an
+    empty <code>GeometryCollection</code>, and WKT is <code>GEOMETRYCOLLECTION()</code>.
   </p>
   <p>
-    The geometry endpoints do not have this limitation &mdash;
-    <code>/geo/osm/relation/{id}.json</code> and
-    <code>/geo/overpass/relation/{id}.json</code> both run the ring-assembly in Java and
-    return a correct <code>MultiPolygon</code>.
-  </p>
-  <p>
-    Thematic or organisational relations that group other features without defining a
-    drawable shape (e.g. a route network or a list of countries) have no node coordinates
-    at all; for these, neither <code>geom:geometry</code> nor a <code>#geo</code> resource
-    is emitted.
+    Inner rings of a MultiPolygon are attached to the first outer ring rather than to the
+    one that contains them; nested multipolygons are therefore approximate.
   </p>
 
   <a name="overpass-recursion"></a>
@@ -156,18 +170,19 @@
   <p>
     The Overpass query for a single relation uses <code>&gt;&gt;</code>, which
     recursively resolves all member relations, ways, and nodes in one round-trip.
-    The OSM API <code>/relation/{id}/full</code> expands only one level deep, and
-    the GeoJSON conversion path does not reassemble member-way geometry the same way.
-    For complex multipolygons in particular, Overpass reliably produces a correct
-    <code>MultiPolygon</code> where the OSM API path may return only a centroid.
+    The OSM API <code>/relation/{id}/full</code> expands only one level deep: a
+    relation whose shape is defined through member relations (a country made of
+    <code>subarea</code> relations, a route made of route segments) has no member ways of
+    its own in that response, so the OSM API path yields no or only a partial geometry
+    for it, while Overpass returns the complete <code>MultiPolygon</code>.
   </p>
 
   <a name="large-relations"></a>
   <h2>How are large relations handled?</h2>
 
   <p>
-    Relation responses in every format fetch <code>/relation/{id}/full</code> from the OSM
-    API, which returns every member way and every node of every way in one response.  For
+    Way and relation responses in every format fetch <code>/{type}/{id}/full</code> from the
+    OSM API, which returns every member way and every node of every way in one response.  For
     large administrative or geographic boundaries this can be tens of megabytes of XML (the
     boundary of Germany, relation 51477, is about 34&nbsp;MB).  The wrapper does not hold this
     response as a string; it streams it once with a StAX parser, keeping only node coordinates,

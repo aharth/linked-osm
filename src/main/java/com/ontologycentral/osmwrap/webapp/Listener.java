@@ -5,6 +5,8 @@ import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.ontologycentral.osmwrap.UpstreamCache;
+
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
@@ -17,12 +19,9 @@ public class Listener implements ServletContextListener {
 
     public static final DateTimeFormatter RFC822 = DateTimeFormatter.ofPattern("EEE, dd MMM yyyy HH:mm:ss Z", Locale.US);
 
-    public static final String NODE = "/node/";
-    public static final String RELATION = "/relation/";
-    public static final String WAY = "/way/";
-    public static final String NODE_GML = "/node/.gml";
-    public static final String WAY_GML = "/way/.gml";
-    public static final String RELATION_GML = "/relation/.gml";
+    /** One Turtle stylesheet and one GML stylesheet serve nodes, ways and relations alike. */
+    public static final String FEATURE = "feature";
+    public static final String FEATURE_GML = "feature.gml";
     public static final String SEARCH = "search";
     public static final String MAP = "map";
     public static final String POI = "poi";
@@ -69,49 +68,22 @@ public class Listener implements ServletContextListener {
               javax.xml.transform.TransformerFactory.newInstance("net.sf.saxon.TransformerFactoryImpl",
             		  Thread.currentThread().getContextClassLoader());
 
+        // Shared upstream response cache for the OSM API element servlets: 2 GB of raw
+        // bodies, 24 h TTL, one upstream fetch per URL at a time.
+        ctx.setAttribute(UpstreamCache.ATTR,
+                new UpstreamCache(2L * 1024 * 1024 * 1024, java.time.Duration.ofHours(24)));
+
         try {
-            Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/node.xsl")));
-            ctx.setAttribute(NODE, tmpl);
+            Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/feature.xsl")));
+            ctx.setAttribute(FEATURE, tmpl);
         } catch (TransformerConfigurationException e) {
             _log.log(Level.SEVERE, e.getMessage(), e);
             throw new RuntimeException(e);
         }
 
         try {
-            Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/relation.xsl")));
-            ctx.setAttribute(RELATION, tmpl);
-        } catch (TransformerConfigurationException e) {
-            _log.log(Level.SEVERE, e.getMessage(), e);
-            throw new RuntimeException(e);
-        }
-
-        try {
-            Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/way.xsl")));
-            ctx.setAttribute(WAY, tmpl);
-        } catch (TransformerConfigurationException e) {
-            _log.log(Level.SEVERE, e.getMessage(), e);
-            throw new RuntimeException(e);
-        }
-
-        try {
-            Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/node-gml.xsl")));
-            ctx.setAttribute(NODE_GML, tmpl);
-        } catch (TransformerConfigurationException e) {
-            _log.log(Level.SEVERE, e.getMessage(), e);
-            throw new RuntimeException(e);
-        }
-
-        try {
-            Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/way-gml.xsl")));
-            ctx.setAttribute(WAY_GML, tmpl);
-        } catch (TransformerConfigurationException e) {
-            _log.log(Level.SEVERE, e.getMessage(), e);
-            throw new RuntimeException(e);
-        }
-
-        try {
-            Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/relation-gml.xsl")));
-            ctx.setAttribute(RELATION_GML, tmpl);
+            Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/feature-gml.xsl")));
+            ctx.setAttribute(FEATURE_GML, tmpl);
         } catch (TransformerConfigurationException e) {
             _log.log(Level.SEVERE, e.getMessage(), e);
             throw new RuntimeException(e);

@@ -2,6 +2,57 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-17] One geometry path for nodes, ways and relations; one cache; one stylesheet per format
+
+- **Every OSM element now takes the same route in every servlet and format:**
+  `OsmElement.load` = `UpstreamCache` (shared, 2 GB, 24 h, in-flight dedup) →
+  `OsmDocument` (single StAX pass; now for nodes and `way/full` too, not just
+  `relation/full`) → `GeometryBuilder` → one `Geometry` object that serialises itself to
+  GeoJSON, WKT, GML and KML. `/osm/{type}/{id}` (Turtle, RDF/XML, GeoJSON, GML) and
+  `/geo/osm/{type}/{id}` (GeoJSON, WKT, KML) share it, so the shape in the Turtle
+  `locn:geometry` literal, the GML feature collection, the GeoJSON feature and the WKT is
+  the same object every time.
+- **`/geo/osm/relation/{id}` fixed.** It still fetched the plain `/relation/{id}` and then
+  bulk-fetched every member way and every node in batches of 50 with no cache - for
+  relation 51477 that was ~33 way requests plus ~3 200 node requests per hit, and it had
+  the same "members of all relations in the document" bug as the old Turtle path. It now
+  reads the cached `/full` once and builds the geometry offline; 51477 answers in 0.3 s.
+- **`/osm/way/{id}.json` no longer makes a second round of upstream calls** to resolve its
+  nodes: ways use `/full` for every format now.
+- **`node.xsl`/`way.xsl`/`relation.xsl` and the three `-gml.xsl` variants are replaced by
+  `feature.xsl` and `feature-gml.xsl`.** One stylesheet each, matching `node | way |
+  relation`, with the tag/member templates and the `#geo` block moved into `common.xsl`.
+  Both receive the geometry as a `geometry-gml` string parameter (`feature-gml.xsl`
+  re-parses it with `parse-xml()`), the centroid as `centroid-lat`/`centroid-lon`, and the
+  requested element as `element-type`/`element-id`. `xsl:key nodeById` is gone from all of
+  them. Visible output changes, all towards uniformity:
+  - the `#geo` URI carries the source prefix for every type (`</osm/way/100#geo>`; ways
+    and relations used to emit `</way/100#geo>`, contradicting the FAQ);
+  - the `#geo` block of a node now also has the `foaf:page </geo/osm/...>` and
+    `/geo/overpass/...` links ways and relations had;
+  - nodes with `name:en` get `rdfs:label` like ways and relations;
+  - `/osm/relation/{id}.gml` carries the real Polygon/MultiSurface instead of a centroid
+    `gml:Point`;
+  - coordinates in `#geo` and geometry literals are Java `double` renderings
+    (`49.4` instead of `49.4000000`); the node feature's own `geo:lat`/`geo:long` still
+    quote the OSM attribute strings verbatim.
+- **Removed:** `HttpClientUtil.fetchNodesBulk`/`fetchWaysBulk` and every regex-over-string
+  element path in `GeoJsonConverter`/`MultipolygonHandler` (`extractGeometryJson`,
+  `extractGeometryGml`, `isMultipolygon(String)`, `buildMultipolygon(String, ...)`,
+  `parseInlineWays/Nodes`, `extractMembers`). `GeoJsonConverter` keeps only the Overpass
+  and Nominatim converters and the tag-list feature builder. `FeatureServlet` lost its
+  private cache; `Listener` creates the shared one.
+- Tests: `OsmDocumentTest` (node/way/relation fixtures, forward references, XXE),
+  `GeometryBuilderTest` (which shape each element becomes, all four serialisations),
+  `UpstreamCacheTest` (offline via an injected fetcher: hits, non-200 not cached, four
+  concurrent requests → one fetch, joiners see the same error), `FeatureStylesheetTest`
+  (both real stylesheets through Saxon for all three types). New fixtures:
+  `node-1675605507.xml`, `way-32113829-full.xml`, `way-100-full.xml`. The old bulk-fetch
+  tests in `HttpClientUtilTest` (which hit the live API) are replaced by offline ones.
+  `test/smoke-rdf.sh` now runs the same RDF checks for all three types.
+- Known, unchanged: `.rdf` still 500s on tag keys like `ref:nuts:1` (Jena RDF/XML writer,
+  see the entry below).
+
 ## [2026-09-17] Relations of any size: `/full` is stream-parsed, the 200-way limit is gone
 
 - **`/relation/{id}` no longer refuses large relations.** The old two-step probe

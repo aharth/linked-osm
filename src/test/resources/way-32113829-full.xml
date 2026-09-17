@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="openstreetmap-cgimap 2.1.0 (244687 spike-07.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">
+ <node id="360412086" visible="true" version="3" changeset="89502611" timestamp="2020-08-17T07:51:06Z" user="googlenaut" uid="519916" lat="49.4577863" lon="11.0755756"/>
+ <node id="360425482" visible="true" version="3" changeset="89502611" timestamp="2020-08-17T07:51:06Z" user="googlenaut" uid="519916" lat="49.4578307" lon="11.0751556"/>
+ <node id="360425488" visible="true" version="3" changeset="89502611" timestamp="2020-08-17T07:51:06Z" user="googlenaut" uid="519916" lat="49.4578804" lon="11.0756220"/>
+ <node id="360425492" visible="true" version="3" changeset="89502611" timestamp="2020-08-17T07:51:06Z" user="googlenaut" uid="519916" lat="49.4577067" lon="11.0755341"/>
+ <node id="360425495" visible="true" version="3" changeset="89502611" timestamp="2020-08-17T07:51:06Z" user="googlenaut" uid="519916" lat="49.4577410" lon="11.0754027"/>
+ <node id="360425504" visible="true" version="4" changeset="89502611" timestamp="2020-08-17T07:51:06Z" user="googlenaut" uid="519916" lat="49.4579389" lon="11.0752974"/>
+ <node id="360620111" visible="true" version="3" changeset="89502611" timestamp="2020-08-17T07:51:06Z" user="googlenaut" uid="519916" lat="49.4578924" lon="11.0755635"/>
+ <node id="1223684540" visible="true" version="4" changeset="127848992" timestamp="2022-10-20T17:32:34Z" user="pyram" uid="497849" lat="49.4578839" lon="11.0755599"/>
+ <node id="7819451004" visible="true" version="1" changeset="89502611" timestamp="2020-08-17T07:51:06Z" user="googlenaut" uid="519916" lat="49.4577825" lon="11.0752708"/>
+ <node id="7819451006" visible="true" version="2" changeset="127848992" timestamp="2022-10-20T17:32:34Z" user="pyram" uid="497849" lat="49.4578728" lon="11.0755552"/>
+ <node id="10117007438" visible="true" version="1" changeset="127848992" timestamp="2022-10-20T17:32:34Z" user="pyram" uid="497849" lat="49.4578718" lon="11.0756177"/>
+ <way id="32113829" visible="true" version="13" changeset="151512434" timestamp="2024-05-18T21:21:57Z" user="Asmido" uid="2268549">
+  <nd ref="360425482"/>
+  <nd ref="360425504"/>
+  <nd ref="7819451006"/>
+  <nd ref="1223684540"/>
+  <nd ref="360620111"/>
+  <nd ref="360425488"/>
+  <nd ref="10117007438"/>
+  <nd ref="360412086"/>
+  <nd ref="360425492"/>
+  <nd ref="360425495"/>
+  <nd ref="7819451004"/>
+  <nd ref="360425482"/>
+  <tag k="addr:city" v="Nürnberg"/>
+  <tag k="addr:country" v="DE"/>
+  <tag k="addr:housenumber" v="18"/>
+  <tag k="addr:postcode" v="90403"/>
+  <tag k="addr:street" v="Burg"/>
+  <tag k="building" v="yes"/>
+  <tag k="historic" v="yes"/>
+  <tag k="name" v="Palas"/>
+  <tag k="roof:material" v="roof_tiles"/>
+  <tag k="source" v="HiRes aerial imagery"/>
+  <tag k="tourism" v="attraction"/>
+ </way>
+</osm>

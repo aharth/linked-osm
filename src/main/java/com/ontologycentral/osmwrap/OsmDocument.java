@@ -18,44 +18,52 @@ import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.XMLStreamWriter;
 
 /**
- * A single-pass StAX parse of an OSM API {@code /relation/{id}/full} response.
+ * A single-pass StAX parse of an OSM API element response: {@code /node/{id}},
+ * {@code /way/{id}/full} or {@code /relation/{id}/full}.
  *
- * <p>The {@code /full} document can be tens of megabytes (relation 51477 is 34 MB); the old
- * approach read it into one Java string and then ran several whole-document regex scans plus
- * a Saxon DOM build over it. This class instead streams the bytes once with
- * {@link XMLStreamReader} and keeps only what the wrapper actually needs:
+ * <p>The same parse serves all three element types. A {@code /full} document can be tens
+ * of megabytes (relation 51477 is 34 MB), so it is streamed once and only what the wrapper
+ * needs is kept:
  *
  * <ul>
- *   <li>{@link #nodes()}: node id → {@code [lon, lat]} for every {@code <node>} that has
- *       coordinates. A node can be referenced by a {@code <nd>}/{@code <member>} that appears
- *       before the node's own definition, so lookups must wait until the pass has finished;
- *       that is why coordinates are collected into a map rather than resolved on the fly.</li>
+ *   <li>{@link #nodes()}: node id → {@code [lon, lat]} for every {@code <node>} with
+ *       coordinates. A node can be referenced by a {@code <nd>}/{@code <member>} that
+ *       appears before the node's own definition, so lookups wait until the pass is done.</li>
  *   <li>{@link #ways()}: way id → ordered node refs for every {@code <way>}.</li>
- *   <li>{@link #relations()}: every {@code <relation>} (members + tags), in document order.
- *       The primary relation is not necessarily first or last: member relations are listed
- *       too.</li>
- *   <li>{@link #strippedXml()}: the same document with every {@code <node>} and {@code <way>}
- *       subtree removed. This is what the relation XSLT stylesheets are given, so Saxon only
- *       ever builds a tree of the relation elements themselves.</li>
+ *   <li>{@link #primary()}: the requested element (attributes, tags, members).</li>
+ *   <li>{@link #relations()}: every {@code <relation>} in document order. A relation's
+ *       {@code /full} lists member relations too, and the primary is not necessarily first
+ *       or last.</li>
+ *   <li>{@link #strippedXml()}: the document with every non-primary {@code <node>} and
+ *       {@code <way>} subtree removed, so the stylesheets only ever see the primary element
+ *       and the relations. Geometry is passed to them as a parameter instead.</li>
  * </ul>
  *
  * Peak memory is proportional to the number of distinct nodes and node refs, not to the raw
  * markup size.
  */
-public final class OsmFullDocument {
+public final class OsmDocument {
 
     /** One {@code <member>} of a relation. */
     public record Member(String type, String ref, String role) {}
 
-    /** One {@code <relation>} element: its attributes, members and tags. */
-    public static final class Relation {
+    /** One {@code <node>}, {@code <way>} or {@code <relation>} element: attributes, tags, members. */
+    public static final class Element {
+        private final String type;
         private final String id;
         private final Map<String, String> attributes = new LinkedHashMap<>();
         private final List<Member> members = new ArrayList<>();
         private final List<String[]> tags = new ArrayList<>();
+        private final List<String> nodeRefs = new ArrayList<>();
 
-        Relation(String id) {
+        Element(String type, String id) {
+            this.type = type;
             this.id = id;
+        }
+
+        /** {@code node}, {@code way} or {@code relation}. */
+        public String type() {
+            return type;
         }
 
         public String id() {
@@ -67,6 +75,7 @@ public final class OsmFullDocument {
             return Collections.unmodifiableMap(attributes);
         }
 
+        /** Relation members, in order; empty for nodes and ways. */
         public List<Member> members() {
             return Collections.unmodifiableList(members);
         }
@@ -84,19 +93,39 @@ public final class OsmFullDocument {
         }
     }
 
+    private final String primaryType;
+    private final String primaryId;
     private final Map<String, double[]> nodes;
     private final Map<String, List<String>> ways;
-    private final Map<String, Relation> relations;
+    private final Map<String, Element> relations;
+    private final Element primary;
     private final String strippedXml;
     private final double[] centroid;
 
-    private OsmFullDocument(Map<String, double[]> nodes, Map<String, List<String>> ways,
-            Map<String, Relation> relations, String strippedXml, double[] centroid) {
+    private OsmDocument(String primaryType, String primaryId, Map<String, double[]> nodes,
+            Map<String, List<String>> ways, Map<String, Element> relations, Element primary,
+            String strippedXml, double[] centroid) {
+        this.primaryType = primaryType;
+        this.primaryId = primaryId;
         this.nodes = nodes;
         this.ways = ways;
         this.relations = relations;
+        this.primary = primary;
         this.strippedXml = strippedXml;
         this.centroid = centroid;
+    }
+
+    public String primaryType() {
+        return primaryType;
+    }
+
+    public String primaryId() {
+        return primaryId;
+    }
+
+    /** The requested element, or {@code null} if the document does not contain it. */
+    public Element primary() {
+        return primary;
     }
 
     /** Node id → {@code [lon, lat]}. */
@@ -110,34 +139,36 @@ public final class OsmFullDocument {
     }
 
     /** Relation id → relation, in document order. */
-    public Map<String, Relation> relations() {
+    public Map<String, Element> relations() {
         return Collections.unmodifiableMap(relations);
     }
 
-    public Relation relation(String id) {
+    public Element relation(String id) {
         return relations.get(id);
     }
 
-    /** The document with all {@code <node>} and {@code <way>} subtrees removed. */
+    /** The document with all non-primary {@code <node>} and {@code <way>} subtrees removed. */
     public String strippedXml() {
         return strippedXml;
     }
 
     /**
      * Mean {@code [lon, lat]} over every node in the document, or {@code null} if there are
-     * none. Matches what {@code relation.xsl} used to compute as
-     * {@code sum(//node/@lat) div count(//node)}.
+     * none. For a node that is the node itself; for a way its nodes; for a relation every
+     * node of every member way.
      */
     public double[] centroid() {
         return centroid;
     }
 
     /**
-     * Parse a {@code /full} response. The stream is read exactly once and is not closed.
+     * Parse an OSM API response. The stream is read exactly once and is not closed.
      *
+     * @param primaryType {@code node}, {@code way} or {@code relation}
+     * @param primaryId   id of the requested element
      * @throws IOException if the XML is not well-formed
      */
-    public static OsmFullDocument parse(InputStream in) throws IOException {
+    public static OsmDocument parse(InputStream in, String primaryType, String primaryId) throws IOException {
         XMLInputFactory inf = XMLInputFactory.newFactory();
         inf.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, Boolean.FALSE);
         inf.setProperty(XMLInputFactory.SUPPORT_DTD, Boolean.FALSE);
@@ -145,7 +176,8 @@ public final class OsmFullDocument {
 
         Map<String, double[]> nodes = new HashMap<>();
         Map<String, List<String>> ways = new HashMap<>();
-        Map<String, Relation> relations = new LinkedHashMap<>();
+        Map<String, Element> relations = new LinkedHashMap<>();
+        Element primary = null;
         StringWriter sw = new StringWriter();
         double sumLon = 0;
         double sumLat = 0;
@@ -154,9 +186,9 @@ public final class OsmFullDocument {
             XMLStreamReader r = inf.createXMLStreamReader(in);
             XMLStreamWriter w = XMLOutputFactory.newFactory().createXMLStreamWriter(sw);
             w.writeStartDocument("UTF-8", "1.0");
-            // Stack of relations currently open (a <relation> only ever nests inside <osm>,
-            // but a stack keeps the copy logic independent of that assumption).
-            List<Relation> open = new ArrayList<>();
+            // Elements currently open and being copied through (relations, and the primary
+            // node/way). Their tags/members/nd children are attached to the innermost one.
+            List<Element> open = new ArrayList<>();
             int depth = 0;
 
             while (r.hasNext()) {
@@ -164,8 +196,12 @@ public final class OsmFullDocument {
                 switch (ev) {
                     case XMLStreamConstants.START_ELEMENT: {
                         String name = r.getLocalName();
-                        if (depth == 1 && "node".equals(name)) {
-                            String id = r.getAttributeValue(null, "id");
+                        boolean osmElement = depth == 1
+                                && ("node".equals(name) || "way".equals(name) || "relation".equals(name));
+                        String id = osmElement ? r.getAttributeValue(null, "id") : null;
+                        boolean isPrimary = osmElement && name.equals(primaryType) && primaryId.equals(id);
+
+                        if (osmElement && "node".equals(name)) {
                             String lat = r.getAttributeValue(null, "lat");
                             String lon = r.getAttributeValue(null, "lon");
                             if (id != null && lat != null && lon != null) {
@@ -178,26 +214,30 @@ public final class OsmFullDocument {
                                     // skip node with unparseable coordinates
                                 }
                             }
-                            skipSubtree(r, null);
+                        }
+                        if (osmElement && !isPrimary && !"relation".equals(name)) {
+                            // Member node/way: index and drop from the stripped document.
+                            if ("way".equals(name)) {
+                                List<String> refs = new ArrayList<>();
+                                skipSubtree(r, refs);
+                                if (id != null) ways.put(id, refs);
+                            } else {
+                                skipSubtree(r, null);
+                            }
                             continue;
                         }
-                        if (depth == 1 && "way".equals(name)) {
-                            String id = r.getAttributeValue(null, "id");
-                            List<String> refs = new ArrayList<>();
-                            skipSubtree(r, refs);
-                            if (id != null) ways.put(id, refs);
-                            continue;
-                        }
+
                         depth++;
                         copyStartElement(r, w);
-                        Relation current = open.isEmpty() ? null : open.get(open.size() - 1);
-                        if ("relation".equals(name)) {
-                            Relation rel = new Relation(r.getAttributeValue(null, "id"));
+                        Element current = open.isEmpty() ? null : open.get(open.size() - 1);
+                        if (osmElement) {
+                            Element el = new Element(name, id);
                             for (int i = 0; i < r.getAttributeCount(); i++) {
-                                rel.attributes.put(r.getAttributeLocalName(i), r.getAttributeValue(i));
+                                el.attributes.put(r.getAttributeLocalName(i), r.getAttributeValue(i));
                             }
-                            if (rel.id != null) relations.put(rel.id, rel);
-                            open.add(rel);
+                            if ("relation".equals(name) && id != null) relations.put(id, el);
+                            if (isPrimary) primary = el;
+                            open.add(el);
                         } else if (current != null && "member".equals(name)) {
                             current.members.add(new Member(
                                     r.getAttributeValue(null, "type"),
@@ -207,16 +247,23 @@ public final class OsmFullDocument {
                             String k = r.getAttributeValue(null, "k");
                             String v = r.getAttributeValue(null, "v");
                             if (k != null) current.tags.add(new String[]{k, v == null ? "" : v});
+                        } else if (current != null && "nd".equals(name)) {
+                            String ref = r.getAttributeValue(null, "ref");
+                            if (ref != null) current.nodeRefs.add(ref);
                         }
                         break;
                     }
-                    case XMLStreamConstants.END_ELEMENT:
+                    case XMLStreamConstants.END_ELEMENT: {
                         depth--;
-                        if ("relation".equals(r.getLocalName()) && !open.isEmpty()) {
-                            open.remove(open.size() - 1);
+                        String name = r.getLocalName();
+                        if (depth == 1 && !open.isEmpty()
+                                && ("node".equals(name) || "way".equals(name) || "relation".equals(name))) {
+                            Element closed = open.remove(open.size() - 1);
+                            if ("way".equals(name) && closed.id != null) ways.put(closed.id, closed.nodeRefs);
                         }
                         w.writeEndElement();
                         break;
+                    }
                     case XMLStreamConstants.CHARACTERS:
                     case XMLStreamConstants.CDATA:
                         if (!r.isWhiteSpace()) {
@@ -237,7 +284,7 @@ public final class OsmFullDocument {
 
         double[] centroid = nodes.isEmpty() ? null
                 : new double[]{sumLon / nodes.size(), sumLat / nodes.size()};
-        return new OsmFullDocument(nodes, ways, relations, sw.toString(), centroid);
+        return new OsmDocument(primaryType, primaryId, nodes, ways, relations, primary, sw.toString(), centroid);
     }
 
     /**

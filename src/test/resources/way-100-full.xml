@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="openstreetmap-cgimap 2.1.0 (244705 spike-07.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">
+ <node id="260897" visible="true" version="10" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1801486" lon="11.3302026"/>
+ <node id="260898" visible="true" version="9" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1801112" lon="11.3300905"/>
+ <node id="260899" visible="true" version="12" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1798917" lon="11.3301190"/>
+ <node id="260900" visible="true" version="9" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1798751" lon="11.3301697"/>
+ <node id="260901" visible="true" version="11" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1798709" lon="11.3302815"/>
+ <node id="260902" visible="true" version="10" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1798994" lon="11.3303708"/>
+ <node id="260903" visible="true" version="13" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1800762" lon="11.3304236"/>
+ <node id="260904" visible="true" version="9" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1801109" lon="11.3303841"/>
+ <node id="185986175" visible="true" version="8" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1800381" lon="11.3300296"/>
+ <node id="456386831" visible="true" version="6" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1801360" lon="11.3303305"/>
+ <node id="456386832" visible="true" version="6" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1801355" lon="11.3301423"/>
+ <node id="456386833" visible="true" version="6" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1800777" lon="11.3300517"/>
+ <node id="456386834" visible="true" version="6" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1799959" lon="11.3300260"/>
+ <node id="456386836" visible="true" version="6" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1798680" lon="11.3302252"/>
+ <node id="456386837" visible="true" version="6" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1798816" lon="11.3303287"/>
+ <node id="1807516891" visible="true" version="7" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1799837" lon="11.3304456"/>
+ <node id="10295526789" visible="true" version="3" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1800154" lon="11.3304488"/>
+ <node id="10295526790" visible="true" version="3" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1799368" lon="11.3300549"/>
+ <node id="10295526791" visible="true" version="3" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1799233" lon="11.3304055"/>
+ <node id="10295526792" visible="true" version="3" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1800467" lon="11.3304414"/>
+ <node id="10295526793" visible="true" version="3" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1801489" lon="11.3302680"/>
+ <node id="13655709895" visible="true" version="2" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1799519" lon="11.3304309"/>
+ <node id="13655709899" visible="true" version="2" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1799653" lon="11.3300356"/>
+ <node id="13655709900" visible="true" version="2" changeset="180072723" timestamp="2026-03-18T17:53:41Z" user="Herr Bause" uid="22961747" lat="48.1799119" lon="11.3300832"/>
+ <way id="100" visible="true" version="22" changeset="180018469" timestamp="2026-03-17T16:52:56Z" user="Herr Bause" uid="22961747">
+  <nd ref="260904"/>
+  <nd ref="456386831"/>
+  <nd ref="10295526793"/>
+  <nd ref="260897"/>
+  <nd ref="456386832"/>
+  <nd ref="260898"/>
+  <nd ref="456386833"/>
+  <nd ref="185986175"/>
+  <nd ref="456386834"/>
+  <nd ref="13655709899"/>
+  <nd ref="10295526790"/>
+  <nd ref="13655709900"/>
+  <nd ref="260899"/>
+  <nd ref="260900"/>
+  <nd ref="456386836"/>
+  <nd ref="260901"/>
+  <nd ref="456386837"/>
+  <nd ref="260902"/>
+  <nd ref="10295526791"/>
+  <nd ref="13655709895"/>
+  <nd ref="1807516891"/>
+  <nd ref="10295526789"/>
+  <nd ref="10295526792"/>
+  <nd ref="260903"/>
+  <nd ref="260904"/>
+  <tag k="bicycle" v="use_sidepath"/>
+  <tag k="foot" v="use_sidepath"/>
+  <tag k="highway" v="secondary"/>
+  <tag k="junction" v="roundabout"/>
+  <tag k="lane_markings" v="no"/>
+  <tag k="lit" v="yes"/>
+  <tag k="maxspeed" v="100"/>
+  <tag k="surface" v="asphalt"/>
+  <tag k="tmc" v="DE:32282/32283"/>
+  <tag k="unsigned_ref" v="St 2069"/>
+  <tag k="zone:traffic" v="DE:rural"/>
+ </way>
+</osm>

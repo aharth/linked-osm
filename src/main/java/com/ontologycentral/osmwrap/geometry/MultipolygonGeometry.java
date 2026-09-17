@@ -5,10 +5,10 @@ import java.util.List;
 
 /**
  * Represents a multipolygon geometry with outer and inner rings.
- * Handles conversion to GeoJSON, WKT, and KML formats.
+ * Handles conversion to GeoJSON, WKT, GML and KML formats.
  * Supports both simple Polygon (1 outer + multiple inners) and MultiPolygon (multiple outers).
  */
-public class MultipolygonGeometry {
+public class MultipolygonGeometry implements Geometry {
     private List<Ring> outerRings;
     private List<Ring> innerRings;
 
@@ -65,9 +65,10 @@ public class MultipolygonGeometry {
      * For Polygon: all rings are included in one polygon
      * For MultiPolygon: each outer ring with its associated inner rings forms a separate polygon
      */
+    @Override
     public String toGeoJSON() {
         if (!isValid()) {
-            return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
+            return Geometry.EMPTY.toGeoJSON();
         }
 
         if (isMultiPolygon()) {
@@ -136,9 +137,10 @@ public class MultipolygonGeometry {
     /**
      * Convert to WKT POLYGON or MULTIPOLYGON format
      */
+    @Override
     public String toWKT() {
         if (!isValid()) {
-            return "GEOMETRYCOLLECTION()";
+            return Geometry.EMPTY.toWKT();
         }
 
         if (isMultiPolygon()) {
@@ -203,9 +205,6 @@ public class MultipolygonGeometry {
         return sb.toString();
     }
 
-    private static final String GML_NS = "xmlns:gml=\"http://www.opengis.net/gml/3.2\"";
-    private static final String GML_CRS84 = "srsName=\"http://www.opengis.net/def/crs/OGC/1.3/CRS84\"";
-
     /**
      * Convert to a GML 3.2 {@code gml:Polygon} (single outer ring) or {@code gml:MultiSurface}
      * (multiple outer rings) fragment, CRS84 axis order - matching the hand-built GML that
@@ -213,6 +212,7 @@ public class MultipolygonGeometry {
      * associated with the first outer ring only, same simplification as {@link #toWKT()}.
      * @return the GML fragment, or {@code null} if the geometry isn't valid
      */
+    @Override
     public String toGML() {
         if (!isValid()) {
             return null;
@@ -255,9 +255,10 @@ public class MultipolygonGeometry {
     /**
      * Convert to KML Polygon format with outerBoundaryIs and innerBoundaryIs
      */
+    @Override
     public String toKML() {
         if (!isValid()) {
-            return "";
+            return Geometry.EMPTY.toKML();
         }
 
         StringBuilder sb = new StringBuilder();

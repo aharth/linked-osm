@@ -1,4 +1,4 @@
-<!-- Shared templates and functions for node.xsl, way.xsl, relation.xsl -->
+<!-- Shared templates and functions for feature.xsl (nodes, ways, relations) -->
 <xsl:stylesheet
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    xmlns:xs="http://www.w3.org/2001/XMLSchema"
@@ -73,6 +73,95 @@
     <xsl:text> .&#10;</xsl:text>
     <xsl:text>&#10;</xsl:text>
   </xsl:template>
+
+  <!-- Geometry resource of a feature. The shape is computed in Java (GeometryBuilder) and
+       passed in as GML; the centroid likewise. Nothing here looks at member nodes. -->
+  <xsl:template name="geometry-resource">
+    <xsl:param name="source-prefix"/>
+    <xsl:param name="type"/>
+    <xsl:param name="id"/>
+    <xsl:param name="centroid-lat" select="''"/>
+    <xsl:param name="centroid-lon" select="''"/>
+    <xsl:param name="geometry-gml" select="''"/>
+    <xsl:text>&lt;</xsl:text><xsl:value-of select="$source-prefix"/><xsl:text>/</xsl:text><xsl:value-of select="$type"/><xsl:text>/</xsl:text><xsl:value-of select="$id"/><xsl:text>#geo&gt; a geom:Geometry ;&#10;</xsl:text>
+    <xsl:text>    foaf:page &lt;/geo/osm/</xsl:text><xsl:value-of select="$type"/><xsl:text>/</xsl:text><xsl:value-of select="$id"/><xsl:text>&gt; ;&#10;</xsl:text>
+    <xsl:text>    foaf:page &lt;/geo/overpass/</xsl:text><xsl:value-of select="$type"/><xsl:text>/</xsl:text><xsl:value-of select="$id"/><xsl:text>&gt;</xsl:text>
+    <xsl:if test="normalize-space($centroid-lat) != '' and normalize-space($centroid-lon) != ''">
+      <xsl:text> ;&#10;    geo:lat "</xsl:text><xsl:value-of select="$centroid-lat"/><xsl:text>"</xsl:text>
+      <xsl:text> ;&#10;    geo:long "</xsl:text><xsl:value-of select="$centroid-lon"/><xsl:text>"</xsl:text>
+    </xsl:if>
+    <xsl:if test="normalize-space($geometry-gml) != ''">
+      <xsl:text> ;&#10;    locn:geometry "</xsl:text>
+      <xsl:value-of select="local:ttl($geometry-gml)"/>
+      <xsl:text>"^^rdf:XMLLiteral</xsl:text>
+    </xsl:if>
+    <xsl:text> .&#10;</xsl:text>
+    <xsl:text>&#10;</xsl:text>
+  </xsl:template>
+
+  <!-- Tag templates. Each emits: ; <predicate> object -->
+  <xsl:template match="tag[@k = 'name:en']">
+    <xsl:text> ;&#10;    rdfs:label "</xsl:text>
+    <xsl:value-of select="local:ttl(@v)"/>
+    <xsl:text>"</xsl:text>
+    <xsl:text> ;&#10;    &lt;/tag/name:en&gt; "</xsl:text>
+    <xsl:value-of select="local:ttl(@v)"/>
+    <xsl:text>"</xsl:text>
+  </xsl:template>
+
+  <!-- could be either in the form fr:Paris or just Paris -->
+  <xsl:template match="tag[@k = 'wikipedia']">
+    <xsl:choose>
+      <xsl:when test="contains(@v, ':')">
+        <xsl:text> ;&#10;    foaf:page &lt;http://</xsl:text>
+        <xsl:value-of select="substring(@v, 0, 3)"/>
+        <xsl:text>.wikipedia.org/wiki/</xsl:text>
+        <xsl:value-of select="encode-for-uri(substring(@v, 4))"/>
+        <xsl:text>&gt;</xsl:text>
+        <xsl:choose>
+          <xsl:when test="substring(@v, 0, 3) = 'en'">
+            <xsl:text> ;&#10;    owl:sameAs &lt;http://dbpedia.org/resource/</xsl:text>
+            <xsl:value-of select="encode-for-uri(substring(@v, 4))"/>
+            <xsl:text>&gt;</xsl:text>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:text> ;&#10;    owl:sameAs &lt;http://</xsl:text>
+            <xsl:value-of select="substring(@v, 0, 3)"/>
+            <xsl:text>.dbpedia.org/resource/</xsl:text>
+            <xsl:value-of select="encode-for-uri(substring(@v, 4))"/>
+            <xsl:text>&gt;</xsl:text>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:text> ;&#10;    owl:sameAs &lt;http://dbpedia.org/resource/</xsl:text>
+        <xsl:value-of select="encode-for-uri(@v)"/>
+        <xsl:text>&gt;</xsl:text>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <xsl:template match="tag[@k = 'wikidata']">
+    <xsl:text> ;&#10;    owl:sameAs &lt;http://www.wikidata.org/entity/</xsl:text>
+    <xsl:value-of select="@v"/>
+    <xsl:text>&gt;</xsl:text>
+  </xsl:template>
+
+  <xsl:template match="tag">
+    <xsl:text> ;&#10;    &lt;/tag/</xsl:text>
+    <xsl:value-of select="@k"/>
+    <xsl:text>&gt; "</xsl:text>
+    <xsl:value-of select="local:ttl(@v)"/>
+    <xsl:text>"</xsl:text>
+  </xsl:template>
+
+  <!-- Relation member: link to the member feature. -->
+  <xsl:template match="member">
+    <xsl:text> ;&#10;    rdfs:seeAlso &lt;/</xsl:text><xsl:value-of select="@type"/><xsl:text>/</xsl:text><xsl:value-of select="@ref"/><xsl:text>&gt;</xsl:text>
+  </xsl:template>
+
+  <!-- Way node refs carry no information beyond the geometry already emitted. -->
+  <xsl:template match="nd"/>
 
   <!-- Changeset as prov:Activity. Only emitted when all three attributes are present. -->
   <xsl:template name="changeset-activity">

@@ -1,50 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- WFS-style GML feature collection for one OSM element (node, way or relation).
+     Input and parameters as for feature.xsl; the geometry arrives as a GML string and is
+     parsed back into the result tree. -->
 <xsl:stylesheet
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:wfs="http://www.opengis.net/wfs/2.0"
   xmlns:gml="http://www.opengis.net/gml/3.2"
   xmlns:osm="http://osm.geovocab.org/vocab#"
   exclude-result-prefixes="xsl"
-  version="2.0">
+  version="3.0">
 
   <xsl:output method="xml" encoding="UTF-8" indent="yes"/>
 
   <xsl:strip-space elements="*"/>
 
-  <!-- Mean member node coordinates, computed in Java (see relation.xsl). Empty = no geometry. -->
-  <xsl:param name="centroid-lat" select="''"/>
-  <xsl:param name="centroid-lon" select="''"/>
-  <!-- id of the requested relation; the point geometry is emitted for that one only -->
+  <xsl:param name="element-type" select="''"/>
   <xsl:param name="element-id" select="''"/>
+  <xsl:param name="geometry-gml" select="''"/>
 
   <xsl:template match="osm">
     <wfs:FeatureCollection
         gml:id="linked-osm"
         numberMatched="1"
         numberReturned="1">
-      <xsl:apply-templates select="relation"/>
+      <xsl:apply-templates select="*[local-name() = $element-type and @id = $element-id]"/>
     </wfs:FeatureCollection>
   </xsl:template>
 
-  <xsl:template match="relation">
+  <xsl:template match="node | way | relation">
     <wfs:member>
-      <osm:relation>
-        <xsl:attribute name="gml:id">relation.<xsl:value-of select="@id"/></xsl:attribute>
-        <xsl:if test="normalize-space($centroid-lat) != '' and normalize-space($centroid-lon) != ''
-                      and ($element-id = '' or @id = $element-id)">
+      <xsl:element name="osm:{local-name()}">
+        <xsl:attribute name="gml:id"><xsl:value-of select="local-name()"/>.<xsl:value-of select="@id"/></xsl:attribute>
+        <xsl:if test="normalize-space($geometry-gml) != ''">
           <osm:geometry>
-            <gml:Point srsName="http://www.opengis.net/def/crs/OGC/1.3/CRS84">
-              <gml:pos>
-                <xsl:value-of select="$centroid-lon"/>
-                <xsl:text> </xsl:text>
-                <xsl:value-of select="$centroid-lat"/>
-              </gml:pos>
-            </gml:Point>
+            <xsl:copy-of select="parse-xml($geometry-gml)/*"/>
           </osm:geometry>
         </xsl:if>
         <xsl:apply-templates select="tag"/>
         <xsl:apply-templates select="member"/>
-      </osm:relation>
+      </xsl:element>
     </wfs:member>
   </xsl:template>
 

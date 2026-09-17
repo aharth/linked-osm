@@ -128,33 +128,34 @@ test_resource() {
         check_rdfxml_scheme "$type RDF/XML https"       "$RDF"
     fi
 
-    # Per-type SPARQL-over-local-file checks
+    # SPARQL-over-local-file checks. Since 2026-09-17 one stylesheet (feature.xsl)
+    # serves nodes, ways and relations, so every type gets the same checks: a
+    # spatial:Feature, a geom:geometry link, lat/long on the #geo resource, a tag,
+    # a GML literal, PROV attribution.
     if [ -n "$TTL" ]; then
-        case "$type" in
-            node)
-                roqet_doc "$type: is spatial:Feature" "$TTL" "$url.ttl" \
-                    'PREFIX spatial: <http://geovocab.org/spatial#>
-                     SELECT ?n WHERE { ?n a spatial:Feature } LIMIT 1'
-                roqet_doc "$type: has lat/long" "$TTL" "$url.ttl" \
-                    'PREFIX geo: <http://www.w3.org/2003/01/geo/wgs84_pos#>
-                     SELECT ?lat ?lon WHERE { ?n geo:lat ?lat ; geo:long ?lon } LIMIT 1'
-                roqet_doc "$type: prov:wasAttributedTo" "$TTL" "$url.ttl" \
-                    'PREFIX prov: <http://www.w3.org/ns/prov#>
-                     SELECT ?agent WHERE { ?s prov:wasAttributedTo ?agent } LIMIT 1'
-                roqet_doc "$type: has tag" "$TTL" "$url.ttl" \
-                    'SELECT ?k ?v WHERE { ?n ?k ?v . FILTER(CONTAINS(STR(?k), "/tag/")) } LIMIT 1'
-                ;;
-            way)
-                roqet_doc "$type: has geometry" "$TTL" "$url.ttl" \
-                    'PREFIX geom: <http://geovocab.org/geometry#>
-                     SELECT ?g WHERE { ?w geom:geometry ?g } LIMIT 1'
-                ;;
-            relation)
-                roqet_doc "$type: rdfs:label" "$TTL" "$url.ttl" \
-                    'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-                     SELECT ?lbl WHERE { ?r rdfs:label ?lbl } LIMIT 1'
-                ;;
-        esac
+        roqet_doc "$type: is spatial:Feature" "$TTL" "$url.ttl" \
+            'PREFIX spatial: <http://geovocab.org/spatial#>
+             SELECT ?n WHERE { ?n a spatial:Feature } LIMIT 1'
+        roqet_doc "$type: has geometry" "$TTL" "$url.ttl" \
+            'PREFIX geom: <http://geovocab.org/geometry#>
+             SELECT ?g WHERE { ?w geom:geometry ?g } LIMIT 1'
+        roqet_doc "$type: #geo has lat/long" "$TTL" "$url.ttl" \
+            'PREFIX geo:  <http://www.w3.org/2003/01/geo/wgs84_pos#>
+             PREFIX geom: <http://geovocab.org/geometry#>
+             SELECT ?lat ?lon WHERE { ?g a geom:Geometry ; geo:lat ?lat ; geo:long ?lon } LIMIT 1'
+        roqet_doc "$type: #geo has GML literal" "$TTL" "$url.ttl" \
+            'PREFIX locn: <http://www.w3.org/ns/locn#>
+             SELECT ?g WHERE { ?s locn:geometry ?g . FILTER(CONTAINS(STR(?g), "gml:")) } LIMIT 1'
+        roqet_doc "$type: prov:wasAttributedTo" "$TTL" "$url.ttl" \
+            'PREFIX prov: <http://www.w3.org/ns/prov#>
+             SELECT ?agent WHERE { ?s prov:wasAttributedTo ?agent } LIMIT 1'
+        roqet_doc "$type: has tag" "$TTL" "$url.ttl" \
+            'SELECT ?k ?v WHERE { ?n ?k ?v . FILTER(CONTAINS(STR(?k), "/tag/")) } LIMIT 1'
+        if [ "$type" = relation ]; then
+            roqet_doc "$type: rdfs:label" "$TTL" "$url.ttl" \
+                'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+                 SELECT ?lbl WHERE { ?r rdfs:label ?lbl } LIMIT 1'
+        fi
     fi
 
     [ -n "$TTL" ] && rm -f "$TTL"

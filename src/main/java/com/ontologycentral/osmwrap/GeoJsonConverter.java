@@ -1,25 +1,18 @@
 package com.ontologycentral.osmwrap;
 
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.ontologycentral.osmwrap.geometry.MultipolygonGeometry;
 import com.ontologycentral.osmwrap.geometry.MultipolygonHandler;
+
 
 /**
  * Converts upstream XML responses to GeoJSON FeatureCollections.
  */
 public final class GeoJsonConverter {
 
-    private static final Logger LOG = Logger.getLogger(GeoJsonConverter.class.getName());
 
     private static final Pattern TAG_PATTERN =
         Pattern.compile("<tag\\s+k=['\"]([^'\"]*)['\"]\\s+v=['\"]([^'\"]*)['\"]");
@@ -322,10 +315,8 @@ public final class GeoJsonConverter {
 
             String geomJson;
             if (!outerSegments.isEmpty()) {
-                com.ontologycentral.osmwrap.geometry.MultipolygonGeometry geom =
-                        com.ontologycentral.osmwrap.geometry.MultipolygonHandler
-                                .buildFromSegments(outerSegments, innerSegments);
-                geomJson = com.ontologycentral.osmwrap.geometry.MultipolygonHandler.toGeoJSON(geom);
+                geomJson = MultipolygonHandler.toGeoJSON(
+                        MultipolygonHandler.buildFromSegments(outerSegments, innerSegments));
             } else {
                 // Route or generic: MultiLineString from all segments
                 List<List<double[]>> all = new ArrayList<>(otherSegments);
@@ -373,29 +364,13 @@ public final class GeoJsonConverter {
     }
 
     /**
-     * Convert an OSM API XML response for a single feature (node/way/relation)
-     * to a GeoJSON Feature with inline geometry and all OSM tags as properties.
+     * A single OSM element as a GeoJSON Feature with its tags as properties.
      *
-     * @param xml          OSM API XML for the element
+     * @param tags         the element's tags as {@code {k, v}} pairs
      * @param elementType  "node", "way", or "relation"
      * @param id           the OSM element ID (used for the GeoJSON "id" field)
-     * @param geometryJson pre-computed GeoJSON geometry object string, or null
-     */
-    public static String osmFeatureToGeoJson(String xml, String elementType, String id,
-            String geometryJson, String sourcePrefix) {
-        List<String[]> tags = new ArrayList<>();
-        Matcher tagMatcher = TAG_PATTERN.matcher(xml);
-        while (tagMatcher.find()) {
-            tags.add(new String[]{decodeXmlEntities(tagMatcher.group(1)), decodeXmlEntities(tagMatcher.group(2))});
-        }
-        return osmFeatureToGeoJson(tags, elementType, id, geometryJson, sourcePrefix);
-    }
-
-    /**
-     * Same as {@link #osmFeatureToGeoJson(String, String, String, String, String)} but with the
-     * element's tags already extracted as {@code {k, v}} pairs. Used for relations parsed from a
-     * {@code /full} response, where a regex over the whole document would also pick up the
-     * member ways' and nodes' tags.
+     * @param geometryJson GeoJSON geometry object string, or null
+     * @param sourcePrefix URI prefix of the wrapper endpoint, e.g. {@code /osm}
      */
     public static String osmFeatureToGeoJson(List<String[]> tags, String elementType, String id,
             String geometryJson, String sourcePrefix) {
@@ -414,252 +389,6 @@ public final class GeoJsonConverter {
                 + ",\"properties\":{" + props + "}"
                 + ",\"geometry\":" + (geometryJson != null ? geometryJson : "null")
                 + "}";
-    }
-
-    /**
-     * Result of extracting geometry from OSM XML.
-     */
-    public static class GeometryResult {
-        public final String geometryJson;
-
-        GeometryResult(String geometryJson) {
-            this.geometryJson = geometryJson;
-        }
-    }
-
-    /**
-     * Extract a GeoJSON geometry object from an OSM API XML response.
-     * Handles nodes (inline lat/lon), ways (bulk node fetch), and relations
-     * (multipolygon or generic member traversal).
-     *
-     * @param osmXml      OSM API XML response body
-     * @param elementType "node", "way", or "relation"
-     * @param id          the OSM element ID (used for logging)
-     * @return GeometryResult with GeoJSON geometry string and optional centroid
-     * @throws IOException if an upstream HTTP call fails
-     */
-    public static GeometryResult extractGeometryJson(String osmXml, String elementType, String id)
-            throws IOException {
-        try {
-            if ("node".equals(elementType)) {
-                Pattern latPattern = Pattern.compile("lat=['\"]([^'\"]+)['\"]");
-                Pattern lonPattern = Pattern.compile("lon=['\"]([^'\"]+)['\"]");
-                Matcher latMatcher = latPattern.matcher(osmXml);
-                Matcher lonMatcher = lonPattern.matcher(osmXml);
-                if (latMatcher.find() && lonMatcher.find()) {
-                    String lon = lonMatcher.group(1);
-                    String lat = latMatcher.group(1);
-                    return new GeometryResult(
-                            "{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}");
-                }
-            } else if ("way".equals(elementType)) {
-                List<String> nodeRefs = extractNodeReferences(osmXml);
-                if (nodeRefs.isEmpty()) {
-                    return new GeometryResult("{\"type\":\"LineString\",\"coordinates\":[]}");
-                }
-                List<double[]> coordinates = fetchNodeCoordinates(nodeRefs);
-                return new GeometryResult(buildLineStringGeometry(coordinates));
-            } else if ("relation".equals(elementType)) {
-                if (MultipolygonHandler.isMultipolygon(osmXml)) {
-                    try {
-                        LOG.info("Processing multipolygon relation " + id);
-                        MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(osmXml, id);
-                        return new GeometryResult(MultipolygonHandler.toGeoJSON(geom));
-                    } catch (Exception e) {
-                        LOG.warning("Error processing multipolygon: " + e.getMessage());
-                    }
-                }
-                List<Map<String, String>> members = extractMemberReferences(osmXml);
-                List<double[]> coordinates = fetchRelationMemberCoordinates(members);
-                if (coordinates.isEmpty()) {
-                    return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}");
-                }
-                return new GeometryResult(buildLineStringGeometry(coordinates));
-            }
-            return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}");
-        } catch (IOException e) {
-            throw e;
-        } catch (Exception e) {
-            LOG.warning("Error extracting geometry from OSM: " + e.getMessage());
-            return new GeometryResult("{\"type\":\"GeometryCollection\",\"geometries\":[]}");
-        }
-    }
-
-    /**
-     * GeoJSON geometry of a relation from a parsed {@code /full} document: Polygon/MultiPolygon
-     * for multipolygon and boundary relations, otherwise one LineString over all member
-     * coordinates in order (same shape as {@link #extractGeometryJson} produces, but without
-     * any upstream calls: every member way and node is already inline).
-     */
-    public static String relationGeometryJson(OsmFullDocument doc, String id) {
-        OsmFullDocument.Relation rel = doc.relation(id);
-        if (MultipolygonHandler.isMultipolygon(rel)) {
-            try {
-                LOG.info("Processing multipolygon relation " + id);
-                MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(doc, id);
-                return MultipolygonHandler.toGeoJSON(geom);
-            } catch (Exception e) {
-                LOG.warning("Error processing multipolygon: " + e.getMessage());
-            }
-        }
-        List<double[]> coordinates = relationMemberCoordinates(doc, rel);
-        if (coordinates.isEmpty()) {
-            return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
-        }
-        return buildLineStringGeometry(coordinates);
-    }
-
-    /**
-     * GML geometry of a relation from a parsed {@code /full} document, for the
-     * {@code locn:geometry} literal in the Turtle output: Polygon/MultiSurface for multipolygon
-     * and boundary relations, otherwise one LineString over all member coordinates in order.
-     *
-     * @return the GML fragment, or {@code null} if no geometry could be built
-     */
-    public static String relationGeometryGml(OsmFullDocument doc, String id) {
-        OsmFullDocument.Relation rel = doc.relation(id);
-        if (MultipolygonHandler.isMultipolygon(rel)) {
-            try {
-                LOG.info("Processing multipolygon relation " + id + " for GML");
-                MultipolygonGeometry geom = MultipolygonHandler.buildMultipolygon(doc, id);
-                String gml = geom.toGML();
-                if (gml != null) {
-                    return gml;
-                }
-            } catch (Exception e) {
-                LOG.warning("Error processing multipolygon for GML: " + e.getMessage());
-            }
-        }
-        List<double[]> coordinates = relationMemberCoordinates(doc, rel);
-        if (coordinates.isEmpty()) {
-            return null;
-        }
-        return buildGmlLineString(coordinates);
-    }
-
-    /**
-     * Member coordinates of a route-style relation in member order: node members directly,
-     * way members as their node lists. Members not present in the document are skipped.
-     */
-    private static List<double[]> relationMemberCoordinates(OsmFullDocument doc, OsmFullDocument.Relation rel) {
-        List<double[]> coordinates = new ArrayList<>();
-        if (rel == null) return coordinates;
-        Map<String, double[]> nodes = doc.nodes();
-        for (OsmFullDocument.Member m : rel.members()) {
-            if ("node".equals(m.type())) {
-                double[] c = nodes.get(m.ref());
-                if (c != null) coordinates.add(c);
-            } else if ("way".equals(m.type())) {
-                List<String> refs = doc.ways().get(m.ref());
-                if (refs == null) continue;
-                for (String ref : refs) {
-                    double[] c = nodes.get(ref);
-                    if (c != null) coordinates.add(c);
-                }
-            }
-        }
-        return coordinates;
-    }
-
-    private static String buildGmlLineString(List<double[]> coordinates) {
-        StringBuilder posList = new StringBuilder();
-        for (int i = 0; i < coordinates.size(); i++) {
-            if (i > 0) posList.append(" ");
-            double[] c = coordinates.get(i);
-            posList.append(c[0]).append(" ").append(c[1]);
-        }
-        return "<gml:LineString xmlns:gml=\"http://www.opengis.net/gml/3.2\" "
-                + "srsName=\"http://www.opengis.net/def/crs/OGC/1.3/CRS84\">"
-                + "<gml:posList>" + posList + "</gml:posList></gml:LineString>";
-    }
-
-    private static List<String> extractNodeReferences(String osmXml) {
-        List<String> nodeRefs = new ArrayList<>();
-        Pattern pattern = Pattern.compile("<nd ref=['\"]([^'\"]+)['\"]");
-        Matcher matcher = pattern.matcher(osmXml);
-        while (matcher.find()) {
-            nodeRefs.add(matcher.group(1));
-        }
-        return nodeRefs;
-    }
-
-    private static List<Map<String, String>> extractMemberReferences(String osmXml) {
-        List<Map<String, String>> members = new ArrayList<>();
-        Pattern pattern = Pattern.compile("<member type=['\"]([^'\"]+)['\"] ref=['\"]([^'\"]+)['\"]");
-        Matcher matcher = pattern.matcher(osmXml);
-        while (matcher.find()) {
-            Map<String, String> member = new HashMap<>();
-            member.put("type", matcher.group(1));
-            member.put("ref", matcher.group(2));
-            members.add(member);
-        }
-        return members;
-    }
-
-    /**
-     * Resolves a route-style relation's member coordinates (nodes + way node lists) with two
-     * bulk upstream calls at most - one {@code fetchWaysBulk} for every member way, one
-     * {@code fetchNodesBulk} for every node referenced (directly or via a member way) - instead
-     * of one {@code GET /way/{id}} per member way. Mirrors how {@link MultipolygonHandler}
-     * already resolves multipolygon members.
-     */
-    private static List<double[]> fetchRelationMemberCoordinates(List<Map<String, String>> members)
-            throws IOException {
-        List<String> wayIds = new ArrayList<>();
-        for (Map<String, String> member : members) {
-            if ("way".equals(member.get("type"))) {
-                wayIds.add(member.get("ref"));
-            }
-        }
-        Map<String, List<String>> wayNodes = wayIds.isEmpty()
-                ? new HashMap<>() : HttpClientUtil.fetchWaysBulk(wayIds);
-
-        List<String> allNodeIds = new ArrayList<>();
-        for (Map<String, String> member : members) {
-            String memberType = member.get("type");
-            String memberRef = member.get("ref");
-            if ("node".equals(memberType)) {
-                allNodeIds.add(memberRef);
-            } else if ("way".equals(memberType)) {
-                List<String> nodeRefs = wayNodes.get(memberRef);
-                if (nodeRefs != null) allNodeIds.addAll(nodeRefs);
-            }
-        }
-        return fetchNodeCoordinates(allNodeIds);
-    }
-
-    private static List<double[]> fetchNodeCoordinates(List<String> nodeIds) throws IOException {
-        List<double[]> coordinates = new ArrayList<>();
-        if (nodeIds == null || nodeIds.isEmpty()) {
-            return coordinates;
-        }
-        Set<String> uniqueNodeIds = new HashSet<>(nodeIds);
-        try {
-            Map<String, double[]> nodeCoordinates = HttpClientUtil.fetchNodesBulk(new ArrayList<>(uniqueNodeIds));
-            for (String nodeId : nodeIds) {
-                if (nodeCoordinates.containsKey(nodeId)) {
-                    coordinates.add(nodeCoordinates.get(nodeId));
-                }
-            }
-        } catch (Exception e) {
-            LOG.warning("Error fetching node coordinates in bulk: " + e.getMessage());
-        }
-        return coordinates;
-    }
-
-    private static String buildLineStringGeometry(List<double[]> coordinates) {
-        if (coordinates.isEmpty()) {
-            return "{\"type\":\"LineString\",\"coordinates\":[]}";
-        }
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\"type\":\"LineString\",\"coordinates\":[");
-        for (int i = 0; i < coordinates.size(); i++) {
-            if (i > 0) sb.append(",");
-            double[] coord = coordinates.get(i);
-            sb.append("[").append(coord[0]).append(",").append(coord[1]).append("]");
-        }
-        sb.append("]}");
-        return sb.toString();
     }
 
     private static String extractAttr(String element, String attrName) {

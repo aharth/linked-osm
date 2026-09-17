@@ -1,33 +1,32 @@
 package com.ontologycentral.osmwrap.webapp;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
-import com.ontologycentral.osmwrap.ApiConstants;
-import com.ontologycentral.osmwrap.GeoJsonConverter;
-import com.ontologycentral.osmwrap.HttpClientUtil;
+import com.ontologycentral.osmwrap.OsmElement;
+import com.ontologycentral.osmwrap.UpstreamCache;
+import com.ontologycentral.osmwrap.UpstreamCache.UpstreamException;
 
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+/**
+ * {@code /geo/osm/{type}/{id}[.json|.wkt|.kml]}: just the geometry of one OSM API element.
+ * Same load path as {@link FeatureServlet} (shared cache, StAX parse, one geometry model),
+ * so the shape here is byte-for-byte the one embedded in the Turtle and GML outputs.
+ */
 @SuppressWarnings("serial")
 public class GeometryOSMServlet extends HttpServlet {
     private static final Logger _log = Logger.getLogger(GeometryOSMServlet.class.getName());
 
     public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        OutputStream os = resp.getOutputStream();
-
         String pathInfo = req.getPathInfo();
         if (pathInfo == null) {
             resp.sendError(404, "No path specified");
@@ -36,15 +35,14 @@ public class GeometryOSMServlet extends HttpServlet {
 
         // Parse /way/123 or /node/456, or /relation/789
         String[] parts = pathInfo.substring(1).split("/", 2);
-        String elementType;
-        String id;
-
-        if (parts.length == 2) {
-            // Format: /way/123
-            elementType = parts[0];
-            id = parts[1];
-        } else {
+        if (parts.length != 2) {
             resp.sendError(404, "Invalid path format");
+            return;
+        }
+        String type = parts[0];
+        String id = parts[1];
+        if (!"node".equals(type) && !"way".equals(type) && !"relation".equals(type)) {
+            resp.sendError(404, "Invalid element type: " + type);
             return;
         }
 
@@ -53,12 +51,8 @@ public class GeometryOSMServlet extends HttpServlet {
         boolean explicitFormat = id.contains(".");
         if (explicitFormat) {
             String extension = id.substring(id.lastIndexOf(".") + 1).toLowerCase();
-            if ("json".equals(extension)) {
-                format = "json";
-            } else if ("wkt".equals(extension)) {
-                format = "wkt";
-            } else if ("kml".equals(extension)) {
-                format = "kml";
+            if ("json".equals(extension) || "wkt".equals(extension) || "kml".equals(extension)) {
+                format = extension;
             } else {
                 // Unknown extension - reject with 406
                 resp.sendError(406, "Unsupported format: ." + extension);
@@ -86,169 +80,44 @@ public class GeometryOSMServlet extends HttpServlet {
             }
         }
 
-        // Fetch element from OSM API to get coordinates and member references
-        String osmApiUrl = ApiConstants.OSM_API_BASE + "/" + elementType + "/" + id;
-
-        _log.info("retrieving OSM element " + osmApiUrl);
+        UpstreamCache cache = (UpstreamCache) getServletContext().getAttribute(UpstreamCache.ATTR);
+        String upstreamUrl = OsmElement.upstreamUrl(type, id);
+        OutputStream os = resp.getOutputStream();
 
         try {
-            HttpResponse<InputStream> response = HttpClientUtil.get(osmApiUrl);
+            OsmElement element = OsmElement.load(cache, type, id);
 
-            int responseCode = response.statusCode();
-            if (responseCode != 200) {
-                resp.setStatus(responseCode);
-                response.headers().firstValue("Content-Type").ifPresent(resp::setContentType);
-                HttpClientUtil.copyStream(response.body(), resp.getOutputStream());
-                return;
+            String body;
+            switch (format) {
+                case "wkt":
+                    resp.setContentType("application/wkt");
+                    body = element.geometry().toWKT();
+                    break;
+                case "kml":
+                    resp.setContentType("application/vnd.google-earth.kml+xml");
+                    body = element.toKmlDocument();
+                    break;
+                default:
+                    resp.setContentType("application/geo+json");
+                    body = element.geometry().toGeoJSON();
             }
-
-            InputStream is = response.body();
-            String osmXml = HttpClientUtil.readToString(is);
-            is.close();
-
-            // Extract geometry from the OSM element
-            GeoJsonConverter.GeometryResult geomResult = GeoJsonConverter.extractGeometryJson(osmXml, elementType, id);
-            String geometry = geomResult.geometryJson;
-
-            if ("json".equals(format)) {
-                resp.setContentType("application/geo+json");
-                os.write(geometry.getBytes(StandardCharsets.UTF_8));
-            } else if ("wkt".equals(format)) {
-                String wkt = convertToWkt(geometry);
-                resp.setContentType("application/wkt");
-                os.write(wkt.getBytes(StandardCharsets.UTF_8));
-            } else if ("kml".equals(format)) {
-                String kml = convertToKml(geometry, elementType, id);
-                resp.setContentType("application/vnd.google-earth.kml+xml");
-                os.write(kml.getBytes(StandardCharsets.UTF_8));
-            } else {
-                resp.sendError(406, "Unsupported format: " + format);
-                return;
-            }
+            os.write(body.getBytes(StandardCharsets.UTF_8));
 
             resp.setHeader("Cache-Control", "public");
             resp.setHeader("Expires", ZonedDateTime.now().plusDays(1).format(Listener.RFC822));
-
+        } catch (UpstreamException e) {
+            UpstreamErrors.relay(e, resp);
+            return;
         } catch (IOException e) {
-            resp.sendError(HttpClientUtil.errorStatus(e), osmApiUrl + ": " + e.getMessage());
             _log.log(Level.SEVERE, e.getMessage(), e);
+            UpstreamErrors.fail(e, upstreamUrl, resp);
             return;
         } catch (RuntimeException e) {
-            resp.sendError(500, osmApiUrl + ": " + e.getMessage());
             _log.log(Level.SEVERE, e.getMessage(), e);
+            resp.sendError(500, upstreamUrl + ": " + e.getMessage());
             return;
         }
 
         os.close();
-    }
-
-    private String convertToWkt(String geoJson) {
-        try {
-            if (geoJson.contains("\"type\":\"Point\"")) {
-                Pattern coordPattern = Pattern.compile("\"coordinates\"\\s*:\\s*\\[([^,]+),([^\\]]+)\\]");
-                Matcher matcher = coordPattern.matcher(geoJson);
-                if (matcher.find()) {
-                    String lon = matcher.group(1);
-                    String lat = matcher.group(2);
-                    return "POINT(" + lon + " " + lat + ")";
-                }
-            } else if (geoJson.contains("\"type\":\"Polygon\"")) {
-                Pattern coordPattern = Pattern.compile("\"coordinates\"\\s*:\\s*(\\[\\[.*?\\]\\])");
-                Matcher matcher = coordPattern.matcher(geoJson);
-                if (matcher.find()) {
-                    String coordStr = matcher.group(1);
-                    String wktCoords = coordStr.replaceAll("\\[", "(").replaceAll("\\]", ")").replaceAll("\\],\\s*\\[", ", ").replaceAll(",\\s*", " ");
-                    return "POLYGON" + wktCoords;
-                }
-            } else if (geoJson.contains("\"type\":\"MultiPolygon\"")) {
-                Pattern coordPattern = Pattern.compile("\"coordinates\"\\s*:\\s*(\\[\\[\\[.*?\\]\\]\\])");
-                Matcher matcher = coordPattern.matcher(geoJson);
-                if (matcher.find()) {
-                    String coordStr = matcher.group(1);
-                    String wktCoords = coordStr.replaceAll("\\[", "(").replaceAll("\\]", ")").replaceAll("\\],\\s*\\[", ", ").replaceAll(",\\s*", " ");
-                    return "MULTIPOLYGON" + wktCoords;
-                }
-            } else if (geoJson.contains("\"type\":\"LineString\"")) {
-                Pattern coordPattern = Pattern.compile("\"coordinates\"\\s*:\\s*(\\[[^\\]]*\\])");
-                Matcher matcher = coordPattern.matcher(geoJson);
-                if (matcher.find()) {
-                    String coordStr = matcher.group(1);
-                    String wktCoords = coordStr.replaceAll("\\[", "(").replaceAll("\\]", ")").replaceAll("\\],\\s*\\[", ", ").replaceAll(",\\s*", " ");
-                    return "LINESTRING" + wktCoords;
-                }
-            }
-
-            return "GEOMETRYCOLLECTION()";
-        } catch (Exception e) {
-            _log.warning("Error converting to WKT: " + e.getMessage());
-            return "GEOMETRYCOLLECTION()";
-        }
-    }
-
-    private String convertToKml(String geoJson, String elementType, String id) {
-        try {
-            StringBuilder kml = new StringBuilder();
-            kml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            kml.append("<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n");
-            kml.append("  <Document>\n");
-            kml.append("    <Placemark>\n");
-            kml.append("      <name>").append(elementType).append(" ").append(id).append("</name>\n");
-
-            if (geoJson.contains("\"type\":\"Point\"")) {
-                Pattern coordPattern = Pattern.compile("\"coordinates\"\\s*:\\s*\\[([^,]+),([^\\]]+)\\]");
-                Matcher matcher = coordPattern.matcher(geoJson);
-                if (matcher.find()) {
-                    String lon = matcher.group(1);
-                    String lat = matcher.group(2);
-                    kml.append("      <Point>\n");
-                    kml.append("        <coordinates>").append(lon).append(",").append(lat).append(",0</coordinates>\n");
-                    kml.append("      </Point>\n");
-                }
-            } else if (geoJson.contains("\"type\":\"Polygon\"")) {
-                // Polygon output: extract coordinates and build KML Polygon
-                Pattern coordPattern = Pattern.compile("\\[([^,]+),([^\\]]+)\\]");
-                Matcher matcher = coordPattern.matcher(geoJson);
-
-                kml.append("      <Polygon>\n");
-                kml.append("        <outerBoundaryIs>\n");
-                kml.append("          <LinearRing>\n");
-                kml.append("            <coordinates>\n");
-
-                while (matcher.find()) {
-                    String lon = matcher.group(1);
-                    String lat = matcher.group(2);
-                    kml.append("              ").append(lon).append(",").append(lat).append(",0\n");
-                }
-
-                kml.append("            </coordinates>\n");
-                kml.append("          </LinearRing>\n");
-                kml.append("        </outerBoundaryIs>\n");
-                kml.append("      </Polygon>\n");
-            } else if (geoJson.contains("\"type\":\"LineString\"")) {
-                Pattern coordPattern = Pattern.compile("\\[([^,]+),([^\\]]+)\\]");
-                Matcher matcher = coordPattern.matcher(geoJson);
-
-                kml.append("      <LineString>\n");
-                kml.append("        <coordinates>\n");
-
-                while (matcher.find()) {
-                    String lon = matcher.group(1);
-                    String lat = matcher.group(2);
-                    kml.append("          ").append(lon).append(",").append(lat).append(",0\n");
-                }
-
-                kml.append("        </coordinates>\n");
-                kml.append("      </LineString>\n");
-            }
-
-            kml.append("    </Placemark>\n");
-            kml.append("  </Document>\n");
-            kml.append("</kml>");
-
-            return kml.toString();
-        } catch (Exception e) {
-            _log.warning("Error converting to KML: " + e.getMessage());
-            return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns=\"http://www.opengis.net/kml/2.2\"/>";
-        }
     }
 }
