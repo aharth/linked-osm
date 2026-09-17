@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!-- HTML view of one OSM element: /osm/{type}/{id}[.html]. FeatureServlet forwards
+     here for a .html suffix or a browser Accept header; the page URL stays
+     /osm/{type}/{id}, so every resource reference below is absolute. The page
+     fetches its own .json representation and renders it with the shared map code,
+     so it shows exactly what the data formats carry. Same shape as linked-adv's
+     object.html. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSM element</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/map.css">
+  <style>
+    /* Map left, property table right; stacks on narrow screens. */
+    #layout { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+    #layout > * { flex: 1; min-width: 20rem; }
+  </style>
+</head>
+<body>
+  <p><a href="/">Overview</a> &gt; <span id="crumb">Element</span></p>
+  <h1 id="title">OSM element</h1>
+
+  <div id="layout">
+    <div>
+      <div id="map-view" class="map"></div>
+      <p id="bbox-zoom-view" class="map-controls"></p>
+      <p id="status-view-0" class="map-controls"></p>
+      <p id="geojson-link-view-0" class="map-controls"></p>
+      <p>Element <span id="objlink"></span>, described in document <span id="doclink"></span>
+        &mdash; raw formats:
+        <a id="fmt-ttl" href="">.ttl</a> &middot;
+        <a id="fmt-rdf" href="">.rdf</a> &middot;
+        <a id="fmt-json" href="">.json</a> &middot;
+        <a id="fmt-gml" href="">.gml</a>.
+        Geometry only:
+        <a id="geo-osm" href="">/geo/osm</a> &middot;
+        <a id="geo-overpass" href="">/geo/overpass</a>.
+        Upstream: <a id="osm-org" href="" target="_blank">osm.org</a> &middot;
+        <a id="osm-api" href="" target="_blank">OSM API</a>.</p>
+    </div>
+    <div id="feature-panel-view-0" class="feature-panel"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/map-common.js"></script>
+  <script src="/map.js"></script>
+  <script>
+  (function() {
+    var m = location.pathname.match(/\/osm\/(node|way|relation)\/(\d+)(?:\.html)?$/);
+    var statusEl = document.getElementById('status-view-0');
+    if (!m) { statusEl.textContent = 'No element in path.'; return; }
+    var type = m[1], id = m[2], docPath = '/osm/' + type + '/' + id;
+
+    // The ELEMENT is the hash name {id}#id; its description DOCUMENT is {id}.
+    document.title = type + ' ' + id;
+    document.getElementById('crumb').textContent = type + ' ' + id;
+    document.getElementById('title').innerHTML =
+      '<a href="' + escHtml(docPath) + '#id">' + escHtml(docPath) + '#id</a>';
+    document.getElementById('objlink').innerHTML =
+      '<a href="' + escHtml(docPath) + '#id">' + escHtml(docPath) + '#id</a>';
+    document.getElementById('doclink').innerHTML =
+      '<a href="' + escHtml(docPath) + '">' + escHtml(docPath) + '</a>';
+    ['ttl', 'rdf', 'json', 'gml'].forEach(function(sfx) {
+      document.getElementById('fmt-' + sfx).href = docPath + '.' + sfx;
+    });
+    document.getElementById('geo-osm').href = '/geo/osm/' + type + '/' + id;
+    document.getElementById('geo-overpass').href = '/geo/overpass/' + type + '/' + id;
+    document.getElementById('osm-org').href = 'https://www.openstreetmap.org/' + type + '/' + id;
+    document.getElementById('osm-api').href = 'https://api.openstreetmap.org/api/0.6/' + type + '/' + id
+      + (type === 'node' ? '' : '/full');
+
+    initOsmMap('map-view', 0, 0, 2);
+    // Shared loader: fetches the GeoJSON feature, draws it, fills the property panel
+    // (feature-panel-view-0) and the status/link lines, zooms to the geometry.
+    loadGeoJsonUrl('map-view', docPath + '.json', 0);
+  })();
+  </script>
+</body>
+</html>

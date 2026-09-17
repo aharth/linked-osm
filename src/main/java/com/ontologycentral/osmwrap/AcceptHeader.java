@@ -71,4 +71,20 @@ public class AcceptHeader {
                 maxQ(accepted, "text", "turtle"));
         return qJson > qRdf;
     }
+
+    /**
+     * True when {@code text/html} STRICTLY out-ranks every data representation an element
+     * offers (GeoJSON, RDF, GML) in the q-weighted Accept header - a real browser. A bare
+     * {@code *\/*} (curl, most clients) ties and keeps getting data. Mirrors linked-adv's
+     * {@code AdvOidServlet.prefersHtml}.
+     */
+    public static boolean prefersHtml(String acceptHeader) {
+        List<AcceptType> a = parse(acceptHeader);
+        double html = maxQ(a, "text", "html");
+        double data = Math.max(
+                Math.max(maxQ(a, "application", "geo+json"), maxQ(a, "application", "json")),
+                Math.max(Math.max(maxQ(a, "application", "rdf+xml"), maxQ(a, "text", "turtle")),
+                        maxQ(a, "application", "gml+xml")));
+        return html > data;
+    }
 }

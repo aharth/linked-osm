@@ -116,14 +116,26 @@
   </p>
   <dl>
     <dt>File extension</dt>
-    <dd>Append <code>.rdf</code>, <code>.json</code>,
-      or <code>.ttl</code> to feature URIs; <code>.json</code> to geometry URIs.</dd>
+    <dd>Append <code>.ttl</code>, <code>.rdf</code>, <code>.json</code>, <code>.gml</code>
+      or <code>.html</code> to element URIs (<code>/osm/{type}/{id}</code>);
+      <code>.json</code>, <code>.wkt</code> or <code>.kml</code> to geometry URIs
+      (<code>/geo/osm/{type}/{id}</code>).</dd>
     <dt>HTTP Accept header</dt>
-    <dd><code>Accept: application/rdf+xml</code> (RDF/XML),
-      <code>Accept: text/turtle</code> (Turtle, via Apache Jena),
+    <dd><code>Accept: text/turtle</code> (Turtle, the default),
+      <code>Accept: application/rdf+xml</code> (RDF/XML, via Apache Jena),
       <code>Accept: application/geo+json</code> or
-      <code>Accept: application/json</code> (GeoJSON).</dd>
+      <code>Accept: application/json</code> (GeoJSON),
+      <code>Accept: application/gml+xml</code> (GML feature collection),
+      <code>Accept: text/html</code> (HTML view).</dd>
   </dl>
+  <p>
+    A browser opening <code>/osm/way/100</code> gets the HTML view: a map with the geometry
+    and a table of the element's properties, plus links to every raw format. Only an Accept
+    header that ranks <code>text/html</code> strictly above the data formats does that; a
+    bare <code>*/*</code> (curl and most clients) still gets Turtle, and an explicit
+    extension always wins. The page itself loads
+    <code>/osm/{type}/{id}.json</code>, so it shows exactly what the data formats carry.
+  </p>
 
   <!-- Geometry building -->
 

@@ -2,6 +2,27 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-09-17] HTML view of an element for browsers
+
+- **`/osm/{type}/{id}` now has an HTML representation**, reached by the `.html` suffix or by
+  an Accept header that ranks `text/html` strictly above the data formats (a browser). The
+  page, `element.html`, is what linked-adv's `/oid/{oid}` does with `object.html`: a Leaflet
+  map with the geometry, the property table from the shared map code
+  (`initOsmMap`/`loadGeoJsonUrl`, so it looks like the index page's feature panel), and
+  links to every raw format, the geometry-only endpoints, osm.org and the OSM API URL. The
+  page loads `/osm/{type}/{id}.json` itself, so it shows exactly what the data formats
+  carry. `Vary: Accept` is set on the forward.
+- `AcceptHeader.prefersHtml` (mirrors linked-adv's `AdvOidServlet.prefersHtml`): a bare
+  `*/*` (curl, most clients) ties and keeps getting Turtle; a semantic-web browser that
+  ranks RDF at q=1 above html at 0.95 keeps getting RDF; an explicit extension always
+  wins. Format selection is now the testable `FeatureServlet.negotiate(path, accept)`.
+- There never was an HTML view here before; browsers always received Turtle. FAQ
+  "content negotiation" section rewritten to list all five element formats and the three
+  geometry formats; index example links extended.
+- Tests: `FeatureServletNegotiationTest` (Firefox/Chrome/curl/semantic-browser Accept
+  headers, every extension, double extensions, empty ids), `prefersHtml` cases in
+  `AcceptHeaderTest`.
+
 ## [2026-09-17] One geometry path for nodes, ways and relations; one cache; one stylesheet per format
 
 - **Every OSM element now takes the same route in every servlet and format:**

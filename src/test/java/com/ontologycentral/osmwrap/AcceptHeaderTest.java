@@ -218,4 +218,18 @@ public class AcceptHeaderTest {
         assertEquals(1.0, AcceptHeader.maxQ(l, "text", "html"), 1e-9);
         assertEquals(0.9, AcceptHeader.maxQ(l, "text", "turtle"), 1e-9);
     }
+
+    // --- prefersHtml ---
+
+    @Test
+    public void prefersHtmlOnlyForARealBrowser() {
+        assertTrue(AcceptHeader.prefersHtml("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"));
+        assertTrue(AcceptHeader.prefersHtml("text/html"));
+        assertFalse("bare wildcard ties every type", AcceptHeader.prefersHtml("*/*"));
+        assertFalse(AcceptHeader.prefersHtml(null));
+        assertFalse(AcceptHeader.prefersHtml(""));
+        assertFalse("semantic-web browser ranks RDF above html", AcceptHeader.prefersHtml(SEMANTIC_BROWSER));
+        assertFalse("tie is not a preference", AcceptHeader.prefersHtml("text/html,application/geo+json"));
+        assertFalse(AcceptHeader.prefersHtml("text/html;q=0.9,application/gml+xml"));
+    }
 }
