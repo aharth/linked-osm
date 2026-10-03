@@ -62,6 +62,20 @@ public class RateLimitFilterTest {
         assertFalse(RateLimitFilter.isExempt(""));
     }
 
+    /**
+     * Only the proxy's own (last) X-Forwarded-For value counts: a client-sent
+     * first value must not buy the FAU exemption and the paid Overpass route.
+     */
+    @Test
+    public void lastForwardedValueIsTheProxys() {
+        assertEquals("203.0.113.7", RateLimitFilter.lastForwarded("131.188.1.1, 203.0.113.7"));
+        assertEquals("203.0.113.7", RateLimitFilter.lastForwarded(" 203.0.113.7 "));
+        assertNull(RateLimitFilter.lastForwarded(null));
+        assertNull(RateLimitFilter.lastForwarded("131.188.1.1, "));
+        assertFalse(RateLimitFilter.isExempt(
+                RateLimitFilter.lastForwarded("131.188.1.1, 203.0.113.7")));
+    }
+
     @Test
     public void parseKeysSplitsAndTrims() {
         assertEquals(Set.of("abc", "def"), RateLimitFilter.parseKeys(" abc , def "));

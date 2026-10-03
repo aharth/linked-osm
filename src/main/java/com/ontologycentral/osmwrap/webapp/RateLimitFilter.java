@@ -223,13 +223,26 @@ public class RateLimitFilter implements Filter {
         return token.isEmpty() ? null : token;
     }
 
-    private static String clientIp(HttpServletRequest req) {
-        String xff = req.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isEmpty()) {
-            int comma = xff.indexOf(',');
-            return (comma >= 0 ? xff.substring(0, comma) : xff).trim();
+    static String clientIp(HttpServletRequest req) {
+        String xff = lastForwarded(req.getHeader("X-Forwarded-For"));
+        return xff != null ? xff : req.getRemoteAddr();
+    }
+
+    /**
+     * The LAST value of a comma-separated {@code X-Forwarded-*} header, or
+     * {@code null} if absent/blank. Every proxy on the way appends its own
+     * value (Apache's mod_proxy does for {@code X-Forwarded-For}); everything
+     * before the last one arrived from the client and is whatever it chose to
+     * send. Taking the first value let a client pick a fresh bucket per request,
+     * or claim an exempt subnet - and with it the paid Overpass endpoint
+     * ({@link OverpassRouting}). Same as linked-dwd's.
+     */
+    static String lastForwarded(String header) {
+        if (header == null) {
+            return null;
         }
-        return req.getRemoteAddr();
+        String v = header.substring(header.lastIndexOf(',') + 1).trim();
+        return v.isEmpty() ? null : v;
     }
 
     /**

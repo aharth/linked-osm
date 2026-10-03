@@ -14,9 +14,9 @@ import java.io.IOException;
  * data-serving paths cross-origin.
  *
  * <p>Sets {@code Access-Control-Allow-Origin} ({@code *}),
- * {@code Access-Control-Allow-Methods} and {@code Access-Control-Allow-Headers} on
- * every response, and answers an {@code OPTIONS} preflight with
- * {@code 204 No Content}. {@code Authorization} and {@code DPoP} are listed
+ * {@code Access-Control-Allow-Methods}, {@code Access-Control-Allow-Headers} and
+ * {@code Access-Control-Expose-Headers} on every response, and answers an
+ * {@code OPTIONS} preflight with {@code 204 No Content}. {@code Authorization} and {@code DPoP} are listed
  * explicitly so a Solid SPA whose authenticated {@code fetch} attaches a DPoP-bound
  * token to every request — including a cross-origin GET of a public resource —
  * clears the preflight (a wildcard never covers {@code Authorization}; {@code DPoP}
@@ -33,6 +33,15 @@ public class CorsFilter implements Filter {
     /** {@code Access-Control-Allow-Headers} response header name. */
     static final String ALLOW_HEADERS = "Access-Control-Allow-Headers";
 
+    /** {@code Access-Control-Expose-Headers} response header name. */
+    static final String EXPOSE_HEADERS = "Access-Control-Expose-Headers";
+
+    /**
+     * Response headers a browser script may read. Without this, CORS hides all
+     * but the safelisted few — {@code Link} included.
+     */
+    static final String EXPOSED = "Link, ETag, Last-Modified, Location";
+
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
@@ -41,6 +50,7 @@ public class CorsFilter implements Filter {
             resp.setHeader(ALLOW_ORIGIN, "*");
             resp.setHeader(ALLOW_METHODS, "GET, OPTIONS");
             resp.setHeader(ALLOW_HEADERS, "Accept, Content-Type, Authorization, DPoP");
+            resp.setHeader(EXPOSE_HEADERS, EXPOSED);
 
             if (request instanceof HttpServletRequest
                     && "OPTIONS".equalsIgnoreCase(((HttpServletRequest) request).getMethod())) {

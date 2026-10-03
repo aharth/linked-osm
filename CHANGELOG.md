@@ -2,6 +2,24 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-10-03] Client IP from the LAST X-Forwarded-For value; Jena 6.2.0
+
+- **`RateLimitFilter.clientIp` takes the last `X-Forwarded-For` value, not the
+  first.** Every proxy appends its own value; everything before the last one
+  came from the client. Taking the first let a client pick a fresh bucket per
+  request, or claim an exempt subnet and with it the paid Overpass route
+  (`OverpassRouting`). Same as linked-dwd's; `lastForwarded` is pinned in
+  `RateLimitFilterTest`.
+- Apache Jena 6.1.0 → 6.2.0 (`jena-arq`), the family's current release.
+- `.gitignore` covers `deploy*.sh` instead of `deploy.sh`: host-specific
+  variants carry Tomcat manager credentials too.
+
+## [2026-10-02] CORS exposes `Link` and the cache validators
+
+- **`CorsFilter` now sends `Access-Control-Expose-Headers: Link, ETag, Last-Modified,
+  Location`.** Without it a cross-origin browser script could read none of them: CORS hides
+  every response header but the safelisted few.
+
 ## [2026-09-17] HTML view of an element for browsers
 
 - **`/osm/{type}/{id}` now has an HTML representation**, reached by the `.html` suffix or by
