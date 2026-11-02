@@ -89,7 +89,7 @@ public class GeometryOverpassServlet extends HttpServlet {
         String query = UrlBuilder.buildOverpassGeometryQuery(elementType, id);
         String archive = OverpassRouting.base(req) + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8);
 
-        _log.info("retrieving " + archive);
+        _log.info("retrieving " + OverpassRouting.redact(archive));
 
         try {
             HttpResponse<InputStream> response = HttpClientUtil.get(archive);
@@ -134,12 +134,12 @@ public class GeometryOverpassServlet extends HttpServlet {
 
             is.close();
         } catch (IOException e) {
-            resp.sendError(HttpClientUtil.errorStatus(e), archive + ": " + e.getMessage());
-            _log.log(Level.SEVERE, e.getMessage(), e);
+            resp.sendError(HttpClientUtil.errorStatus(e), OverpassRouting.redact(archive) + ": " + OverpassRouting.redact(e.getMessage()));
+            _log.log(Level.SEVERE, OverpassRouting.redact(e.getMessage()), e);
             return;
         } catch (RuntimeException e) {
-            resp.sendError(500, archive + ": " + e.getMessage());
-            _log.log(Level.SEVERE, e.getMessage(), e);
+            resp.sendError(500, OverpassRouting.redact(archive) + ": " + OverpassRouting.redact(e.getMessage()));
+            _log.log(Level.SEVERE, OverpassRouting.redact(e.getMessage()), e);
             return;
         }
 
@@ -187,7 +187,7 @@ public class GeometryOverpassServlet extends HttpServlet {
 
             return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
         } catch (Exception e) {
-            _log.warning("Error extracting geometry: " + e.getMessage());
+            _log.warning("Error extracting geometry: " + OverpassRouting.redact(e.getMessage()));
             return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
         }
     }
@@ -223,7 +223,7 @@ public class GeometryOverpassServlet extends HttpServlet {
 
             return "GEOMETRYCOLLECTION()";
         } catch (Exception e) {
-            _log.warning("Error converting to WKT: " + e.getMessage());
+            _log.warning("Error converting to WKT: " + OverpassRouting.redact(e.getMessage()));
             return "GEOMETRYCOLLECTION()";
         }
     }
@@ -278,7 +278,7 @@ public class GeometryOverpassServlet extends HttpServlet {
 
             return kml.toString();
         } catch (Exception e) {
-            _log.warning("Error converting to KML: " + e.getMessage());
+            _log.warning("Error converting to KML: " + OverpassRouting.redact(e.getMessage()));
             return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns=\"http://www.opengis.net/kml/2.2\"/>";
         }
     }

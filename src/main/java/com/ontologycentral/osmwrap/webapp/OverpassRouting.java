@@ -1,5 +1,7 @@
 package com.ontologycentral.osmwrap.webapp;
 
+import com.ontologycentral.osmwrap.BuildInfo;
+
 import com.ontologycentral.osmwrap.ApiConstants;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +30,16 @@ public final class OverpassRouting {
     /** First (and possibly only) base to use for this request. */
     public static String base(HttpServletRequest req) {
         return bases(req)[0];
+    }
+
+    /**
+     * {@code s} with the Tracestrack key replaced by {@code redacted}: the key is a path
+     * segment of the Overpass URL, and that URL goes out as prov:hadPrimarySource,
+     * X-Upstream-Source and in error messages.
+     */
+    public static String redact(String s) {
+        String key = BuildInfo.getTracestrackApiKey();
+        return s == null || key == null || key.isEmpty() ? s : s.replace(key, "redacted");
     }
 
     /** Full fallback chain to use for this request. */

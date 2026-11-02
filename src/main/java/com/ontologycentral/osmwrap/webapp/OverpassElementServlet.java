@@ -82,7 +82,7 @@ public class OverpassElementServlet extends HttpServlet {
 
         _log.info("querying overpass for " + elementType + "/" + id);
 
-        resp.setHeader("X-Upstream-Source", archive + "?" + postData);
+        resp.setHeader("X-Upstream-Source", OverpassRouting.redact(archive) + "?" + postData);
 
         try {
             HttpResponse<InputStream> response = HttpClientUtil.post(archive, postData);
@@ -112,7 +112,7 @@ public class OverpassElementServlet extends HttpServlet {
                 Templates tmpl = (Templates) ctx.getAttribute(tmplKey);
                 Transformer t = tmpl.newTransformer();
                 t.setParameter("source-prefix", "/overpass");
-                t.setParameter("upstream-url", archive + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8));
+                t.setParameter("upstream-url", OverpassRouting.redact(archive) + "?data=" + URLEncoder.encode(query, StandardCharsets.UTF_8));
                 if ("relation".equals(elementType)) {
                     t.setParameter("element-id", id);
                 }
@@ -121,16 +121,16 @@ public class OverpassElementServlet extends HttpServlet {
                 t.transform(new StreamSource(new StringReader(rdfXml)), new StreamResult(os));
             }
         } catch (TransformerException e) {
-            _log.log(Level.SEVERE, e.getMessage(), e);
-            resp.sendError(500, e.getMessage());
+            _log.log(Level.SEVERE, OverpassRouting.redact(e.getMessage()), e);
+            resp.sendError(500, OverpassRouting.redact(e.getMessage()));
             return;
         } catch (IOException e) {
-            resp.sendError(HttpClientUtil.errorStatus(e), archive + ": " + e.getMessage());
-            _log.log(Level.SEVERE, e.getMessage(), e);
+            resp.sendError(HttpClientUtil.errorStatus(e), OverpassRouting.redact(archive) + ": " + OverpassRouting.redact(e.getMessage()));
+            _log.log(Level.SEVERE, OverpassRouting.redact(e.getMessage()), e);
             return;
         } catch (RuntimeException e) {
-            resp.sendError(500, archive + ": " + e.getMessage());
-            _log.log(Level.SEVERE, e.getMessage(), e);
+            resp.sendError(500, OverpassRouting.redact(archive) + ": " + OverpassRouting.redact(e.getMessage()));
+            _log.log(Level.SEVERE, OverpassRouting.redact(e.getMessage()), e);
             return;
         }
 

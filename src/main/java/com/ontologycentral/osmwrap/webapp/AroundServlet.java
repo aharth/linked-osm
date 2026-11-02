@@ -62,13 +62,13 @@ public class AroundServlet extends HttpServlet {
         try {
             overpassQuery = UrlBuilder.buildOverpassAroundQuery(lat, lon, radius, limit);
         } catch (IllegalArgumentException e) {
-            resp.sendError(400, e.getMessage());
+            resp.sendError(400, OverpassRouting.redact(e.getMessage()));
             return;
         }
 
         String archive = OverpassRouting.base(req);
 
-        _log.info("retrieving " + archive);
+        _log.info("retrieving " + OverpassRouting.redact(archive));
 
         try {
             String postData = "data=" + URLEncoder.encode(overpassQuery, StandardCharsets.UTF_8);
@@ -82,7 +82,7 @@ public class AroundServlet extends HttpServlet {
                 return;
             }
 
-            resp.setHeader("X-Upstream-Source", archive + "?" + postData);
+            resp.setHeader("X-Upstream-Source", OverpassRouting.redact(archive) + "?" + postData);
 
             InputStream is = response.body();
 
@@ -95,7 +95,7 @@ public class AroundServlet extends HttpServlet {
             } else {
                 Templates tmpl = (Templates) ctx.getAttribute(Listener.POI);
                 Transformer t = tmpl.newTransformer();
-                t.setParameter("upstream-url", archive + "?" + postData);
+                t.setParameter("upstream-url", OverpassRouting.redact(archive) + "?" + postData);
                 response.headers().firstValueAsLong("content-length")
                         .ifPresent(n -> t.setParameter("upstream-bytes", n));
                 resp.setContentType("application/rdf+xml");
@@ -104,16 +104,16 @@ public class AroundServlet extends HttpServlet {
                 is.close();
             }
         } catch (TransformerException e) {
-            _log.log(Level.SEVERE, e.getMessage(), e);
-            resp.sendError(500, e.getMessage());
+            _log.log(Level.SEVERE, OverpassRouting.redact(e.getMessage()), e);
+            resp.sendError(500, OverpassRouting.redact(e.getMessage()));
             return;
         } catch (IOException e) {
-            resp.sendError(HttpClientUtil.errorStatus(e), archive + ": " + e.getMessage());
-            _log.log(Level.SEVERE, e.getMessage(), e);
+            resp.sendError(HttpClientUtil.errorStatus(e), OverpassRouting.redact(archive) + ": " + OverpassRouting.redact(e.getMessage()));
+            _log.log(Level.SEVERE, OverpassRouting.redact(e.getMessage()), e);
             return;
         } catch (RuntimeException e) {
-            resp.sendError(500, archive + ": " + e.getMessage());
-            _log.log(Level.SEVERE, e.getMessage(), e);
+            resp.sendError(500, OverpassRouting.redact(archive) + ": " + OverpassRouting.redact(e.getMessage()));
+            _log.log(Level.SEVERE, OverpassRouting.redact(e.getMessage()), e);
             return;
         }
 

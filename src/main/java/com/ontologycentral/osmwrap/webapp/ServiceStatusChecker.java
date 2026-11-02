@@ -119,12 +119,14 @@ final class ServiceStatusChecker {
 
     /** Hand-maintained, not discovered: Tracestrack has no capabilities/layer-list API this
      *  wrapper's own passthrough servlets (or callers) can query. Kept in sync with the examples
-     *  already served on index.html - update both together. */
+     *  already served on index.html - update both together. A raster layer's {@code source} is
+     *  its {@code s=} on {@code /tile} ({@code /tile?s=tracestrack&layer=topo}), which is not this
+     *  service's status name. */
     static Map<String, Object> tracestrackTileLayers() {
         Map<String, Object> layers = new LinkedHashMap<>();
-        layers.put("topo", Map.of("kind", "raster"));
-        layers.put("topo_en", Map.of("kind", "raster"));
-        layers.put("en", Map.of("kind", "raster"));
+        layers.put("topo", Map.of("kind", "raster", "source", "tracestrack"));
+        layers.put("topo_en", Map.of("kind", "raster", "source", "tracestrack"));
+        layers.put("en", Map.of("kind", "raster", "source", "tracestrack"));
         layers.put("carto", Map.of("kind", "vector", "path", "vt/carto"));
         layers.put("terrain-rgb", Map.of("kind", "terrain-rgb"));
         return layers;

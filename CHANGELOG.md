@@ -2,6 +2,19 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-11-02] Tracestrack key redacted from Overpass provenance; `/status` names a raster layer's `/tile` source
+
+- **The Tracestrack key no longer leaves the wrapper.** It is a path segment
+  of the paid Overpass URL (`/overpass/{key}/interpreter`), and that URL went
+  out as `prov:hadPrimarySource`, `X-Upstream-Source`, in error messages and
+  in the log for every trusted request. `OverpassRouting.redact` replaces it
+  with `redacted` in the five Overpass servlets (`/overpass/features`,
+  `/overpass/{type}/{id}`, `/geo/overpass`, `/poi`, `/around`);
+  `OverpassRoutingTest` pins it.
+- **`/status`: Tracestrack's raster layers carry `"source": "tracestrack"`**,
+  their `s=` on `/tile`, which differs from the service's status name
+  (`tracestrack-tile`).
+
 ## [2026-10-03] Client IP from the LAST X-Forwarded-For value; Jena 6.2.0
 
 - **`RateLimitFilter.clientIp` takes the last `X-Forwarded-For` value, not the
