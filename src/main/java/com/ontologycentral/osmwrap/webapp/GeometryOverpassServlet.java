@@ -10,12 +10,13 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
 import com.ontologycentral.osmwrap.HttpClientUtil;
+import com.ontologycentral.osmwrap.OsmDocument;
 import com.ontologycentral.osmwrap.UrlBuilder;
+import com.ontologycentral.osmwrap.geometry.Geometry;
+import com.ontologycentral.osmwrap.geometry.GeometryBuilder;
 
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -103,25 +104,28 @@ public class GeometryOverpassServlet extends HttpServlet {
             }
 
             InputStream is = response.body();
-            String osmJson = HttpClientUtil.readToString(is);
+            // OSM XML as the API's /full answers it: the same parser and geometry builder as
+            // /geo/osm, so both routes give the same POLYGON, MULTIPOLYGON, LINESTRING or POINT
+            OsmDocument doc = OsmDocument.parse(is, elementType, id);
+            Geometry geometry = GeometryBuilder.build(doc);
+            if (doc.primary() == null) {
+                resp.sendError(404, elementType + " " + id + " not found in Overpass");
+                is.close();
+                return;
+            }
 
             if ("json".equals(format)) {
-                // Extract only the geometry from the OSM JSON
-                String geometry = extractGeometry(osmJson);
-
                 resp.setContentType("application/geo+json");
-                os.write(geometry.getBytes(StandardCharsets.UTF_8));
+                os.write(geometry.toGeoJSON().getBytes(StandardCharsets.UTF_8));
             } else if ("wkt".equals(format)) {
-                // Convert geometry to WKT format
-                String wkt = convertToWkt(osmJson);
-
                 resp.setContentType("application/wkt");
-                os.write(wkt.getBytes(StandardCharsets.UTF_8));
+                os.write(geometry.toWKT().getBytes(StandardCharsets.UTF_8));
             } else if ("kml".equals(format)) {
-                // Convert geometry to KML format
-                String kml = convertToKml(osmJson, elementType, id);
-
                 resp.setContentType("application/vnd.google-earth.kml+xml");
+                String kml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                        + "<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n  <Document>\n    <Placemark>\n"
+                        + "      <name>" + elementType + " " + id + "</name>\n      " + geometry.toKML() + "\n"
+                        + "    </Placemark>\n  </Document>\n</kml>";
                 os.write(kml.getBytes(StandardCharsets.UTF_8));
             } else {
                 resp.sendError(406, "Unsupported format: " + format);
@@ -144,154 +148,5 @@ public class GeometryOverpassServlet extends HttpServlet {
         }
 
         os.close();
-    }
-
-    private String extractGeometry(String osmJson) {
-        // Extract just the geometry object from the OSM JSON
-        try {
-            if (osmJson.contains("\"elements\":[]")) {
-                return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
-            }
-
-            // Find geometry array in JSON
-            int geoIdx = osmJson.indexOf("\"geometry\"");
-            if (geoIdx < 0) {
-                return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
-            }
-
-            int bracketIdx = osmJson.indexOf("[", geoIdx);
-            if (bracketIdx < 0) {
-                return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
-            }
-
-            String geometryType = osmJson.contains("\"type\":\"node\"") ? "Point" : "LineString";
-
-            if ("Point".equals(geometryType)) {
-                Pattern latPattern = Pattern.compile("\"lat\"\\s*:\\s*([-\\d.]+)");
-                Pattern lonPattern = Pattern.compile("\"lon\"\\s*:\\s*([-\\d.]+)");
-                Matcher latMatcher = latPattern.matcher(osmJson);
-                Matcher lonMatcher = lonPattern.matcher(osmJson);
-                if (latMatcher.find() && lonMatcher.find()) {
-                    String lon = lonMatcher.group(1);
-                    String lat = latMatcher.group(1);
-                    return "{\"type\":\"Point\",\"coordinates\":[" + lon + "," + lat + "]}";
-                }
-            } else {
-                // For LineString, extract coordinates
-                int endIdx = findMatchingBracket(osmJson, bracketIdx);
-                if (endIdx > bracketIdx) {
-                    String coordinates = osmJson.substring(bracketIdx, endIdx + 1);
-                    return "{\"type\":\"LineString\",\"coordinates\":" + coordinates + "}";
-                }
-            }
-
-            return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
-        } catch (Exception e) {
-            _log.warning("Error extracting geometry: " + OverpassRouting.redact(e.getMessage()));
-            return "{\"type\":\"GeometryCollection\",\"geometries\":[]}";
-        }
-    }
-
-    private String convertToWkt(String osmJson) {
-        try {
-            if (osmJson.contains("\"elements\":[]")) {
-                return "GEOMETRYCOLLECTION()";
-            }
-
-            String geometryType = osmJson.contains("\"type\":\"node\"") ? "Point" : "LineString";
-
-            if ("Point".equals(geometryType)) {
-                Pattern latPattern = Pattern.compile("\"lat\"\\s*:\\s*([-\\d.]+)");
-                Pattern lonPattern = Pattern.compile("\"lon\"\\s*:\\s*([-\\d.]+)");
-                Matcher latMatcher = latPattern.matcher(osmJson);
-                Matcher lonMatcher = lonPattern.matcher(osmJson);
-                if (latMatcher.find() && lonMatcher.find()) {
-                    String lat = latMatcher.group(1);
-                    String lon = lonMatcher.group(1);
-                    return "POINT(" + lon + " " + lat + ")";
-                }
-            } else {
-                int geoIdx = osmJson.indexOf("\"geometry\"");
-                int bracketIdx = osmJson.indexOf("[", geoIdx);
-                if (bracketIdx > 0) {
-                    int endIdx = findMatchingBracket(osmJson, bracketIdx);
-                    String coordinates = osmJson.substring(bracketIdx, endIdx + 1);
-                    String wktCoords = coordinates.replaceAll("\\[\\[", "(").replaceAll("\\]\\]", ")").replaceAll("\\],\\[", ", ").replaceAll(",\\s*", " ");
-                    return "LINESTRING(" + wktCoords.replaceAll("[\\[\\]]", "") + ")";
-                }
-            }
-
-            return "GEOMETRYCOLLECTION()";
-        } catch (Exception e) {
-            _log.warning("Error converting to WKT: " + OverpassRouting.redact(e.getMessage()));
-            return "GEOMETRYCOLLECTION()";
-        }
-    }
-
-    private String convertToKml(String osmJson, String elementType, String id) {
-        try {
-            StringBuilder kml = new StringBuilder();
-            kml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            kml.append("<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n");
-            kml.append("  <Document>\n");
-            kml.append("    <Placemark>\n");
-            kml.append("      <name>").append(elementType).append(" ").append(id).append("</name>\n");
-
-            if (osmJson.contains("\"elements\":[]")) {
-                kml.append("      <MultiGeometry/>\n");
-            } else if (osmJson.contains("\"type\":\"node\"")) {
-                Pattern latPattern = Pattern.compile("\"lat\"\\s*:\\s*([-\\d.]+)");
-                Pattern lonPattern = Pattern.compile("\"lon\"\\s*:\\s*([-\\d.]+)");
-                Matcher latMatcher = latPattern.matcher(osmJson);
-                Matcher lonMatcher = lonPattern.matcher(osmJson);
-                if (latMatcher.find() && lonMatcher.find()) {
-                    String lat = latMatcher.group(1);
-                    String lon = lonMatcher.group(1);
-                    kml.append("      <Point>\n");
-                    kml.append("        <coordinates>").append(lon).append(",").append(lat).append(",0</coordinates>\n");
-                    kml.append("      </Point>\n");
-                }
-            } else {
-                int geoIdx = osmJson.indexOf("\"geometry\"");
-                int bracketIdx = osmJson.indexOf("[", geoIdx);
-                if (bracketIdx > 0) {
-                    kml.append("      <LineString>\n");
-                    kml.append("        <coordinates>\n");
-
-                    Pattern coordPattern = Pattern.compile("\\[([-\\d.]+),\\s*([-\\d.]+)\\]");
-                    Matcher coordMatcher = coordPattern.matcher(osmJson);
-
-                    while (coordMatcher.find()) {
-                        String lon = coordMatcher.group(1);
-                        String lat = coordMatcher.group(2);
-                        kml.append("          ").append(lon).append(",").append(lat).append(",0\n");
-                    }
-
-                    kml.append("        </coordinates>\n");
-                    kml.append("      </LineString>\n");
-                }
-            }
-
-            kml.append("    </Placemark>\n");
-            kml.append("  </Document>\n");
-            kml.append("</kml>");
-
-            return kml.toString();
-        } catch (Exception e) {
-            _log.warning("Error converting to KML: " + OverpassRouting.redact(e.getMessage()));
-            return "<?xml version=\"1.0\" encoding=\"UTF-8\"?><kml xmlns=\"http://www.opengis.net/kml/2.2\"/>";
-        }
-    }
-
-    private int findMatchingBracket(String str, int openPos) {
-        int count = 1;
-        for (int i = openPos + 1; i < str.length(); i++) {
-            if (str.charAt(i) == '[') count++;
-            else if (str.charAt(i) == ']') {
-                count--;
-                if (count == 0) return i;
-            }
-        }
-        return -1;
     }
 }

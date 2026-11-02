@@ -117,14 +117,17 @@ public final class UrlBuilder {
     }
 
     /**
-     * Builds Overpass API query for geometry data.
+     * Builds the Overpass query for an element's geometry: the element and everything below it
+     * (a way's nodes; a relation's member nodes and ways and their nodes), as OSM XML: the same
+     * document the OSM API answers for {@code /{type}/{id}/full}, so one parser and one
+     * geometry builder serve both ({@code OsmDocument}, {@code GeometryBuilder}).
      *
-     * @param elementType the OSM element type (node, way, relation)
-     * @param id the element ID
+     * @param elementType node, way or relation
+     * @param id the element id
      * @return Overpass query string
      */
     public static String buildOverpassGeometryQuery(String elementType, String id) {
-        return "[out:json];" + elementType + "(" + id + ");out geom;";
+        return "[out:xml];" + elementType + "(" + id + ");(._;>;);out body;";
     }
 
     /**

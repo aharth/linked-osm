@@ -2,6 +2,17 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-11-02] `/geo/overpass` builds geometry as `/geo/osm` does
+
+- **`/geo/overpass/{type}/{id}` answered broken geometry for ways and relations.** It
+  scraped Overpass JSON with regexes that expected `[lon,lat]` pairs where `out geom`
+  writes `{"lat":…,"lon":…}`: `.wkt` was `LINESTRING( { "lat": … "lon": … } … )`, `.json`
+  a LineString of those objects, `.kml` empty, and a closed way or a multipolygon was never
+  a polygon. It now asks Overpass for OSM XML in the shape of the API's `/full`
+  (`[out:xml];{type}({id});(._;>;);out body;`) and reads it with `OsmDocument` and
+  `GeometryBuilder`, as `/geo/osm` does: way 32949878 and relations 287649, 944496 give
+  the same WKT on both routes. `GeometryOverpassTest` pins the query and the parse.
+
 ## [2026-11-02] Tracestrack key redacted from Overpass provenance; `/status` names a raster layer's `/tile` source
 
 - **The Tracestrack key no longer leaves the wrapper.** It is a path segment
