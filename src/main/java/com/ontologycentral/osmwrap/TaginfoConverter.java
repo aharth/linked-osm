@@ -5,7 +5,12 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.apache.jena.atlas.json.JSON;
+import org.apache.jena.atlas.json.JsonObject;
+import org.apache.jena.atlas.json.JsonValue;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -15,6 +20,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
  */
 public class TaginfoConverter {
     static final String TAGINFO_API_BASE = "https://taginfo.openstreetmap.org/api/4";
+    /** The OSM wiki's MediaWiki API: its Wikibase data items (Item:Q…) describe keys and tags. */
+    static final String WIKI_API = "https://wiki.openstreetmap.org/w/api.php";
     private static final Logger _log = Logger.getLogger(TaginfoConverter.class.getName());
 
     /**
@@ -128,7 +135,7 @@ public class TaginfoConverter {
         rdf.append("\n  <rdf:Description rdf:about=\"").append(conceptUri).append("\">\n");
         rdf.append("    <rdf:type rdf:resource=\"http://www.w3.org/2004/02/skos/core#Concept\"/>\n");
         rdf.append("    <skos:prefLabel xml:lang=\"en\">").append(escapeXml(key)).append("</skos:prefLabel>\n");
-        appendWikiLinksRDF(rdf, wikiJson);
+        appendWikiLinksRDF(rdf, wikiJson, key);
 
         // Extract statistics
         long countAll = extractCount(keyInfoJson, "\"type\":\"all\"");
@@ -216,7 +223,7 @@ public class TaginfoConverter {
         rdf.append("    <rdf:type rdf:resource=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#Property\"/>\n");
         rdf.append("    <skos:prefLabel xml:lang=\"en\">").append(escapeXml(key)).append("</skos:prefLabel>\n");
         rdf.append("    <rdfs:label>").append(escapeXml(key)).append("</rdfs:label>\n");
-        appendWikiLinksRDF(rdf, wikiJson);
+        appendWikiLinksRDF(rdf, wikiJson, key);
 
         long countAll = extractCount(keyInfoJson, "\"type\":\"all\"");
         long countNodes = extractCount(keyInfoJson, "\"type\":\"nodes\"");
@@ -290,7 +297,7 @@ public class TaginfoConverter {
         rdf.append("    <rdf:type rdf:resource=\"http://www.w3.org/2004/02/skos/core#Concept\"/>\n");
         rdf.append("    <skos:prefLabel xml:lang=\"en\">").append(escapeXml(key)).append("=").append(escapeXml(value)).append("</skos:prefLabel>\n");
         rdf.append("    <skos:broader rdf:resource=\"").append(baseUri).append(keyPart).append("#concept\"/>\n");
-        appendWikiLinksRDF(rdf, wikiJson);
+        appendWikiLinksRDF(rdf, wikiJson, key + "=" + value);
 
         long countAll = extractCount(statsJson, "\"type\":\"all\"");
         long countNodes = extractCount(statsJson, "\"type\":\"nodes\"");
@@ -347,7 +354,7 @@ public class TaginfoConverter {
         json.append("      \"@type\": \"Concept\",\n");
         json.append("      \"prefLabel\": \"").append(escapeJson(key)).append("=").append(escapeJson(value)).append("\",\n");
         json.append("      \"broader\": \"").append(baseUri).append(keyPart).append("#concept\",\n");
-        appendWikiLinksJson(json, wikiJson);
+        appendWikiLinksJson(json, wikiJson, key + "=" + value);
 
         long countAll = extractCount(statsJson, "\"type\":\"all\"");
         long countNodes = extractCount(statsJson, "\"type\":\"nodes\"");
@@ -402,7 +409,7 @@ public class TaginfoConverter {
         json.append("      \"@id\": \"").append(baseUri).append(escapeJson(key)).append("#concept\",\n");
         json.append("      \"@type\": \"Concept\",\n");
         json.append("      \"prefLabel\": \"").append(escapeJson(key)).append("\",\n");
-        appendWikiLinksJson(json, wikiJson);
+        appendWikiLinksJson(json, wikiJson, key);
 
         long countAll = extractCount(keyInfoJson, "\"type\":\"all\"");
         long countNodes = extractCount(keyInfoJson, "\"type\":\"nodes\"");
@@ -524,7 +531,7 @@ public class TaginfoConverter {
         json.append("      \"@id\": \"").append(baseUri).append(escapeJson(key)).append("#concept\",\n");
         json.append("      \"@type\": \"Concept\",\n");
         json.append("      \"prefLabel\": \"").append(escapeJson(key)).append("\",\n");
-        appendWikiLinksJson(json, wikiJson);
+        appendWikiLinksJson(json, wikiJson, key);
 
         long countAll = extractCount(keyInfoJson, "\"type\":\"all\"");
         long countNodes = extractCount(keyInfoJson, "\"type\":\"nodes\"");
@@ -1025,27 +1032,91 @@ public class TaginfoConverter {
      * Appends rdfs:seeAlso + skos:definition (RDF/XML) for a confirmed OSM wiki page,
      * or nothing if {@code wikiJson} has no English entry -- never guesses a link.
      */
-    private void appendWikiLinksRDF(StringBuilder rdf, String wikiJson) {
+    private void appendWikiLinksRDF(StringBuilder rdf, String wikiJson, String label) {
         WikiPage wiki = extractEnglishWikiPage(wikiJson);
         if (!wiki.isPresent()) {
             return;
         }
         rdf.append("    <rdfs:seeAlso rdf:resource=\"").append(wikiUrl(wiki.title())).append("\"/>\n");
-        if (wiki.description() != null && !wiki.description().isEmpty()) {
-            rdf.append("    <skos:definition xml:lang=\"en\">").append(escapeXml(wiki.description())).append("</skos:definition>\n");
+        String definition = wiki.description();
+        if (definition == null || definition.isEmpty()) {
+            WikiItem item = fetchDataItem(label);
+            if (item != null) {
+                rdf.append("    <rdfs:seeAlso rdf:resource=\"").append(itemUrl(item.id())).append("\"/>\n");
+                definition = item.description();
+            }
+        }
+        if (definition != null && !definition.isEmpty()) {
+            rdf.append("    <skos:definition xml:lang=\"en\">").append(escapeXml(definition)).append("</skos:definition>\n");
         }
     }
 
     /** JSON-LD counterpart of {@link #appendWikiLinksRDF}. */
-    private void appendWikiLinksJson(StringBuilder json, String wikiJson) {
+    private void appendWikiLinksJson(StringBuilder json, String wikiJson, String label) {
         WikiPage wiki = extractEnglishWikiPage(wikiJson);
         if (!wiki.isPresent()) {
             return;
         }
         json.append("      \"rdfs:seeAlso\": \"").append(escapeJson(wikiUrl(wiki.title()))).append("\",\n");
-        if (wiki.description() != null && !wiki.description().isEmpty()) {
-            json.append("      \"definition\": \"").append(escapeJson(wiki.description())).append("\",\n");
+        String definition = wiki.description();
+        if (definition == null || definition.isEmpty()) {
+            WikiItem item = fetchDataItem(label);
+            if (item != null) {
+                definition = item.description();
+            }
         }
+        if (definition != null && !definition.isEmpty()) {
+            json.append("      \"definition\": \"").append(escapeJson(definition)).append("\",\n");
+        }
+    }
+
+    /** An OSM wiki data item: its id (Q4892) and English description. */
+    record WikiItem(String id, String description) {}
+
+    /**
+     * The data item labelled exactly {@code label} ("amenity=bar", "building") with its
+     * English description, or null. The fallback for a wiki page whose own description is
+     * empty: the page then shows the data item's description (the Description template
+     * reads it from there), which Taginfo does not see. Exact label only; a search hit with
+     * another label is not this tag's item.
+     */
+    WikiItem fetchDataItem(String label) {
+        String url = WIKI_API + "?action=wbsearchentities&format=json&language=en&type=item&limit=10&search="
+                + URLEncoder.encode(label, StandardCharsets.UTF_8);
+        try {
+            return dataItem(fetchCached(url), label);
+        } catch (IOException | RuntimeException e) {
+            _log.log(Level.FINE, "no data item for " + label, e);
+            return null;
+        }
+    }
+
+    /** The exact-label hit with a non-empty description in a {@code wbsearchentities} answer, or null. */
+    static WikiItem dataItem(String searchJson, String label) {
+        JsonObject o = JSON.parse(searchJson);
+        if (!o.hasKey("search")) {
+            return null;
+        }
+        for (JsonValue v : o.get("search").getAsArray()) {
+            if (!v.isObject()) {
+                continue;
+            }
+            JsonObject e = v.getAsObject();
+            if (label.equals(string(e, "label"))) {
+                String d = string(e, "description");
+                return (d == null || d.isEmpty()) ? null : new WikiItem(string(e, "id"), d);
+            }
+        }
+        return null;
+    }
+
+    private static String string(JsonObject o, String field) {
+        JsonValue v = o.get(field);
+        return (v != null && v.isString()) ? v.getAsString().value() : null;
+    }
+
+    private static String itemUrl(String id) {
+        return "https://wiki.openstreetmap.org/wiki/Item:" + id;
     }
 
     private static String escapeXml(String str) {

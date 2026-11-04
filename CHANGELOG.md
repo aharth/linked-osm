@@ -2,6 +2,14 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-11-04] A tag's definition from its wiki data item when the page has none
+
+- `/tag/{key}={value}` and `/tag/{key}` had no `skos:definition` where the English wiki
+  page's own description is empty, e.g. `amenity=bar`: the page shows its data item's
+  description, which Taginfo's `wiki_pages` does not carry. The definition now falls back
+  to the data item labelled exactly that tag (`wbsearchentities` on the wiki), linked with
+  `rdfs:seeAlso` to `Item:Q…`. `TaginfoConverterTest` pins the label match.
+
 ## [2026-11-02] `/geo/overpass` builds geometry as `/geo/osm` does
 
 - **`/geo/overpass/{type}/{id}` answered broken geometry for ways and relations.** It
