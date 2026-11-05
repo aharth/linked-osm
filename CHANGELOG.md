@@ -2,6 +2,20 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-11-04] MultiViewsFilter: Content-Location is the sibling file name; .ttl parsed against the public URL
+
+Synced from linked-adv (shared by copy).
+- `Content-Location` was the webapp-root path (e.g. `inspire/base/3.3.rdf`).
+  Clients resolve it against the request URL, so for every nested document
+  it pointed one directory level too deep. It is now the bare file name
+  (`contentLocation()`). Seen live on
+  `wunderfacts.com/inspire/inspire/base/3.3`.
+- Turtle → RDF/XML parsed a `.ttl` variant without a base, so its
+  relative IRIs would have resolved against the `file:` URL inside the WAR.
+  It now parses against the public document URL (`docBase()`,
+  `ProvUtil.effectiveOrigin`).
+- `MultiViewsFilterLocationTest` pins both.
+
 ## [2026-11-04] A tag's definition from its wiki data item when the page has none
 
 - `/tag/{key}={value}` and `/tag/{key}` had no `skos:definition` where the English wiki

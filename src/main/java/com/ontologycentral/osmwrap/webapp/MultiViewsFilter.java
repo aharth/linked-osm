@@ -79,7 +79,7 @@ public class MultiViewsFilter implements Filter {
                         if (ctx.getResource(ttlPath) != null) {
                             resp.setHeader("Vary", "Accept");
                             resp.setContentType("application/rdf+xml");
-                            convertTtlToRdfXml(ctx, ttlPath, resp.getOutputStream());
+                            convertTtlToRdfXml(ctx, req, ttlPath, resp.getOutputStream());
                             return;
                         }
                     } catch (java.net.MalformedURLException e2) { /* fall through */ }
@@ -149,26 +149,46 @@ public class MultiViewsFilter implements Filter {
         if (best.endsWith(".ttl")) {
             Map<String, Double> accept = parseAccept(acceptHeader);
             if (score("application/rdf+xml", accept) > score("text/turtle", accept)) {
-                String contentLoc = best.substring(1, best.length() - 4) + ".rdf";
-                resp.setHeader("Content-Location", contentLoc);
+                resp.setHeader("Content-Location", contentLocation(best.substring(0, best.length() - 4) + ".rdf"));
                 resp.setContentType("application/rdf+xml");
-                convertTtlToRdfXml(ctx, best, resp.getOutputStream());
+                convertTtlToRdfXml(ctx, req, best, resp.getOutputStream());
                 return;
             }
         }
 
-        resp.setHeader("Content-Location", best.substring(1)); // strip leading /
+        resp.setHeader("Content-Location", contentLocation(best));
         req.getRequestDispatcher(best).forward(request, response);
+    }
+
+    /**
+     * Content-Location for a chosen variant: a RELATIVE reference, resolved by
+     * the client against the request URL — and the variant always sits in the
+     * request's own directory, so it is the bare file name. The webapp-root
+     * path used before ("gid/7.1.rdf") resolved to /gid/gid/7.1.rdf for every
+     * nested document (found 2026-11-04 in linked-adv; synced from there).
+     */
+    static String contentLocation(String variantPath) {
+        return variantPath.substring(variantPath.lastIndexOf('/') + 1);
+    }
+
+    /**
+     * Base for parsing a .ttl variant: the document's PUBLIC URL (per request,
+     * ProvUtil.effectiveOrigin + the path without .ttl). Without a base, its
+     * relative IRIs resolved against the file: URL inside the WAR, leaking
+     * server paths into the served RDF/XML (synced from linked-adv 2026-11-04).
+     */
+    static String docBase(HttpServletRequest req, String ttlPath) {
+        return ProvUtil.effectiveOrigin(req) + ttlPath.substring(0, ttlPath.length() - ".ttl".length());
     }
 
     // --- Jena conversion ----------------------------------------------------
 
-    private static void convertTtlToRdfXml(ServletContext ctx, String ttlPath, OutputStream out)
+    private static void convertTtlToRdfXml(ServletContext ctx, HttpServletRequest req, String ttlPath, OutputStream out)
             throws IOException, ServletException {
         try {
             java.net.URL url = ctx.getResource(ttlPath);
             Model model = ModelFactory.createDefaultModel();
-            RDFParser.create().source(url.openStream()).lang(Lang.TURTLE).parse(model);
+            RDFParser.create().source(url.openStream()).base(docBase(req, ttlPath)).lang(Lang.TURTLE).parse(model);
             RDFWriter.create().lang(Lang.RDFXML).source(model).output(out);
         } catch (Exception e) {
             throw new ServletException("TTL to RDF/XML conversion failed: " + e.getMessage(), e);
