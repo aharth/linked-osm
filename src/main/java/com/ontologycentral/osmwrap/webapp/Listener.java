@@ -6,6 +6,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.UpstreamCache;
+import com.ontologycentral.osmwrap.dump.DumpStore;
 
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletContextEvent;
@@ -73,6 +74,26 @@ public class Listener implements ServletContextListener {
         ctx.setAttribute(UpstreamCache.ATTR,
                 new UpstreamCache(2L * 1024 * 1024 * 1024, java.time.Duration.ofHours(24)));
 
+        // Local OSM dumps (plans/pbf-store-bavaria.md): every integrated region in
+        // dumps.json at <dumps-dir>/osm/<region>/dump, opened once. dumps-dir is the
+        // family's shared root from the Maven property dumps.dir. Unset, or no region
+        // passing its check: live only - the dump is an accelerator, never required.
+        String dumpsDir = ctx.getInitParameter("dumps-dir");
+        if (dumpsDir == null || dumpsDir.isBlank() || dumpsDir.startsWith("${")) {
+            ctx.log("Linked OSM: dumps-dir not configured (build with -Ddumps.dir=... or set it in ~/.m2/settings.xml) - live only");
+        } else {
+            try {
+                DumpStore dumps = DumpStore.open(java.nio.file.Path.of(dumpsDir), m -> ctx.log("Linked OSM: " + m));
+                if (dumps.regions().isEmpty()) {
+                    ctx.log("Linked OSM: no dump under " + dumpsDir + "/" + DumpStore.SUBDIR + " - live only");
+                } else {
+                    ctx.setAttribute(DumpStore.ATTR, dumps);
+                }
+            } catch (java.io.IOException e) {
+                _log.log(Level.WARNING, "dumps unavailable, live only: " + e.getMessage(), e);
+            }
+        }
+
         try {
             Templates tmpl = tf.newTemplates(new StreamSource(ctx.getRealPath("/WEB-INF/xsl/feature.xsl")));
             ctx.setAttribute(FEATURE, tmpl);
@@ -123,6 +144,15 @@ public class Listener implements ServletContextListener {
     }
 
     public void contextDestroyed(ServletContextEvent event) {
+        Object dumps = event.getServletContext().getAttribute(DumpStore.ATTR);
+        if (dumps instanceof DumpStore d) {
+            try {
+                d.close();
+            } catch (java.io.IOException e) {
+                _log.log(Level.WARNING, "closing dumps: " + e.getMessage(), e);
+            }
+        }
+
         // jena-geosparql pulls in Apache SIS (sis-referencing), which lazily starts a
         // static daemon thread (org.apache.sis.system.ReferenceQueueConsumer) the first
         // time GeoSPARQLConfig.setupNoIndex() runs. SIS never stops it on its own, so a

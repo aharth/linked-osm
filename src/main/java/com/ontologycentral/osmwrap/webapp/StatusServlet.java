@@ -2,6 +2,9 @@ package com.ontologycentral.osmwrap.webapp;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
 
+import com.ontologycentral.osmwrap.dump.DumpRegion;
+import com.ontologycentral.osmwrap.dump.DumpStore;
+
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObjectBuilder;
@@ -64,11 +67,13 @@ public class StatusServlet extends HttpServlet {
         resp.setHeader("Vary", "Accept");
 
         List<ServiceStatusChecker.ServiceStatus> services = ServiceStatusChecker.checkAll();
+        List<DumpRegion> dumps = getServletContext().getAttribute(DumpStore.ATTR) instanceof DumpStore d
+                ? d.regions() : List.of();
         resp.setHeader("Cache-Control", "public, max-age=60");
         switch (fmt) {
-            case HTML -> writeHtml(resp, services);
-            case TTL, RDFXML, NTRIPLES -> writeRdf(req, resp, services, fmt);
-            default -> writeJson(resp, services);
+            case HTML -> writeHtml(resp, services, dumps);
+            case TTL, RDFXML, NTRIPLES -> writeRdf(req, resp, services, dumps, fmt);
+            default -> writeJson(resp, services, dumps);
         }
     }
 
@@ -108,8 +113,8 @@ public class StatusServlet extends HttpServlet {
 
     // ---- JSON -----------------------------------------------------------------
 
-    private void writeJson(HttpServletResponse resp, List<ServiceStatusChecker.ServiceStatus> services)
-            throws IOException {
+    private void writeJson(HttpServletResponse resp, List<ServiceStatusChecker.ServiceStatus> services,
+            List<DumpRegion> dumps) throws IOException {
         resp.setContentType("application/json;charset=UTF-8");
         JsonArrayBuilder arr = Json.createArrayBuilder();
         for (ServiceStatusChecker.ServiceStatus s : services) {
@@ -136,16 +141,25 @@ public class StatusServlet extends HttpServlet {
             }
             arr.add(o);
         }
+        JsonArrayBuilder dumpArr = Json.createArrayBuilder();
+        for (DumpRegion d : dumps) {
+            JsonObjectBuilder o = Json.createObjectBuilder().add("region", d.name());
+            for (Map.Entry<String, String> e : d.manifest().entrySet()) {
+                if (!"region".equals(e.getKey())) o.add(e.getKey(), e.getValue());
+            }
+            dumpArr.add(o);
+        }
         resp.getWriter().write(Json.createObjectBuilder()
                 .add("checkedAt", ServiceStatusChecker.lastCheckedAt().toString())
                 .add("services", arr)
+                .add("dumps", dumpArr)
                 .build().toString());
     }
 
     // ---- HTML -----------------------------------------------------------------
 
-    private void writeHtml(HttpServletResponse resp, List<ServiceStatusChecker.ServiceStatus> services)
-            throws IOException {
+    private void writeHtml(HttpServletResponse resp, List<ServiceStatusChecker.ServiceStatus> services,
+            List<DumpRegion> dumps) throws IOException {
         resp.setContentType("text/html;charset=UTF-8");
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">")
@@ -180,7 +194,28 @@ public class StatusServlet extends HttpServlet {
             }
             sb.append("</dd>\n");
         }
-        sb.append("</dl>\n</body></html>");
+        sb.append("</dl>\n");
+        sb.append("<h2>Local dumps</h2>\n");
+        if (dumps.isEmpty()) {
+            sb.append("<p>None: every element comes from the OSM API.</p>\n");
+        } else {
+            sb.append("<p>Elements a dump has complete are served from it instead of the OSM API"
+                    + " (response header <code>X-Source</code>).</p>\n<dl>\n");
+            for (DumpRegion d : dumps) {
+                Map<String, String> mf = d.manifest();
+                sb.append("<dt>").append(esc(d.name())).append("</dt>\n<dd>")
+                  .append("as of ").append(esc(mf.getOrDefault("replication_timestamp", "?")))
+                  .append(" &mdash; <code>").append(esc(mf.getOrDefault("source", "?"))).append("</code>")
+                  .append(" &mdash; ").append(esc(mf.getOrDefault("nodes", "?"))).append(" nodes, ")
+                  .append(esc(mf.getOrDefault("ways", "?"))).append(" ways, ")
+                  .append(esc(mf.getOrDefault("relations", "?"))).append(" relations (")
+                  .append(esc(mf.getOrDefault("incomplete_relations", "?")))
+                  .append(" crossing the region's edge, served live) &mdash; built ")
+                  .append(esc(mf.getOrDefault("built", "?"))).append("</dd>\n");
+            }
+            sb.append("</dl>\n");
+        }
+        sb.append("</body></html>");
         resp.getWriter().write(sb.toString());
     }
 
@@ -191,11 +226,13 @@ public class StatusServlet extends HttpServlet {
     // ---- RDF --------------------------------------------------------------
 
     private void writeRdf(HttpServletRequest req, HttpServletResponse resp,
-            List<ServiceStatusChecker.ServiceStatus> services, Format fmt) throws IOException {
+            List<ServiceStatusChecker.ServiceStatus> services, List<DumpRegion> dumps, Format fmt)
+            throws IOException {
         String origin = ProvUtil.effectiveOrigin(req);
         String qs = req.getQueryString();
         String docUrl = origin + "/status" + (qs != null ? "?" + qs : "");
         Model m = buildStatusModel(services, docUrl, origin);
+        addDumpsRdf(m, m.createResource(docUrl), dumps, origin);
 
         Lang lang = fmt == Format.NTRIPLES ? Lang.NTRIPLES
                 : fmt == Format.RDFXML ? Lang.RDFXML
@@ -242,6 +279,27 @@ public class StatusServlet extends HttpServlet {
             addReachabilityRdf(m, svc, s.ok(), s.detail(), s.statusCode());
         }
         return m;
+    }
+
+    /** Each local dump as a {@code dcat:Dataset} of the catalog: the extract it was built
+     *  from ({@code dct:source}) and as of when (the replication timestamp, as
+     *  {@code dct:modified}). */
+    static void addDumpsRdf(Model m, Resource doc, List<DumpRegion> dumps, String origin) {
+        for (DumpRegion d : dumps) {
+            Map<String, String> mf = d.manifest();
+            Resource ds = m.createResource(origin + "/status#dump-" + d.name());
+            doc.addProperty(m.createProperty(NS_DCAT + "dataset"), ds);
+            ds.addProperty(RDF.type, m.createResource(NS_DCAT + "Dataset"));
+            ds.addProperty(RDFS.label, "Local OSM dump " + d.name());
+            String ts = mf.get("replication_timestamp");
+            if (ts != null && !ts.isEmpty()) {
+                ds.addProperty(m.createProperty(NS_DCT + "modified"),
+                        m.createTypedLiteral(ts, XSDDatatype.XSDdateTime));
+            }
+            if (mf.get("source") != null) {
+                ds.addProperty(m.createProperty(NS_DCT + "source"), mf.get("source"));
+            }
+        }
     }
 
     /** One Tracestrack layer as a {@code dcat:Distribution} - the same deliberate, documented

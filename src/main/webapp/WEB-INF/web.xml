@@ -25,6 +25,17 @@ xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
 		<param-value>${api.keys}</param-value>
 	</context-param>
 
+	<!-- dumps-dir: the family's shared dumps root (refresh.sh's DUMPS_ROOT), from the
+	     Maven property dumps.dir at package time. Listener opens every integrated
+	     region of src/main/resources/dumps.json at <dumps-dir>/osm/<region>/dump and
+	     serves elements it has complete from there. Unset or blank: live only. Dumps
+	     are built on lithium and rsynced to the serving host, so the path is the
+	     serving host's. -->
+	<context-param>
+		<param-name>dumps-dir</param-name>
+		<param-value>${dumps.dir}</param-value>
+	</context-param>
+
 	<filter>
 		<filter-name>cors</filter-name>
 		<filter-class>com.ontologycentral.osmwrap.webapp.CorsFilter</filter-class>

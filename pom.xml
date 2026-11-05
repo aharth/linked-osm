@@ -86,6 +86,15 @@
       proxy simply has no upstream to route to for anyone, trusted or not.
     -->
     <protomaps.api.key></protomaps.api.key>
+
+    <!--
+      The family's shared dumps root (web.xml dumps-dir; refresh.sh's DUMPS_ROOT),
+      set ONCE in ~/.m2/settings.xml for every wrapper (or -Ddumps.dir=...), the same
+      property linked-adv reads. linked-osm owns the fixed subdirectory osm/:
+      <dumps.dir>/osm/<region>/dump. Unset: no dumps, every element from the OSM API
+      (unlike linked-adv, nothing answers 503 - the dump only saves upstream calls).
+    -->
+    <dumps.dir></dumps.dir>
   </properties>
 
   <dependencies>
@@ -304,9 +313,11 @@
               <mainClass>com.ontologycentral.osmwrap.Main</mainClass>
             </manifest>
           </archive>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
+          <!-- custom descriptor: the built-in one puts a war project's classes under
+               WEB-INF/classes/ (see the descriptor's header) -->
+          <descriptors>
+            <descriptor>src/assembly/jar-with-dependencies.xml</descriptor>
+          </descriptors>
         </configuration>
       </plugin>
 

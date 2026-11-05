@@ -255,6 +255,33 @@
       Other endpoints (search, POI, around) are not cached server-side.</dd>
   </dl>
 
+  <a name="dumps"></a>
+  <h2>Are some elements served from a local copy?</h2>
+
+  <p>
+    Yes. For some regions (Bavaria first; <a href="status.html">/status</a> lists them) the
+    server keeps a copy of the region's OpenStreetMap extract from
+    <a href="https://download.geofabrik.de/">Geofabrik</a>, updated by hand. An element
+    the copy holds completely is served from it instead of the OSM API, in every format
+    (<code>/osm/*</code>, <code>/geo/osm/*</code>). The response header
+    <code>X-Source</code> says which: <code>dump:bayern</code> or <code>live</code>.
+  </p>
+  <dl>
+    <dt>As of when</dt>
+    <dd>The extract's date. The RDF names it in an <code>rdfs:comment</code>
+      (<code>Linked OSM dump bayern (bayern-261103.osm.pbf, replication
+      2026-11-03T21:24:23Z)</code>); <code>/status</code> shows it too. An element changed
+      since then is served as it was; one deleted since then is still served.</dd>
+    <dt>Less provenance</dt>
+    <dd>Geofabrik's public extracts carry each element's version and timestamp but not
+      its changeset or user, so <code>prov:wasGeneratedBy</code> and the changeset's
+      <code>foaf:accountName</code> are absent from these responses.</dd>
+    <dt>What still goes live</dt>
+    <dd>Everything outside the region; relations with members outside it (the Germany
+      boundary, long routes), so a partial geometry is never served; and untagged nodes
+      that are not relation members, which the copy does not keep.</dd>
+  </dl>
+
   <a name="bot"></a>
   <h2>What is the automated HTTP client?</h2>
 

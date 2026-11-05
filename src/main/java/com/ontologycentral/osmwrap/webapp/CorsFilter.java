@@ -40,7 +40,7 @@ public class CorsFilter implements Filter {
      * Response headers a browser script may read. Without this, CORS hides all
      * but the safelisted few — {@code Link} included.
      */
-    static final String EXPOSED = "Link, ETag, Last-Modified, Location";
+    static final String EXPOSED = "Link, ETag, Last-Modified, Location, X-Source";
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)

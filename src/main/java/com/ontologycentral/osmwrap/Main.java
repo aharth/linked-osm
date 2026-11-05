@@ -25,6 +25,12 @@ public class Main {
 
 
     public static void main(String[] args) {
+        // Build side of the local dumps (refresh.sh on lithium): dump index|check|get ...
+        if (args.length > 0 && "dump".equals(args[0])) {
+            System.exit(com.ontologycentral.osmwrap.dump.DumpTool.run(
+                    java.util.Arrays.copyOfRange(args, 1, args.length)));
+        }
+
         Options options = createOptions();
         CommandLineParser parser = new DefaultParser();
 

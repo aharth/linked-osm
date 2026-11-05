@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  The CLI jar (Main: the fetch commands, and "dump index|check|get" for refresh.sh).
+
+  Not the plugin's built-in jar-with-dependencies: this project's packaging is war, so
+  the built-in descriptor unpacks the WAR as the project artifact and our classes land
+  under WEB-INF/classes/, where java -jar can't find Main (found 2026-11-05). Here the
+  classes come from target/classes and only the dependencies are unpacked.
+
+  metaInf-services merges same-path META-INF/services files across jars instead of
+  last-jar-wins (Jena registers its subsystems one file per jar); copied from
+  linked-adv's src/assembly/jar-with-dependencies.xml, which explains why.
+-->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+  <id>jar-with-dependencies</id>
+  <formats>
+    <format>jar</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <containerDescriptorHandlers>
+    <containerDescriptorHandler>
+      <handlerName>metaInf-services</handlerName>
+    </containerDescriptorHandler>
+  </containerDescriptorHandlers>
+  <fileSets>
+    <fileSet>
+      <directory>${project.build.outputDirectory}</directory>
+      <outputDirectory>/</outputDirectory>
+    </fileSet>
+  </fileSets>
+  <dependencySets>
+    <dependencySet>
+      <outputDirectory>/</outputDirectory>
+      <useProjectArtifact>false</useProjectArtifact>
+      <unpack>true</unpack>
+      <scope>runtime</scope>
+    </dependencySet>
+  </dependencySets>
+</assembly>

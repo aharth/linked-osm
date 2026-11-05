@@ -6,24 +6,32 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.UpstreamCache.Fetched;
+import com.ontologycentral.osmwrap.dump.DumpStore;
 import com.ontologycentral.osmwrap.geometry.Geometry;
 import com.ontologycentral.osmwrap.geometry.GeometryBuilder;
 
 /**
  * One OSM API element, loaded the same way for every servlet and output format:
- * upstream URL → {@link UpstreamCache} → {@link OsmDocument} → {@link Geometry}.
+ * a local dump when one has it complete ({@link DumpStore}), otherwise upstream URL →
+ * {@link UpstreamCache}; then {@link OsmDocument} → {@link Geometry}. The dump answers with
+ * the same OSM API XML, so everything from the parse on is one path.
  *
  * @param type        {@code node}, {@code way} or {@code relation}
  * @param id          the element id
- * @param upstreamUrl the OSM API URL the body came from
- * @param fetched     the raw upstream body and declared byte count
+ * @param upstreamUrl the OSM API URL the body came from (also for a dump hit: the URL the
+ *                    dump stands in for)
+ * @param fetched     the raw body and declared byte count (-1 for a dump hit)
  * @param doc         the parsed document
  * @param geometry    the element's geometry, {@link Geometry#EMPTY} if none could be built
+ * @param source      {@code live}, or {@code dump:<region>}
  */
 public record OsmElement(String type, String id, String upstreamUrl, Fetched fetched,
-        OsmDocument doc, Geometry geometry) {
+        OsmDocument doc, Geometry geometry, String source) {
 
     private static final Logger _log = Logger.getLogger(OsmElement.class.getName());
+
+    /** Value of {@link #source} for an element fetched from the OSM API. */
+    public static final String LIVE = "live";
 
     /**
      * The OSM API URL for an element. Nodes carry their coordinates themselves; ways and
@@ -34,19 +42,30 @@ public record OsmElement(String type, String id, String upstreamUrl, Fetched fet
     }
 
     /**
+     * @param dumps the local dumps, or null when none are configured
      * @throws UpstreamCache.UpstreamException if the OSM API answered with a non-200 status
      * @throws IOException                     on transport failure or malformed XML
      */
-    public static OsmElement load(UpstreamCache cache, String type, String id) throws IOException {
+    public static OsmElement load(UpstreamCache cache, DumpStore dumps, String type, String id)
+            throws IOException {
         String url = upstreamUrl(type, id);
-        Fetched fetched = cache.fetch(url);
+        Fetched fetched;
+        String source;
+        DumpStore.Hit hit = dumps == null ? null : dumps.lookup(type, id, _log::warning);
+        if (hit != null) {
+            fetched = new Fetched(hit.xml(), -1);
+            source = "dump:" + hit.region().name();
+        } else {
+            fetched = cache.fetch(url);
+            source = LIVE;
+        }
         OsmDocument doc = OsmDocument.parse(new ByteArrayInputStream(fetched.body()), type, id);
         Geometry geometry = GeometryBuilder.build(doc);
-        _log.info(type + " " + id + ": " + doc.nodes().size() + " nodes, " + doc.ways().size()
+        _log.info(type + " " + id + " (" + source + "): " + doc.nodes().size() + " nodes, " + doc.ways().size()
                 + " ways, " + doc.relations().size() + " relations, geometry "
                 + (geometry.isEmpty() ? "none" : geometry.getClass().getSimpleName())
                 + (doc.primary() == null ? ", primary element missing" : ""));
-        return new OsmElement(type, id, url, fetched, doc, geometry);
+        return new OsmElement(type, id, url, fetched, doc, geometry, source);
     }
 
     /** The element's tags as {@code {k, v}} pairs; empty if the element is missing. */

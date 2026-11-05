@@ -34,13 +34,13 @@ public class FeatureStylesheetTest {
     private static OsmElement element(String xml, String type, String id) throws IOException {
         OsmDocument doc = OsmDocumentTest.parse(xml, type, id);
         return new OsmElement(type, id, OsmElement.upstreamUrl(type, id),
-                new Fetched(xml.getBytes(StandardCharsets.UTF_8), xml.length()), doc, GeometryBuilder.build(doc));
+                new Fetched(xml.getBytes(StandardCharsets.UTF_8), xml.length()), doc, GeometryBuilder.build(doc), OsmElement.LIVE);
     }
 
     private static OsmElement fixture(String resource, String type, String id) throws IOException {
         OsmDocument doc = OsmDocumentTest.fixture(resource, type, id);
         return new OsmElement(type, id, OsmElement.upstreamUrl(type, id),
-                new Fetched(new byte[0], -1), doc, GeometryBuilder.build(doc));
+                new Fetched(new byte[0], -1), doc, GeometryBuilder.build(doc), OsmElement.LIVE);
     }
 
     private static String transform(String stylesheet, OsmElement e) throws Exception {

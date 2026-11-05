@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
 import com.ontologycentral.osmwrap.OsmElement;
+import com.ontologycentral.osmwrap.dump.DumpStore;
 import com.ontologycentral.osmwrap.UpstreamCache;
 import com.ontologycentral.osmwrap.UpstreamCache.UpstreamException;
 
@@ -85,7 +86,9 @@ public class GeometryOSMServlet extends HttpServlet {
         OutputStream os = resp.getOutputStream();
 
         try {
-            OsmElement element = OsmElement.load(cache, type, id);
+            OsmElement element = OsmElement.load(cache,
+                    (DumpStore) getServletContext().getAttribute(DumpStore.ATTR), type, id);
+            resp.setHeader("X-Source", element.source());
 
             String body;
             switch (format) {

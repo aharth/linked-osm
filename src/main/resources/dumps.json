@@ -1,0 +1,10 @@
+{
+  "regions": {
+    "bayern": {
+      "file": "bayern-261103.osm.pbf",
+      "source": "https://download.geofabrik.de/europe/germany/bayern-261103.osm.pbf",
+      "licence": "ODbL-1.0",
+      "integrated": true
+    }
+  }
+}

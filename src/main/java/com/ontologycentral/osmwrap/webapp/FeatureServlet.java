@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 
 import com.ontologycentral.osmwrap.AcceptHeader;
 import com.ontologycentral.osmwrap.OsmElement;
+import com.ontologycentral.osmwrap.dump.DumpStore;
 import com.ontologycentral.osmwrap.UpstreamCache;
 import com.ontologycentral.osmwrap.UpstreamCache.UpstreamException;
 
@@ -82,7 +83,8 @@ public class FeatureServlet extends HttpServlet {
         OutputStream os = resp.getOutputStream();
 
         try {
-            OsmElement element = OsmElement.load(cache, type, id);
+            OsmElement element = OsmElement.load(cache, (DumpStore) ctx.getAttribute(DumpStore.ATTR), type, id);
+            resp.setHeader("X-Source", element.source());
 
             if (format.equals("json")) {
                 resp.setContentType("application/geo+json");

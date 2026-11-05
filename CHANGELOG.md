@@ -2,6 +2,39 @@
 
 All notable changes to the OpenStreetMap Linked Data Wrapper project will be documented in this file.
 
+## [2026-11-05] Elements from a local Bavaria dump: the `.osm.pbf` is the store
+
+Plan: `plans/pbf-store-bavaria.md` (phase 1, lookups by ID).
+- **`/osm/{type}/{id}` and `/geo/osm/{type}/{id}` answer from a local dump** when one
+  holds the element completely, otherwise from the OSM API as before. The dump is
+  Geofabrik's extract after `osmium add-locations-to-ways --keep-member-nodes`; the file
+  itself is the store, with a 32-byte index entry per block (`blocks.idx`, 62 KB for
+  Bavaria's 1,957 blocks). A node or way is one block read; a relation adds the blocks of
+  its members.
+- **One path after the read.** `DumpRegion.osmXml` writes the XML the OSM API's `/full`
+  would return, and `OsmDocument.parse`, `GeometryBuilder` and the stylesheets run
+  unchanged. Checked against the live API for nodes, ways and relations up to the Nürnberg
+  boundary (3,949 nodes, 81 ways, 11 sub-relations): same members, coordinates, tags and
+  version. The RDF differs only in the generator comment (names the extract and its
+  replication timestamp) and the changeset/user triples, which public extracts lack.
+- **Never a partial geometry.** `incomplete.idx` lists relations with a member outside the
+  file (4,150 of Bavaria's 144,552) and ways with a missing location (none); those, and
+  anything outside the region, go live.
+- **`X-Source: dump:<region>` or `live`** on every element response, exposed via CORS.
+  `/status` (JSON, HTML, RDF) lists each dump with its replication timestamp and counts.
+- **Build on lithium:** `refresh.sh <region>` (family build contract: `DUMPS_ROOT` and
+  `BUILD_ROOT` required, `dump-<stamp>/`, MANIFEST written last, `dump check`, link flip).
+  Bavaria: 58 s, 878 MB. Regions and their downloaded file are listed in
+  `src/main/resources/dumps.json`. The webapp reads `<dumps-dir>/osm/<region>/dump` from
+  the Maven property `dumps.dir`, as linked-adv does; unset means live only, never 503.
+- **The CLI jar runs again.** `jar-with-dependencies` on a `war` project put our classes
+  under `WEB-INF/classes/`, so `java -jar` found no `Main`. A custom descriptor
+  (`src/assembly/jar-with-dependencies.xml`) takes them from `target/classes`. `Main dump
+  index|check|get` are the build-side commands.
+- No new dependency: `PbfFile`/`PbfBlock` read the PBF format with a small protobuf reader
+  and `java.util.zip.Inflater`. `DumpRegionTest` runs the whole path on a 79 KB extract
+  around the Kaiserburg.
+
 ## [2026-11-04] MultiViewsFilter: Content-Location is the sibling file name; .ttl parsed against the public URL
 
 Synced from linked-adv (shared by copy).
